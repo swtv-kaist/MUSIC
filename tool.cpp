@@ -223,7 +223,7 @@ void validate_replacee(string &op, set<string> &replacee)
     set<string> empty_replacee{"CRCR", "SSDL", "VLSR", "VGSR", "VGAR", "VLAR", 
                             "VGTR", "VLTR", "VGPR", "VLPR", "VSCR", "CGCR", "CLCR",
                             "CGSR", "CLSR", "OMMO", "OPPO", "OLNG", "OCNG", "OBNG", 
-                            "OBOM", "VTWD"};
+                            "OBOM", "VTWD", "OIPM"};
 
     // Determine the set of valid tokens based on the type of operator
     set<string> valid;
@@ -372,7 +372,7 @@ void validate_replacer(string &op, set<string> &replacer)
     set<string> empty_replacer{"SSDL", "VLSR", "VGSR", "VGAR", "VLAR", "VGTR",
                                 "VLTR", "VGPR", "VLPR", "VSCR", "CGCR", "CLCR",
                                 "CGSR", "CLSR", "OMMO", "OPPO", "OLNG", "OCNG",
-                                "OBNG", "OBOM", "VTWD"};
+                                "OBNG", "OBOM", "VTWD", "OIPM"};
 
     // Determine the set of valid tokens based on the type of operator
     set<string> valid;  
@@ -541,6 +541,7 @@ public:
     bool doOBNG;
     bool doOCNG;
     bool doVTWD;
+    bool doOIPM;
 
     MutantOperatorHolder()
     {
@@ -564,6 +565,7 @@ public:
         doOBNG = false;
         doOCNG = false; 
         doVTWD = false;
+        doOIPM = false;
     }
     ~MutantOperatorHolder(){}
 
@@ -762,6 +764,10 @@ public:
         {
             doVTWD = true;
         }
+        else if (op.getName().compare("OIPM") == 0)
+        {
+            doOIPM = true;
+        }
         else {
             // The operator does not belong to any of the supported categories
             return false;
@@ -867,6 +873,7 @@ public:
         doOBNG = true;
         doOCNG = true;  
         doVTWD = true;  
+        doOIPM = true;
     }
 };
 
@@ -1731,6 +1738,11 @@ public:
             {
                 return getEndLocOfExpr(cast<CStyleCastExpr>(e)->getSubExpr()->IgnoreImpCasts());
             }
+            if (ParenExpr *pe = dyn_cast<ParenExpr>(e))
+            {
+                ret = pe->getRParen();
+                ret = ret.getLocWithOffset(1);
+            }
             else 
             {
                 ret = e->getLocEnd();
@@ -1746,6 +1758,16 @@ public:
                 if (*(m_srcmgr.getCharacterData(prevLoc)) == ';')
                     ret = prevLoc;
             }
+
+        return ret;
+    }
+
+    SourceLocation getLeftBracketOfArraySubscript(ArraySubscriptExpr *ase)
+    {
+        SourceLocation ret = ase->getLocStart();
+
+        while (*(m_srcmgr.getCharacterData(ret)) != '[')
+            ret = ret.getLocWithOffset(1);
 
         return ret;
     }
@@ -2429,6 +2451,99 @@ public:
         }
     }
 
+    void generateOIPMMutant(UnaryOperator *uo)
+    {
+        string op{"OIPM"};
+        string token{m_rewriter.ConvertToString(uo)};
+
+        Expr *nonDerefExpr = cast<Expr>(uo);
+        int numberOfDeref{0};
+
+        while (true)
+        {
+            if (UnaryOperator *theSubExpr = dyn_cast<UnaryOperator>(nonDerefExpr))
+                if (theSubExpr->getOpcode() == UO_Deref)
+                {
+                    nonDerefExpr = theSubExpr->getSubExpr()->IgnoreImpCasts();
+                    ++numberOfDeref;
+                    continue;
+                }
+
+            break;
+        }
+
+        bool mutateArray{false};
+        bool mutatePointer{false};
+        SourceLocation endOfPtr;
+        QualType type;
+
+        if (ArraySubscriptExpr *ase = dyn_cast<ArraySubscriptExpr>(nonDerefExpr))
+        {
+            mutateArray = true;
+            endOfPtr = getLeftBracketOfArraySubscript(ase);
+            type = ase->getBase()->IgnoreImpCasts()->getType().getCanonicalType();
+        }
+
+        if (UnaryOperator *uop = dyn_cast<UnaryOperator>(nonDerefExpr))
+            if (uop->getOpcode() == UO_PostDec || uop->getOpcode() == UO_PostInc)
+            {
+                mutatePointer = true;
+                // endOfPtr = uop->getLocEnd();
+                // type = uop->getSubExpr()->IgnoreImpCasts()->getType().getCanonicalType();
+            }
+
+        if (mutatePointer)
+        {
+            SourceLocation start = uo->getLocStart();
+            SourceLocation end = getEndLocForUnaryOp(uo);
+
+            if (targetInMutationRange(&start, &end)
+                && !uo->getType().getCanonicalType().isConstQualified()
+                && start != m_lhsOfAssignment->getBegin())
+            {
+                string replacingToken{m_rewriter.ConvertToString(uo)};
+                replacingToken.pop_back();
+                replacingToken.pop_back();
+
+                string replacingToken1;
+                if (uo->getOpcode() == UO_PostDec)
+                    replacingToken1 = "--(" + replacingToken + ")";
+                else
+                    replacingToken1 = "++(" + replacingToken + ")";
+
+                generateMutant_new(op, &start, &end, token, replacingToken1);
+
+                string replacingToken2;
+                if (uo->getOpcode() == UO_PostDec)
+                    replacingToken2 = "(" + replacingToken + ")--";
+                else
+                    replacingToken2 = "(" + replacingToken + ")++";
+
+                generateMutant_new(op, &start, &end, token, replacingToken2);
+            }
+        }
+
+        if (mutateArray)
+        {
+            SourceLocation start = uo->getLocStart();
+            SourceLocation end = getEndLocForUnaryOp(uo);
+
+            if (targetInMutationRange(&start, &end))
+            {
+                string index;
+                while (endOfPtr != end)
+                {
+                    index += *(m_srcmgr.getCharacterData(endOfPtr));
+                    endOfPtr = endOfPtr.getLocWithOffset(1);
+                }
+
+                string replacingToken = "(" + token.substr(0, token.length() - index.length()) + ")" + index;
+
+                generateMutant_new(op, &start, &end, token, replacingToken);
+            }
+        }
+    }
+
     void generateMutantByNegation(Expr *e, string op)
     {
         SourceLocation start = e->getLocStart();
@@ -2617,6 +2732,8 @@ public:
         // cout << m_rewriter.ConvertToString(ase) << endl;
         // printLocation(end);
         // printLocation(ase->getRBracketLoc());
+        // printLocation(getLeftBracketOfArraySubscript(ase));
+        // cout << m_rewriter.ConvertToString(ase->getRHS()) << endl;
 
         end = getRealEndLoc(&end);
         string refName{m_rewriter.ConvertToString(ase)};
@@ -2916,6 +3033,14 @@ public:
         if (uo->getOpcode() == UO_Deref)
         {
             //===============================
+            //=== GENERATING OIPM MUTANTS ===
+            //===============================
+            if (m_holder->doOIPM && !m_isInsideEnumDecl)
+            {
+                generateOIPMMutant(uo);
+            }
+
+            //===============================
             //=== GENERATING VTWD MUTANTS ===
             //===============================
             if (m_holder->doVTWD
@@ -2956,15 +3081,6 @@ public:
                     && !locationIsInRange(start, *m_addressOfOpRange))
                     generateCRCRMutant(cast<Expr>(uo), start, end);
             }
-
-
-            /*cout << m_rewriter.ConvertToString(uo) << endl;
-            cout << m_rewriter.ConvertToString(uo->getSubExpr()) << endl;
-            printLocation(start);
-            if (((uo->getType()).getTypePtr())->isIntegralType(m_compinst->getASTContext()))
-                cout << "this is integral\n";
-            if (((uo->getType()).getTypePtr())->isFloatingType())
-                cout << "this is floating\n";*/
         }
 
         // Retrieve the range of UnaryOperator getting address of single expression
@@ -5451,7 +5567,7 @@ int main(int argc, char *argv[])
 
     if (useAllOperator) 
     {
-        holder->useAll();
+        // holder->useAll();
     }
 
     // Make mutation database file named <inputfilename>_mut_db.out
