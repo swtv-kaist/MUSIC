@@ -2916,6 +2916,33 @@ public:
         if (uo->getOpcode() == UO_Deref)
         {
             //===============================
+            //=== GENERATING VTWD MUTANTS ===
+            //===============================
+            if (m_holder->doVTWD
+                && exprIsScalar(cast<Expr>(uo)) && !exprIsPointer(cast<Expr>(uo)))
+            {
+                if (targetInMutationRange(&start, &end)
+                    && !m_isInsideEnumDecl 
+                    && !locationIsInRange(start, *m_lhsOfAssignment)
+                    && !locationIsInRange(start, *m_unaryIncrementRange) 
+                    && !locationIsInRange(start, *m_unaryDecrementRange) 
+                    && !locationIsInRange(start, *m_addressOfOpRange))
+                {
+                    string refName{m_rewriter.ConvertToString(uo)};
+                    if (canApplyVTWDTo(refName))
+                        generateVTWDMutant(&start, &end, refName);
+                    else
+                        // Block VTWD mutation once and remove the reference name from the nonMutatable list.
+                        for (auto it = m_nonVTWDMutatable.begin(); it != m_nonVTWDMutatable.end(); ++it)
+                            if (refName.compare(*it) == 0)
+                            {
+                                m_nonVTWDMutatable.erase(it);
+                                break;
+                            }
+                }
+            }
+
+            //===============================
             //=== GENERATING CRCR MUTANTS ===
             //===============================
             if ((m_holder->CRCR_floating).size() != 0)
@@ -2929,6 +2956,8 @@ public:
                     && !locationIsInRange(start, *m_addressOfOpRange))
                     generateCRCRMutant(cast<Expr>(uo), start, end);
             }
+
+
             /*cout << m_rewriter.ConvertToString(uo) << endl;
             cout << m_rewriter.ConvertToString(uo->getSubExpr()) << endl;
             printLocation(start);
