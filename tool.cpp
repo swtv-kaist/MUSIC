@@ -84,6 +84,8 @@ struct comp
 // Map label declaration location with its usage locations (goto)
 typedef map<LabelDeclLocation, GotoLocationList, comp> LabelUsageMap;
 
+typedef vector<string> ScalarRefNameList;
+
 // states used for analyzing user input, used in function handleInput()
 enum class State
 {
@@ -220,7 +222,8 @@ void validate_replacee(string &op, set<string> &replacee)
     // set of operators whose domain cannot be altered.
     set<string> empty_replacee{"CRCR", "SSDL", "VLSR", "VGSR", "VGAR", "VLAR", 
                             "VGTR", "VLTR", "VGPR", "VLPR", "VSCR", "CGCR", "CLCR",
-                            "CGSR", "CLSR", "OMMO", "OPPO", "OLNG", "OCNG", "OBNG"};
+                            "CGSR", "CLSR", "OMMO", "OPPO", "OLNG", "OCNG", "OBNG", 
+                            "OBOM", "VTWD"};
 
     // Determine the set of valid tokens based on the type of operator
     set<string> valid;
@@ -369,7 +372,7 @@ void validate_replacer(string &op, set<string> &replacer)
     set<string> empty_replacer{"SSDL", "VLSR", "VGSR", "VGAR", "VLAR", "VGTR",
                                 "VLTR", "VGPR", "VLPR", "VSCR", "CGCR", "CLCR",
                                 "CGSR", "CLSR", "OMMO", "OPPO", "OLNG", "OCNG",
-                                "OBNG"};
+                                "OBNG", "OBOM", "VTWD"};
 
     // Determine the set of valid tokens based on the type of operator
     set<string> valid;  
@@ -537,6 +540,7 @@ public:
     bool doOLNG;
     bool doOBNG;
     bool doOCNG;
+    bool doVTWD;
 
     MutantOperatorHolder()
     {
@@ -559,6 +563,7 @@ public:
         doOLNG = false;
         doOBNG = false;
         doOCNG = false; 
+        doVTWD = false;
     }
     ~MutantOperatorHolder(){}
 
@@ -749,6 +754,14 @@ public:
         {
             doOBNG = true;
         }
+        else if (op.getName().compare("OBOM") == 0)
+        {
+            addAllObomOperators();
+        }
+        else if (op.getName().compare("VTWD") == 0)
+        {
+            doVTWD = true;
+        }
         else {
             // The operator does not belong to any of the supported categories
             return false;
@@ -757,25 +770,7 @@ public:
         return true;
     }
 
-    void addOperatorMutantOperator(string op)
-    {
-        set<string> domain;
-        set<string> range;
-
-        validate_replacer(op, range);
-        validate_replacee(op, domain);
-        
-        MutantOperator newOp{op, domain, range};
-        addOperator(newOp);
-    }
-
-    /**
-        Add to each Mutant Operator vector all the MutantOperator that it
-        can receive, with tokens before and after mutation of each token
-        same as in Agrawal's Design of Mutation Operators for C.        
-        Called when user does not specify any specific operator(s) to use.
-    */
-    void useAll()
+    void addAllObomOperators()
     {
         addOperatorMutantOperator(string("OLLN"));
         addOperatorMutantOperator(string("OLAN"));
@@ -825,7 +820,29 @@ public:
         addOperatorMutantOperator(string("OEAA"));
         addOperatorMutantOperator(string("OEBA"));
         addOperatorMutantOperator(string("OESA"));
+    }
 
+    void addOperatorMutantOperator(string op)
+    {
+        set<string> domain;
+        set<string> range;
+
+        validate_replacer(op, range);
+        validate_replacee(op, domain);
+        
+        MutantOperator newOp{op, domain, range};
+        addOperator(newOp);
+    }
+
+    /**
+        Add to each Mutant Operator vector all the MutantOperator that it
+        can receive, with tokens before and after mutation of each token
+        same as in Agrawal's Design of Mutation Operators for C.        
+        Called when user does not specify any specific operator(s) to use.
+    */
+    void useAll()
+    {
+        addAllObomOperators();
 
         CRCR_integral = {"0", "1", "-1"};
         CRCR_floating = {"0.0", "1.0", "-1.0"};
@@ -848,7 +865,8 @@ public:
         doOMMO = true;
         doOLNG = true;
         doOBNG = true;
-        doOCNG = true;    
+        doOCNG = true;  
+        doVTWD = true;  
     }
 };
 
@@ -897,6 +915,9 @@ public:
     // ID of the next mutated code file
     int m_mutFileNum;
 
+    int m_proteumStmtLineNum;
+    int m_proteumEndOfStmt;
+
     // name of mutated code file = m_outFilename + m_mutFileNum
     // m_outFilename = (input filename without .c) + ".MUT"
     string m_outFilename;
@@ -911,22 +932,24 @@ public:
 
     Rewriter m_rewriter;
 
-    bool checkForZero;
-    SourceRange *targetExpr;
+    bool m_checkForZero;
+    SourceRange *m_targetExpr;
 
     // True when visit Statement Expression,
     // False when out of Statement Expression.
-    bool isInsideStmtExpr;
+    bool m_isInsideStmtExpr;
 
     // True when enter array size of array declaration
     // False when out of array size of array declaration.
-    bool isInsideArraySize;
+    bool m_isInsideArraySize;
 
     // Range of the latest parsed array declaration statement
-    SourceRange *arrayDeclRange;
+    SourceRange *m_arrayDeclRange;
 
     // True if the next Binary Operator is the expression evaluating to array size.
     bool firstBinOpAfterArrayDecl;
+
+    bool m_isInsideEnumDecl;
 
     // Expression evaluating to array size.
     // Used to prevent generating-negative-array-size mutants.
@@ -956,24 +979,24 @@ public:
     vector<DeclInScope> m_allLocalPointers;
 
     // bool isInsideFunctionDecl;
-    SourceRange *currentFunctionDeclRange;
-    SourceRange *lhsOfAssignment;
-    SourceRange *switchConditionRange;
-    SourceRange *typedefRange;
-    SourceRange *addressOfOpRange;
-    SourceRange *functionPrototypeRange;
-    SourceRange *unaryIncrementRange;
-    SourceRange *unaryDecrementRange;
-    SourceRange *arraySubscriptRange;
+    SourceRange *m_currentFunctionDeclRange;
+    SourceRange *m_lhsOfAssignment;
+    SourceRange *m_switchConditionRange;
+    SourceRange *m_typedefRange;
+    SourceRange *m_addressOfOpRange;
+    SourceRange *m_functionPrototypeRange;
+    SourceRange *m_unaryIncrementRange;
+    SourceRange *m_unaryDecrementRange;
+    SourceRange *m_arraySubscriptRange;
     // variable declaration inside a struct or union is called field declaration
-    SourceRange *fieldDeclRange; 
-    SourceRange *switchCaseRange;   
+    SourceRange *m_fieldDeclRange; 
+    SourceRange *m_switchCaseRange;   
 
     Sema *m_sema;
 
-    bool isInsideEnumDecl;
-
     SwitchCaseTracker m_switchCaseTracker;
+
+    ScalarRefNameList m_nonVTWDMutatable;
 
     MyASTVisitor(SourceManager &sm, LangOptions &langopt, UserInput *userInput,  
                 MutantOperatorHolder *holder, CompilerInstance *CI, vector<SourceLocation> *labels,
@@ -984,6 +1007,8 @@ public:
         m_labels(labels), m_labelUsageMap(usageMap),
         m_allGlobalConsts(globalConsts), m_allLocalConsts(localConsts)
     {
+        m_proteumEndOfStmt = 0;
+
         // name of mutated code file = m_outFilename + m_mutFileNum
         // m_outFilename = (input filename without .c) + ".MUT"
         m_outFilename.assign(m_userinput->getInputFilename(), 0, (m_userinput->getInputFilename()).length()-2);
@@ -991,38 +1016,38 @@ public:
 
         m_rewriter.setSourceMgr(m_srcmgr, m_langopt);
 
-        checkForZero = false;
-        isInsideStmtExpr = false;
-        isInsideArraySize = false;
+        m_checkForZero = false;
+        m_isInsideStmtExpr = false;
+        m_isInsideArraySize = false;
         firstBinOpAfterArrayDecl = false;
         // isInsideFunctionDecl = false;
-        isInsideEnumDecl = false;
+        m_isInsideEnumDecl = false;
 
-        lhsOfAssignment = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_lhsOfAssignment = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        switchConditionRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_switchConditionRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        typedefRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_typedefRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        addressOfOpRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_addressOfOpRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        functionPrototypeRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_functionPrototypeRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        unaryIncrementRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_unaryIncrementRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        unaryDecrementRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_unaryDecrementRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        currentFunctionDeclRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_currentFunctionDeclRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        arraySubscriptRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_arraySubscriptRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
-        fieldDeclRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_fieldDeclRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID())); 
-        switchCaseRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+        m_switchCaseRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID())); 
 
-        arrayDeclRange = nullptr;
-        targetExpr = nullptr;
+        m_arrayDeclRange = nullptr;
+        m_targetExpr = nullptr;
     }
 
     void printIdentifierTable(const ASTContext &astcontext)
@@ -1142,6 +1167,9 @@ public:
     */
     string getArrayElementType(QualType type)
     {
+        cout << type.getAsString() << endl;
+        cout << type.getCanonicalType().getAsString() << endl << endl;
+
         string res;
 
         // getElementType can only be called from an ArrayType
@@ -1417,6 +1445,8 @@ public:
         out_mutDb << m_userinput->getInputFilename() << "\t";   // write input file name
         out_mutDb << m_outFilename << m_mutFileNum << "\t";     // write output file name
         out_mutDb << op << "\t";                                // write name of operator
+
+        out_mutDb << m_proteumStmtLineNum << "\t"; 
         
         // write information about token BEFORE mutation (range and token)
         out_mutDb << getLineNumber(startloc) << "\t";           
@@ -1661,6 +1691,20 @@ public:
         return ret;
     }
 
+    SourceLocation getLocAfterSemiColon(SourceLocation loc)
+    {
+
+        SourceLocation prevLoc = m_srcmgr.translateLineCol(m_srcmgr.getMainFileID(),
+                                                        getLineNumber(&loc),
+                                                        getColNumber(&loc) - 1);
+
+        if (*(m_srcmgr.getCharacterData(prevLoc)) == ';')
+            return loc;
+        if (*(m_srcmgr.getCharacterData(loc)) == ';')
+            return loc.getLocWithOffset(1);
+        return loc;
+    }
+
     SourceLocation getLocBeforeSemiColon(Expr *e)
     {
         SourceLocation ret = e->getLocEnd();
@@ -1695,7 +1739,7 @@ public:
                 if (ret.isInvalid())
                     ret = e->getLocEnd();
 
-                // getRealEndLoc returns location after semicolon
+                // getRealEndLoc returns location after semicolon (depends)
                 SourceLocation prevLoc = m_srcmgr.translateLineCol(m_srcmgr.getMainFileID(),
                                                                     getLineNumber(&ret),
                                                                     getColNumber(&ret) - 1);
@@ -1706,21 +1750,123 @@ public:
         return ret;
     }
 
-    void generateCRCRMutant(DeclRefExpr *dre)
+    bool canApplyVTWDTo(string refName)
     {
-        SourceLocation start = dre->getLocStart();
-        SourceLocation end = dre->getLocEnd();
-        string varName = m_rewriter.ConvertToString(dre);
+        // if the reference name is in the nonMutatableList then it is not mutatable
+        for (auto it = m_nonVTWDMutatable.begin(); it != m_nonVTWDMutatable.end(); ++it)
+        {
+            if (refName.compare(*it) == 0)
+                return false;
+        }
+
+        return true;
+    }
+
+    // if there are addition of multiple scalar reference
+    // then only mutate one, put all the other inside the nonMutatableList
+    // 
+    // Return True if a scalar reference is excluded
+    //        False otherwise
+    bool collectNonMutatableScalarRef(Expr *e, bool excludeOne)
+    {
+        bool excluded{false};
+
+        if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
+        {
+            if (bo->isAdditiveOp())
+            {
+                Expr *rhs = bo->getRHS();
+                Expr *lhs = bo->getLHS();
+
+                if (!excludeOne)
+                {
+                    if (exprIsScalarRef(rhs))
+                    {
+                        string refName{m_rewriter.ConvertToString(rhs)};
+
+                        // if this scalar reference is mutatable then block it
+                        if (canApplyVTWDTo(refName))
+                            m_nonVTWDMutatable.push_back(refName);
+                    }
+                    else if (ParenExpr *pe = dyn_cast<ParenExpr>(rhs))
+                        collectNonMutatableScalarRef(pe->getSubExpr(), false);
+                    else
+                        ;   // do nothing
+
+                    if (exprIsScalarRef(lhs))
+                    {
+                        string refName{m_rewriter.ConvertToString(lhs)};
+
+                        // if this scalar reference is mutatable then block it
+                        if (canApplyVTWDTo(refName))
+                            m_nonVTWDMutatable.push_back(refName);
+                    }
+                    else if (ParenExpr *pe = dyn_cast<ParenExpr>(lhs))
+                        collectNonMutatableScalarRef(pe->getSubExpr(), false);
+                    else
+                        ;   // do nothing
+                }
+                else    // have to exclude 1 scalar reference for VTWD
+                {
+                    if (exprIsScalarRef(rhs))
+                    {
+                        excluded = true;
+                    }
+                    else if (ParenExpr *pe = dyn_cast<ParenExpr>(rhs))
+                    {
+                        if (collectNonMutatableScalarRef(pe->getSubExpr(), true))
+                            excluded = true;
+                    }
+                    else
+                        ;
+
+                    if (exprIsScalarRef(lhs))
+                    {
+                        if (excluded)
+                        {
+                            string refName{m_rewriter.ConvertToString(lhs)};
+
+                            // if this scalar reference is mutatable then block it
+                            if (canApplyVTWDTo(refName))
+                                m_nonVTWDMutatable.push_back(refName);
+                        }
+                        else
+                            excluded = true;
+                    }
+                    else if (ParenExpr *pe = dyn_cast<ParenExpr>(lhs))
+                    {
+                        if (excluded)
+                            collectNonMutatableScalarRef(pe->getSubExpr(), false);
+                        else
+                        {
+                            if (collectNonMutatableScalarRef(pe->getSubExpr(), true))
+                                excluded = true;
+                        }
+                    }
+                    else
+                        ;
+                }
+            }
+        }
+
+        return excluded;
+    }
+
+    void generateCRCRMutant(Expr *e, SourceLocation start, SourceLocation end)
+    {
+        // SourceLocation start = dre->getLocStart();
+        // SourceLocation end = dre->getLocEnd();
+        string varName = m_rewriter.ConvertToString(e);
         string opName = "CRCR";
 
         int cap = m_userinput->getLimit();
 
-        if (((dre->getType()).getTypePtr())->isIntegralType(m_compinst->getASTContext()))
+        if (((e->getType()).getTypePtr())->isIntegralType(m_compinst->getASTContext()))
         {
             for (auto it: m_holder->CRCR_integral)
             {
                 string replacingToken{"(" + it + ")"};
-                generateMutant(opName, &start, &end, varName, replacingToken);
+                generateMutant_new(opName, &start, &end, varName, replacingToken);
 
                 // Apply limit option on number of generated mutants 
                 --cap;
@@ -1730,12 +1876,12 @@ public:
             return;
         }
 
-        if (((dre->getType()).getTypePtr())->isFloatingType())
+        if (((e->getType()).getTypePtr())->isFloatingType())
         {
             for (auto it: m_holder->CRCR_floating)
             {
                 string replacingToken{"(" + it + ")"};
-                generateMutant(opName, &start, &end, varName, replacingToken);
+                generateMutant_new(opName, &start, &end, varName, replacingToken);
                 
                 // Apply limit option on number of generated mutants 
                 --cap;
@@ -1749,10 +1895,10 @@ public:
     void generateVGSRMutant(SourceLocation *start, SourceLocation *end, string refName)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-        bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-        bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         string op{"VGSR"};
 
@@ -1783,12 +1929,12 @@ public:
     void generateVLSRMutant(SourceLocation *start, SourceLocation *end, string refName)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-        bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
-        bool skipRegister = locationIsInRange(*start, *addressOfOpRange);
+        bool skipRegister = locationIsInRange(*start, *m_addressOfOpRange);
 
         string op{"VLSR"};
 
@@ -1828,10 +1974,10 @@ public:
     void generateVGARMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-        bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         string op{"VGAR"};
 
@@ -1862,13 +2008,13 @@ public:
     void generateVLARMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         // cannot mutate a variable inside addressOf op (&) to a register variable
-        bool skipRegister = locationIsInRange(*start, *addressOfOpRange);
+        bool skipRegister = locationIsInRange(*start, *m_addressOfOpRange);
 
         string op{"VLAR"};
 
@@ -1907,10 +2053,10 @@ public:
     void generateVGTRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         string structType = getStructureType(type);
 
@@ -1944,13 +2090,13 @@ public:
     void generateVLTRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         // cannot mutate a variable inside addressOf op (&) to a register variable
-        bool skipRegister = locationIsInRange(*start, *addressOfOpRange);
+        bool skipRegister = locationIsInRange(*start, *m_addressOfOpRange);
 
         string structType = getStructureType(type);
 
@@ -1993,10 +2139,10 @@ public:
     void generateVGPRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         string pointeeType = getPointerType(type);
 
@@ -2030,13 +2176,13 @@ public:
     void generateVLPRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *switchConditionRange);
+		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *lhsOfAssignment);
+		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         // cannot mutate a variable inside addressOf op (&) to a register variable
-        bool skipRegister = locationIsInRange(*start, *addressOfOpRange);
+        bool skipRegister = locationIsInRange(*start, *m_addressOfOpRange);
 
         string pointeeType = getPointerType(type);
 
@@ -2270,6 +2416,19 @@ public:
         }
     }
 
+    void generateVTWDMutant(SourceLocation *start, SourceLocation *end, string token)
+    {
+        string op{"VTWD"};
+        string replacingToken = "(" + token + "+1)";
+        generateMutant_new(op, start, end, token, replacingToken);
+
+        if (m_userinput->getLimit() > 1)
+        {
+            replacingToken = "(" + token + "-1)";
+            generateMutant_new(op, start, end, token, replacingToken);
+        }
+    }
+
     void generateMutantByNegation(Expr *e, string op)
     {
         SourceLocation start = e->getLocStart();
@@ -2423,6 +2582,11 @@ public:
         printLocation(range.getEnd());
     }
 
+    void printExprType(Expr *e)
+    {
+        cout << "expr type: " << e->getType().getCanonicalType().getAsString() << endl;
+    }
+
     void handleStmtExpr(StmtExpr *se)
     {
         CompoundStmt::body_iterator stmt = (se->getSubStmt())->body_begin();
@@ -2441,7 +2605,7 @@ public:
 
         if (targetInMutationRange(&start, &end))
         {
-            isInsideStmtExpr = true;
+            m_isInsideStmtExpr = true;
         }
     }
 
@@ -2449,13 +2613,59 @@ public:
     {
         SourceLocation start = ase->getLocStart();
         SourceLocation end = ase->getLocEnd();
+
+        // cout << m_rewriter.ConvertToString(ase) << endl;
+        // printLocation(end);
+        // printLocation(ase->getRBracketLoc());
+
         end = getRealEndLoc(&end);
         string refName{m_rewriter.ConvertToString(ase)};
 
-        if (arraySubscriptRange != nullptr)
-            delete arraySubscriptRange;
+        if (m_arraySubscriptRange != nullptr)
+            delete m_arraySubscriptRange;
 
-        arraySubscriptRange = new SourceRange(start, end);
+        m_arraySubscriptRange = new SourceRange(start, end);
+
+        //===============================
+        //=== GENERATING VTWD MUTANTS ===
+        //===============================
+        if (m_holder->doVTWD
+            && exprIsScalar(cast<Expr>(ase)) && !exprIsPointer(cast<Expr>(ase)))
+        {
+            if (targetInMutationRange(&start, &end)
+                && !m_isInsideEnumDecl 
+                && !locationIsInRange(start, *m_lhsOfAssignment)
+                && !locationIsInRange(start, *m_unaryIncrementRange) 
+                && !locationIsInRange(start, *m_unaryDecrementRange) 
+                && !locationIsInRange(start, *m_addressOfOpRange))
+            {
+                if (canApplyVTWDTo(refName))
+                    generateVTWDMutant(&start, &end, refName);
+                else
+                    // Block VTWD mutation once and remove the reference name from the nonMutatable list.
+                    for (auto it = m_nonVTWDMutatable.begin(); it != m_nonVTWDMutatable.end(); ++it)
+                        if (refName.compare(*it) == 0)
+                        {
+                            m_nonVTWDMutatable.erase(it);
+                            break;
+                        }
+            }
+        }
+
+        //===============================
+        //=== GENERATING CRCR MUTANTS ===
+        //===============================
+        if ((m_holder->CRCR_floating).size() != 0)
+        {
+            if (!m_isInsideArraySize
+                && !m_isInsideEnumDecl
+                && targetInMutationRange(&start, &end)
+                && !locationIsInRange(start, *m_lhsOfAssignment)
+                && !locationIsInRange(start, *m_unaryIncrementRange)
+                && !locationIsInRange(start, *m_unaryDecrementRange)
+                && !locationIsInRange(start, *m_addressOfOpRange))
+                generateCRCRMutant(cast<Expr>(ase), start, end);
+        }
 
         //=================================================
         //=== GENERATING Vsrr, Varr, Vtrr, Vprr MUTANTS ===
@@ -2463,7 +2673,7 @@ public:
         if (m_holder->doVGSR || m_holder->doVLSR || m_holder->doVGAR || m_holder->doVLAR ||
             m_holder->doVGTR || m_holder->doVLTR || m_holder->doVGPR || m_holder->doVLPR)
         {
-            if (!isInsideArraySize && !isInsideEnumDecl && targetInMutationRange(&start, &end))
+            if (!m_isInsideArraySize && !m_isInsideEnumDecl && targetInMutationRange(&start, &end))
             {
                 if (exprIsScalar(cast<Expr>(ase)) && !exprIsPointer(cast<Expr>(ase)))
                 {
@@ -2517,19 +2727,46 @@ public:
             return;
 
         //===============================
+        //=== GENERATING VTWD MUTANTS ===
+        //===============================
+        if (m_holder->doVTWD
+            && exprIsScalar(cast<Expr>(dre)) && !exprIsPointer(cast<Expr>(dre)))
+        {
+            if (targetInMutationRange(&start, &end)
+                && !m_isInsideEnumDecl 
+                && !locationIsInRange(start, *m_lhsOfAssignment)
+                && !locationIsInRange(start, *m_unaryIncrementRange) 
+                && !locationIsInRange(start, *m_unaryDecrementRange) 
+                && !locationIsInRange(start, *m_addressOfOpRange))
+            {
+                string declName{m_rewriter.ConvertToString(dre)};
+                if (canApplyVTWDTo(declName))
+                    generateVTWDMutant(&start, &end, declName);
+                else
+                    // Block VTWD mutation once and remove the reference name from the nonMutatable list.
+                    for (auto it = m_nonVTWDMutatable.begin(); it != m_nonVTWDMutatable.end(); ++it)
+                        if (declName.compare(*it) == 0)
+                        {
+                            m_nonVTWDMutatable.erase(it);
+                            break;
+                        }
+            }
+        }
+
+        //===============================
         //=== GENERATING Ccsr MUTANTS ===
         //===============================
         if ((m_holder->doCGSR || m_holder->doCLSR) && exprIsScalar(cast<Expr>(dre)) && !exprIsPointer(cast<Expr>(dre)))
         {
             // no mutation applied inside array declaration, enum declaration, outside mutation range,
             // left hand of assignment, inside address-of operator and left hand of unary increment operator.
-            if (!isInsideArraySize && !isInsideEnumDecl && targetInMutationRange(&start, &end) &&
-                !locationIsInRange(start, *lhsOfAssignment) && !locationIsInRange(start, *unaryIncrementRange) &&
-                !locationIsInRange(start, *unaryDecrementRange) && !locationIsInRange(start, *addressOfOpRange))
+            if (!m_isInsideArraySize && !m_isInsideEnumDecl && targetInMutationRange(&start, &end) &&
+                !locationIsInRange(start, *m_lhsOfAssignment) && !locationIsInRange(start, *m_unaryIncrementRange) &&
+                !locationIsInRange(start, *m_unaryDecrementRange) && !locationIsInRange(start, *m_addressOfOpRange))
             {
                 // cannot mutate the variable in switch condition or array subscript to a floating-type variable
-                bool skipFloating = locationIsInRange(start, *arraySubscriptRange) ||
-                                    locationIsInRange(start, *switchConditionRange);
+                bool skipFloating = locationIsInRange(start, *m_arraySubscriptRange) ||
+                                    locationIsInRange(start, *m_switchConditionRange);
 
                 if (m_holder->doCGSR)
                 {
@@ -2551,7 +2788,7 @@ public:
                 }
 
                 // CLSR can only be applied to references inside a function, not a global reference
-                if (m_holder->doCLSR && locationIsInRange(start, *currentFunctionDeclRange))
+                if (m_holder->doCLSR && locationIsInRange(start, *m_currentFunctionDeclRange))
                 {
                     string op{"CLSR"};
 
@@ -2561,7 +2798,7 @@ public:
                     for (auto constant: *m_allLocalConsts)
                     {
                         // all the consts after this are outside the currently parsed function
-                        if (!locationIsInRange(constant.second.first, *currentFunctionDeclRange))
+                        if (!locationIsInRange(constant.second.first, *m_currentFunctionDeclRange))
                             break;
 
                         if (skipFloating && constant.second.second)
@@ -2583,11 +2820,11 @@ public:
         //===============================
         if ((m_holder->CRCR_floating).size() != 0)
         {
-            if (!isInsideArraySize && !isInsideEnumDecl && targetInMutationRange(&start, &end))
+            if (!m_isInsideArraySize && !m_isInsideEnumDecl && targetInMutationRange(&start, &end))
             {
-                if (!locationIsInRange(start, *lhsOfAssignment) && !locationIsInRange(start, *unaryIncrementRange) 
-                    && !locationIsInRange(start, *unaryDecrementRange) && !locationIsInRange(start, *addressOfOpRange))
-                    generateCRCRMutant(dre);
+                if (!locationIsInRange(start, *m_lhsOfAssignment) && !locationIsInRange(start, *m_unaryIncrementRange) 
+                    && !locationIsInRange(start, *m_unaryDecrementRange) && !locationIsInRange(start, *m_addressOfOpRange))
+                    generateCRCRMutant(cast<Expr>(dre), start, end);
             }
         }
 
@@ -2597,7 +2834,7 @@ public:
         if (m_holder->doVGSR || m_holder->doVLSR || m_holder->doVGAR || m_holder->doVLAR ||
             m_holder->doVGTR || m_holder->doVLTR || m_holder->doVGPR || m_holder->doVLPR)
         {
-            if (!isInsideArraySize && !isInsideEnumDecl && targetInMutationRange(&start, &end))
+            if (!m_isInsideArraySize && !m_isInsideEnumDecl && targetInMutationRange(&start, &end))
             {
                 //===============================
                 //=== GENERATING Vsrr MUTANTS ===
@@ -2674,7 +2911,32 @@ public:
     void handleUnaryOperator(UnaryOperator *uo)
     {
         SourceLocation start = uo->getLocStart();
-        SourceLocation end = uo->getLocEnd();
+        SourceLocation end = getEndLocForUnaryOp(uo);
+
+        if (uo->getOpcode() == UO_Deref)
+        {
+            //===============================
+            //=== GENERATING CRCR MUTANTS ===
+            //===============================
+            if ((m_holder->CRCR_floating).size() != 0)
+            {
+                if (!m_isInsideArraySize
+                    && !m_isInsideEnumDecl
+                    && targetInMutationRange(&start, &end)
+                    && !locationIsInRange(start, *m_lhsOfAssignment)
+                    && !locationIsInRange(start, *m_unaryIncrementRange)
+                    && !locationIsInRange(start, *m_unaryDecrementRange)
+                    && !locationIsInRange(start, *m_addressOfOpRange))
+                    generateCRCRMutant(cast<Expr>(uo), start, end);
+            }
+            /*cout << m_rewriter.ConvertToString(uo) << endl;
+            cout << m_rewriter.ConvertToString(uo->getSubExpr()) << endl;
+            printLocation(start);
+            if (((uo->getType()).getTypePtr())->isIntegralType(m_compinst->getASTContext()))
+                cout << "this is integral\n";
+            if (((uo->getType()).getTypePtr())->isFloatingType())
+                cout << "this is floating\n";*/
+        }
 
         // Retrieve the range of UnaryOperator getting address of single expression
         // to prevent getting-address-of-a-register error.
@@ -2683,11 +2945,11 @@ public:
                 isa<MemberExpr>(uo->getSubExpr()) ||
                 isa<ArraySubscriptExpr>(uo->getSubExpr())))
         {
-            addressOfOpRange = new SourceRange(uo->getLocStart(), uo->getLocEnd());
+            m_addressOfOpRange = new SourceRange(uo->getLocStart(), uo->getLocEnd());
         }
         else if (uo->getOpcode() == UO_PostInc || uo->getOpcode() == UO_PreInc)
         {
-            unaryIncrementRange = new SourceRange(uo->getLocStart(), uo->getLocEnd());
+            m_unaryIncrementRange = new SourceRange(uo->getLocStart(), uo->getLocEnd());
 
             //===============================
             //=== GENERATING OPPO MUTANTS ===
@@ -2697,7 +2959,7 @@ public:
         }   
         else if (uo->getOpcode() == UO_PostDec || uo->getOpcode() == UO_PreDec)
         {
-            unaryDecrementRange = new SourceRange(uo->getLocStart(), uo->getLocEnd());
+            m_unaryDecrementRange = new SourceRange(uo->getLocStart(), uo->getLocEnd());
 
             //===============================
             //=== GENERATING OMMO MUTANTS ===
@@ -2720,13 +2982,13 @@ public:
         if (m_holder->doCGCR || m_holder->doCLCR)
         {
             // cannot mutate the variable in switch condition, case value, array subscript to a floating-type variable
-            bool skipFloating = locationIsInRange(start, *arraySubscriptRange) ||
-                                locationIsInRange(start, *switchConditionRange) ||
-                                locationIsInRange(start, *switchCaseRange);
+            bool skipFloating = locationIsInRange(start, *m_arraySubscriptRange) ||
+                                locationIsInRange(start, *m_switchConditionRange) ||
+                                locationIsInRange(start, *m_switchCaseRange);
 
-            if (!isInsideArraySize && !isInsideEnumDecl &&
+            if (!m_isInsideArraySize && !m_isInsideEnumDecl &&
                 targetInMutationRange(&start, &end) &&
-                !locationIsInRange(start, *fieldDeclRange))
+                !locationIsInRange(start, *m_fieldDeclRange))
             {
                 if (m_holder->doCGCR)
                 {
@@ -2743,7 +3005,7 @@ public:
                             continue;
 
                         bool duplicatedCase = false;
-                        if (locationIsInRange(start, *switchCaseRange))
+                        if (locationIsInRange(start, *m_switchCaseRange))
                         {   
                             string temp = replacingToken.first;
                             if (temp.front() == '\'' && temp.back() == '\'')
@@ -2770,7 +3032,7 @@ public:
                 }
 
                 // CLCR can only be applied to constants inside a function, not a global constant
-                if (m_holder->doCLCR && locationIsInRange(start, *currentFunctionDeclRange))
+                if (m_holder->doCLCR && locationIsInRange(start, *m_currentFunctionDeclRange))
                 {
                     string op{"CLCR"};
 
@@ -2779,14 +3041,14 @@ public:
                     // generate mutants with constants inside the current function
                     for (auto constant: *m_allLocalConsts)
                     {
-                        if (locationBeforeRange(constant.second.first, *currentFunctionDeclRange))
+                        if (locationBeforeRange(constant.second.first, *m_currentFunctionDeclRange))
                         {
                             // cout << "before range. NEXT.\n";
                             continue;
                         }
 
                         // all the consts after this are outside the currently parsed function
-                        if (!locationIsInRange(constant.second.first, *currentFunctionDeclRange))
+                        if (!locationIsInRange(constant.second.first, *m_currentFunctionDeclRange))
                         {
                             // cout << "out of the function\n";
                             break;
@@ -2806,7 +3068,7 @@ public:
                         }
 
                         bool duplicatedCase = false;
-                        if (locationIsInRange(start, *switchCaseRange))
+                        if (locationIsInRange(start, *m_switchCaseRange))
                         {
                             // for (auto e: m_switchCaseTracker)
                             //     print_vec(e.second);
@@ -3110,34 +3372,67 @@ public:
         return b->getOpcode() >= BO_AndAssign && b->getOpcode() <= BO_OrAssign;
     }
 
+    bool exprIsDeclRefExpr(Expr *e)
+    {
+        // An Enum value is not a declaration reference
+        if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(e))
+        {
+            if (isa<EnumConstantDecl>(dre->getDecl()))
+                return false;
+            return true;
+        }
+        return false;
+    }
+
+    bool exprIsPointerDereference(Expr *e)
+    {
+        if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
+        {
+            if (uo->getOpcode() == UO_Deref)
+                return true;
+            return false;
+        }
+        return false;
+    }
+
+    bool exprIsScalarRef(Expr *e)
+    {
+        if (exprIsDeclRefExpr(e) ||  exprIsPointerDereference(e)
+            || isa<ArraySubscriptExpr>(e) || isa<MemberExpr>(e))
+            if (exprIsScalar(e) && !exprIsPointer(e))
+                return true;
+
+        return false;
+    }
+
     bool exprIsPointer(Expr *e)
     {
-        return ((e->getType()).getTypePtr())->isPointerType();
+        return ((e->getType()).getCanonicalType().getTypePtr())->isPointerType();
     }
 
     bool exprIsFloat(Expr *e)
     {
-        return ((e->getType()).getTypePtr())->isFloatingType();
+        return ((e->getType()).getCanonicalType().getTypePtr())->isFloatingType();
     }
 
     bool exprIsIntegral(Expr *e)
     {
-        return ((e->getType()).getTypePtr())->isIntegralType(m_compinst->getASTContext());
+        return ((e->getType()).getCanonicalType().getTypePtr())->isIntegralType(m_compinst->getASTContext());
     }
 
     bool exprIsScalar(Expr *e)
     {
-        return ((e->getType()).getTypePtr())->isScalarType(); 
+        return ((e->getType().getCanonicalType()).getTypePtr())->isScalarType(); 
     }
 
     bool exprIsArray(Expr *e)
     {
-        return ((e->getType()).getTypePtr())->isArrayType(); 
+        return ((e->getType().getCanonicalType()).getTypePtr())->isArrayType(); 
     }
 
     bool exprIsStruct(Expr *e)
     {
-        return ((e->getType()).getTypePtr())->isStructureType(); 
+        return ((e->getType().getCanonicalType()).getTypePtr())->isStructureType(); 
     }
 
     bool VisitEnumDecl(EnumDecl *ed)
@@ -3146,21 +3441,21 @@ public:
         SourceLocation start = ed->getLocStart();
         SourceLocation end = ed->getLocEnd();
 
-        isInsideEnumDecl = true;
+        m_isInsideEnumDecl = true;
         // cout << "found enum at line " << getLineNumber(&start) << endl;
         return true;
     }
 
     bool VisitTypedefDecl(TypedefDecl *td)
     {
-        typedefRange = new SourceRange(td->getLocStart(), td->getLocEnd());
+        m_typedefRange = new SourceRange(td->getLocStart(), td->getLocEnd());
         return true;
     }
 
     bool VisitExpr(Expr *e)
     {
         // Do not mutate or consider anything inside a typedef definition
-        if (locationIsInRange(e->getLocStart(), *typedefRange))
+        if (locationIsInRange(e->getLocStart(), *m_typedefRange))
             return true;
 
         if (isa<CharacterLiteral>(e) || isa<FloatingLiteral>(e) || isa<IntegerLiteral>(e))
@@ -3204,15 +3499,17 @@ public:
             // Store location for later consideration/prevention of generating uncompilable mutants.
             if (binOp_s->isAssignmentOp())
             {
-                if (lhsOfAssignment != nullptr)
-                    delete lhsOfAssignment;
+                if (m_lhsOfAssignment != nullptr)
+                    delete m_lhsOfAssignment;
 
-                lhsOfAssignment = new SourceRange(binOp_s->getLHS()->getLocStart(), startloc);
+                m_lhsOfAssignment = new SourceRange(binOp_s->getLHS()->getLocStart(), startloc);
             }
 
             // No mutation needs to be done if the token is not in the mutation range, inside array decl size or enum decl
-            if (targetInMutationRange(&startloc, &endloc) && !isInsideArraySize && !isInsideEnumDecl)
+            if (targetInMutationRange(&startloc, &endloc) && !m_isInsideArraySize && !m_isInsideEnumDecl)
             {
+                // cout << m_rewriter.ConvertToString(e) << endl;
+
                 vector<MutantOperator>::iterator startIt;
                 vector<MutantOperator>::iterator endIt;
 
@@ -3222,16 +3519,26 @@ public:
                     startIt = (m_holder->bin_arith).begin();
                     endIt = (m_holder->bin_arith).end();
 
+                    // printExprType(e);
+
                     // mark an expression that should not be 0 to prevent divide-by-zero error.
                     if (op.compare("/") == 0)
                     {
-                        checkForZero = true;
+                        m_checkForZero = true;
                         Expr *rhs = binOp_s->getRHS()->IgnoreParenImpCasts();
                         
-                        if (targetExpr != nullptr)
-                            delete targetExpr;
+                        if (m_targetExpr != nullptr)
+                            delete m_targetExpr;
                         
-                        targetExpr = new SourceRange(rhs->getLocStart(), rhs->getLocEnd());
+                        m_targetExpr = new SourceRange(rhs->getLocStart(), rhs->getLocEnd());
+                    }
+
+                    //===============================
+                    //=== GENERATING VTWD MUTANTS ===
+                    //===============================
+                    if (binOp_s->isAdditiveOp() && m_holder->doVTWD)
+                    {
+                        collectNonMutatableScalarRef(e, true);
                     }
                 }
                 else if (binOp_s->isLogicalOp())
@@ -3258,6 +3565,7 @@ public:
                 {
                     startIt = (m_holder->bin_relational).begin();
                     endIt = (m_holder->bin_relational).end();
+                    // cout << "relational\n";
                 }
 
                 else if (binOp_s->isBitwiseOp())
@@ -3317,6 +3625,7 @@ public:
                 bool leftIsPtr = (((binOp_s->getLHS()->IgnoreParenImpCasts())->getType()).getTypePtr())->isPointerType();
                 bool leftIsStruct = (((binOp_s->getLHS()->IgnoreParenImpCasts())->getType()).getTypePtr())->isStructureType();
 
+                // traverse each mutant operator that can be applied for this op
                 for (auto it = startIt; it != endIt; ++it)
                 {
                     bool onlyPlusAndMinus = false;
@@ -3355,11 +3664,24 @@ public:
                             continue;
 
                     if ((it->getName()).compare("OEAA") == 0)
+                    {
                         if (leftIsStruct)
                             continue;
                         if (leftIsPtr)
+                        {
+                            string rhsType{binOp_s->getRHS()->IgnoreImpCasts()->getType().getAsString()};
+                            if (rhsType.compare("void *") == 0)
+                                continue;
                             onlyMinusAssignemt = true;
+                        }
+                    }
 
+                    if (((it->getName()).compare("OALN") == 0
+                        || (it->getName()).compare("OARN") == 0) 
+                        && exprIsPointer(e))
+                        continue;
+
+                    // cout << "before check for domain" << endl;
                     // Generate mutants only for operators that can mutate this operator
                     if ((it->m_targets).find(op) != (it->m_targets).end())
                     {
@@ -3380,6 +3702,7 @@ public:
                                     rightNewOperandIsPointer(binOp_s->getRHS(), translateToOpcode(replacingToken)))
                                     continue;
                             }
+                            // cout << "pass first check" << endl;
 
 
                             if ((it->getName()).compare("OLAN") == 0 ||
@@ -3417,11 +3740,13 @@ public:
                                     if (!newLeftIsIntegral || !newRightIsIntegral)
                                         continue;
                                 }
-                            }              
+                            }  
+                            // cout << "pass 2nd check" << endl;            
 
                             // Do not replace the token with itself
                             if (replacingToken.compare(op) == 0)
                                 continue;
+                            // cout << "pass 3rd check" << endl;
 
                             if (onlyPlusAndMinus)
                             {
@@ -3429,22 +3754,26 @@ public:
                                     replacingToken.compare("+=") != 0 && replacingToken.compare("-=") != 0)
                                     continue;
                             }
+                            // cout << "pass 4th check" << endl;
 
                             if (onlyMinusAssignemt && replacingToken.compare("-=") != 0)
                                 continue;
+                            // cout << "pass 5 check" << endl;
 
                             // Prevent generation of umcompilable mutant because of divide-by-zero
-                            if (checkForZero && *targetExpr == SourceRange(binOp_s->getLocStart(), binOp_s->getLocEnd()))
+                            if (m_checkForZero && *m_targetExpr == SourceRange(binOp_s->getLocStart(), binOp_s->getLocEnd()))
                             {
                                 if (mutationCauseZero(binOp_s, replacingToken))
                                 {
                                     continue;
                                 }
                             }
+                            // cout << "pass 6 check" << endl;
 
                             if (replacingToken.compare("/") == 0 &&
                                 mutationCauseDivideByZero(binOp_s->getRHS()->IgnoreParenImpCasts()))
                                 continue;
+                            // cout << "pass 7 check" << endl;
 
                             if (firstBinOpAfterArrayDecl)
                             {
@@ -3452,8 +3781,8 @@ public:
                                 firstBinOpAfterArrayDecl = false;
                             }
 
-                            if (isInsideArraySize)
-                                if (locationIsInRange(startloc, *arrayDeclRange))
+                            if (m_isInsideArraySize)
+                                if (locationIsInRange(startloc, *m_arrayDeclRange))
                                 {
                                     binOp_s->setOpcode(translateToOpcode(replacingToken));
                                     llvm::APSInt val;
@@ -3466,8 +3795,9 @@ public:
                                         }
                                     }
                                     binOp_s->setOpcode(translateToOpcode(op));
-                                }                              
+                                }
 
+                            // cout << "before generate" << endl;
                             generateMutant(it->getName(), &startloc, &endloc, op, replacingToken);
 
                             // make sure not to generate more mutants than user wants/specifies
@@ -3480,8 +3810,8 @@ public:
                     }
                 }
 
-                if (checkForZero && *targetExpr == SourceRange(binOp_s->getLocStart(), binOp_s->getLocEnd()))
-                    checkForZero = false;
+                if (m_checkForZero && *m_targetExpr == SourceRange(binOp_s->getLocStart(), binOp_s->getLocEnd()))
+                    m_checkForZero = false;
             }   
         }
 
@@ -3498,7 +3828,11 @@ public:
             // generate sdl mutant for case of single non-compound statement of THEN part of if statement
             if (Stmt *thenStmt = is->getThen())
             {
-                if (!isa<CompoundStmt>(thenStmt) && !isa<NullStmt>(thenStmt))
+                if (CompoundStmt *c = dyn_cast<CompoundStmt>(thenStmt))
+                {
+                    deleteCompoundContent(c);
+                }
+                else if (/*!isa<CompoundStmt>(thenStmt) &&*/ !isa<NullStmt>(thenStmt))
                 {
                     string opName{"SSDL"};
                     string token{m_rewriter.ConvertToString(thenStmt)};
@@ -3519,6 +3853,7 @@ public:
                     }
                     else
                     {
+                        realendloc = getLocAfterSemiColon(realendloc);
                         if (targetInMutationRange(&startloc, &realendloc) /*&& noLabelsInside(SourceRange(startloc, realendloc))*/)
                         generateSdlMutant(opName, &startloc, &realendloc, token, replacingToken);
                     }
@@ -3599,6 +3934,45 @@ public:
                 generateMutantByNegation(cond, op);
         }
 
+        if (m_holder->doSSDL)
+        {
+            if (Stmt *body = ws->getBody())
+            {
+                if (CompoundStmt *c = dyn_cast<CompoundStmt>(body))
+                {
+                    deleteCompoundContent(c);
+                }
+                else if (/*!isa<CompoundStmt>(body) && */!isa<NullStmt>(body))
+                {
+                    string op{"SSDL"};
+                    string token{m_rewriter.ConvertToString(body)};
+                    SourceLocation start = body->getLocStart();
+                    SourceLocation end = body->getLocEnd();
+
+                    // make replacing token
+                    string replacingToken{";"};
+                    replacingToken.append(getLineNumber(&end)-getLineNumber(&start), '\n');
+
+                    SourceLocation realendloc = getRealEndLoc(&end);
+
+                    if (realendloc.isInvalid())
+                    {
+                        cout << "VisitWhileStmt: error getting end location. no SSDL mutants generated here.\n";
+                        cout << "error endloc is: "; printLocation(end);
+                        // exit(1);
+                    }
+                    else
+                    {
+                        realendloc = getLocAfterSemiColon(realendloc);
+                        if (targetInMutationRange(&start, &end))
+                            generateSdlMutant(op, &start, &realendloc, token, replacingToken);
+                    }
+                }
+            }
+            else
+                cout << "while stmt with no body\n";
+        }
+
         return true;
     }
 
@@ -3619,11 +3993,53 @@ public:
                 generateMutantByNegation(cond, op);
         }
 
+        if (m_holder->doSSDL)
+        {
+            if (Stmt *body = ds->getBody())
+            {
+                if (CompoundStmt *c = dyn_cast<CompoundStmt>(body))
+                {
+                    deleteCompoundContent(c);
+                }
+                else if (/*!isa<CompoundStmt>(body) &&*/ !isa<NullStmt>(body))
+                {
+                    string op{"SSDL"};
+                    string token{m_rewriter.ConvertToString(body)};
+                    SourceLocation start = body->getLocStart();
+                    SourceLocation end = body->getLocEnd();
+
+                    // make replacing token
+                    string replacingToken{";"};
+                    replacingToken.append(getLineNumber(&end)-getLineNumber(&start), '\n');
+
+                    SourceLocation realendloc = getRealEndLoc(&end);
+
+                    if (realendloc.isInvalid())
+                    {
+                        cout << "VisitDoStmt: error getting end location. no SSDL mutants generated here.\n";
+                        cout << "error endloc is: "; printLocation(end);
+                        // exit(1);
+                    }
+                    else
+                    {
+                        realendloc = getLocAfterSemiColon(realendloc);
+                        if (targetInMutationRange(&start, &end))
+                            generateSdlMutant(op, &start, &realendloc, token, replacingToken);
+                    }
+                }
+            }
+            else
+                cout << "do stmt with no body\n";
+        }
+
         return true;
     }
 
     bool VisitForStmt(ForStmt *fs)
     {
+        // printLocation(fs->getRParenLoc());
+        // cout << endl;
+
         //===============================
         //=== GENERATING OCNG MUTANTS ===
         //===============================
@@ -3637,6 +4053,48 @@ public:
 
             if (targetInMutationRange(&start, &end))
                 generateMutantByNegation(cond, op);
+        }
+
+        //===============================
+        //=== GENERATING SSDL MUTANTS ===
+        //===============================
+        if (m_holder->doSSDL)
+        {
+            if (Stmt *body = fs->getBody())
+            {
+                if (CompoundStmt *c = dyn_cast<CompoundStmt>(body))
+                {
+                    deleteCompoundContent(c);
+                }
+                else if (/*!isa<CompoundStmt>(body) && */!isa<NullStmt>(body))
+                {
+                    string op{"SSDL"};
+                    string token{m_rewriter.ConvertToString(body)};
+                    SourceLocation start = body->getLocStart();
+                    SourceLocation end = body->getLocEnd();
+
+                    // make replacing token
+                    string replacingToken{";"};
+                    replacingToken.append(getLineNumber(&end)-getLineNumber(&start), '\n');
+
+                    SourceLocation realendloc = getRealEndLoc(&end);
+
+                    if (realendloc.isInvalid())
+                    {
+                        cout << "VisitForStmt: error getting end location. no SSDL mutants generated here.\n";
+                        cout << "error endloc is: "; printLocation(end);
+                        // exit(1);
+                    }
+                    else
+                    {
+                        realendloc = getLocAfterSemiColon(realendloc);
+                        if (targetInMutationRange(&start, &end))
+                            generateSdlMutant(op, &start, &realendloc, token, replacingToken);
+                    }
+                }
+            }
+            else
+                cout << "for stmt with no body\n";
         }
 
         return true;
@@ -3703,24 +4161,46 @@ public:
 
             // In case of Do, For, While statement,
             // delete their body statement if that is not compound.
-            Stmt *target;
-            if (DoStmt *ds = dyn_cast<DoStmt>(s))
-                target = ds->getBody();
-            else 
-                if (ForStmt *fs = dyn_cast<ForStmt>(s))
-                    target = fs->getBody();
-                else 
-                    if (WhileStmt *fs = dyn_cast<WhileStmt>(s))
-                        target = fs->getBody();
-                    else 
-                        return;         
+            // Stmt *target;
+            // if (DoStmt *ds = dyn_cast<DoStmt>(s))
+            //     target = ds->getBody();
+            // else 
+            //     if (ForStmt *fs = dyn_cast<ForStmt>(s))
+            //         target = fs->getBody();
+            //     else 
+            //         if (WhileStmt *fs = dyn_cast<WhileStmt>(s))
+            //             target = fs->getBody();
+            //         else 
+            //             return;         
 
             // no braces surrounding the Body part of this statement
-            if (!isa<CompoundStmt>(target))
-            {
-                deleteStatement(target);
-            }
+            // if (!isa<CompoundStmt>(target))
+            // {
+            //     deleteStatement(target);
+            // }
         }            
+    }
+
+    void deleteCompoundContent(CompoundStmt *c)
+    {  
+        SourceLocation start = c->getLBracLoc();
+        SourceLocation end = c->getRBracLoc().getLocWithOffset(1);
+
+        if (!noUnremoveableLabelInside(SourceRange(start, end)))
+            return;
+
+        string op{"SSDL"};
+        string token{m_rewriter.ConvertToString(c)};
+        
+        
+        // make replacing token
+        string replacingToken{"{"};
+        replacingToken.append(getLineNumber(&end) - getLineNumber(&start), '\n');
+        replacingToken.append(1, '}');
+
+
+        if (targetInMutationRange(&start, &end))
+            generateMutant_new(op, &start, &end, token, replacingToken);
     }
 
     bool VisitCompoundStmt(CompoundStmt *c)
@@ -3732,6 +4212,10 @@ public:
         m_allLocalStructs.push_back(DeclInScope());
         m_allLocalPointers.push_back(DeclInScope());
 
+        // printLocation(c->getLBracLoc());
+        // printLocation(c->getRBracLoc());
+        // cout << endl;
+
         if (!m_holder->doSSDL)
             return true;
 
@@ -3740,13 +4224,13 @@ public:
         for (CompoundStmt::body_iterator it = c->body_begin(); it != c->body_end(); ++it)
         {
             // Do not apply SSDL to the last statement of statement expression
-            if (isInsideStmtExpr)
+            if (m_isInsideStmtExpr)
             {
                 CompoundStmt::body_iterator nextStmt = it;
                 ++nextStmt;
                 if (nextStmt == c->body_end())  // this is the last statement of a statement expression
                 {
-                    isInsideStmtExpr = false;
+                    m_isInsideStmtExpr = false;
                     continue;   // no SDL mutants generated for this statement
                 }
             }
@@ -3762,31 +4246,39 @@ public:
         SourceLocation start = fd->getLocStart();
         SourceLocation end = fd->getLocEnd();
 
-        if (fieldDeclRange != nullptr)
-            delete fieldDeclRange;
-        fieldDeclRange = new SourceRange(start, end);
+        if (m_fieldDeclRange != nullptr)
+            delete m_fieldDeclRange;
+        m_fieldDeclRange = new SourceRange(start, end);
 
         if (fd->getType().getTypePtr()->isArrayType())
         {
-            isInsideArraySize = true;
+            m_isInsideArraySize = true;
             firstBinOpAfterArrayDecl = true;
 
-            // if (arrayDeclRange != nullptr)
-            //     delete arrayDeclRange;
+            // if (m_arrayDeclRange != nullptr)
+            //     delete m_arrayDeclRange;
 
-            arrayDeclRange = new SourceRange(fd->getLocStart(), fd->getLocEnd());
+            m_arrayDeclRange = new SourceRange(fd->getLocStart(), fd->getLocEnd());
         }
         return true;
     }
 
     bool VisitVarDecl(VarDecl *vd)
     {
-        isInsideEnumDecl = false;
+        SourceLocation start = vd->getLocStart();
+        SourceLocation end = vd->getLocEnd();
+        /*if (targetInMutationRange(&start, &end))
+        {
+            cout << "var decl: " << getVarDeclName(vd) << endl;
+            cout << "type: " << vd->getType().getAsString() << endl;
+        }*/
 
-        if (locationIsInRange(vd->getLocStart(), *typedefRange))
+        m_isInsideEnumDecl = false;
+
+        if (locationIsInRange(start, *m_typedefRange))
             return true;
 
-        if (locationIsInRange(vd->getLocStart(), *functionPrototypeRange))
+        if (locationIsInRange(start, *m_functionPrototypeRange))
             return true;
 
         if (varDeclIsScalar(vd))
@@ -3800,7 +4292,7 @@ public:
                 // This is a local variable. m_currentScope vector CANNOT be empty.
                 if (m_allLocalScalars.empty())
                 {
-                    cout << "m_allLocalScalars is empty when meeting a local variable declaration at "; printLocation(vd->getLocStart());
+                    cout << "m_allLocalScalars is empty when meeting a local variable declaration at "; printLocation(start);
                     exit(1);
                 }
                 m_allLocalScalars.back().push_back(vd);
@@ -3810,10 +4302,10 @@ public:
         {
             if (auto t =  dyn_cast_or_null<ConstantArrayType>(vd->getType().getCanonicalType().getTypePtr())) 
             {  
-                isInsideArraySize = true;
+                m_isInsideArraySize = true;
                 firstBinOpAfterArrayDecl = true;
 
-                arrayDeclRange = new SourceRange(vd->getLocStart(), vd->getLocEnd());
+                m_arrayDeclRange = new SourceRange(start, end);
             }
 
             if (vd->isFileVarDecl())    // global variable
@@ -3822,10 +4314,13 @@ public:
             }
             else
             {
+                // if (targetInMutationRange(&start, &end))
+                //     cout << getVarDeclName(vd) << endl;
+
                 // This is a local variable. m_currentScope vector CANNOT be empty.
                 if (m_allLocalArrays.empty())
                 {
-                    cout << "m_allLocalArrays is empty when meeting a local variable declaration at "; printLocation(vd->getLocStart());
+                    cout << "m_allLocalArrays is empty when meeting a local variable declaration at "; printLocation(start);
                     exit(1);
                 }
                 m_allLocalArrays.back().push_back(vd);
@@ -3842,7 +4337,7 @@ public:
                 // This is a local variable. m_currentScope vector CANNOT be empty.
                 if (m_allLocalStructs.empty())
                 {
-                    cout << "m_allLocalArrays is empty when meeting a local variable declaration at "; printLocation(vd->getLocStart());
+                    cout << "m_allLocalArrays is empty when meeting a local variable declaration at "; printLocation(start);
                     exit(1);
                 }
                 m_allLocalStructs.back().push_back(vd);
@@ -3859,7 +4354,7 @@ public:
                 // This is a local variable. m_currentScope vector CANNOT be empty.
                 if (m_allLocalPointers.empty())
                 {
-                    cout << "m_allLocalPointers is empty when meeting a local variable declaration at "; printLocation(vd->getLocStart());
+                    cout << "m_allLocalPointers is empty when meeting a local variable declaration at "; printLocation(start);
                     exit(1);
                 }
                 m_allLocalPointers.back().push_back(vd);
@@ -3871,10 +4366,13 @@ public:
 
     bool VisitSwitchStmt(SwitchStmt *ss)
     {
-        if (switchConditionRange != nullptr)
-            delete switchConditionRange;
+        // printLocation(ss->getCond()->getLocEnd());
+        // cout << endl;
 
-        switchConditionRange = new SourceRange(ss->getSwitchLoc(), ss->getBody()->getLocStart());
+        if (m_switchConditionRange != nullptr)
+            delete m_switchConditionRange;
+
+        m_switchConditionRange = new SourceRange(ss->getSwitchLoc(), ss->getBody()->getLocStart());
 
         // remove switch statements that are already parsed/passed
         while (!m_switchCaseTracker.empty() && !locationIsInRange(ss->getLocStart(), m_switchCaseTracker.back().first))
@@ -3940,10 +4438,10 @@ public:
 
     bool VisitSwitchCase(SwitchCase *sc)
     {
-        if (switchCaseRange != nullptr)
-            delete switchCaseRange;
+        if (m_switchCaseRange != nullptr)
+            delete m_switchCaseRange;
 
-        switchCaseRange = new SourceRange(sc->getLocStart(), sc->getColonLoc());
+        m_switchCaseRange = new SourceRange(sc->getLocStart(), sc->getColonLoc());
 
         return true;
     }
@@ -3956,10 +4454,54 @@ public:
                                         getLineNumber(&start),
                                         getColNumber(&start) + refName.length());
 
+        //===============================
+        //=== GENERATING VTWD MUTANTS ===
+        //===============================
+        if (m_holder->doVTWD
+            && exprIsScalar(cast<Expr>(me)) && !exprIsPointer(cast<Expr>(me)))
+        {
+            if (targetInMutationRange(&start, &end)
+                && !m_isInsideEnumDecl 
+                && !locationIsInRange(start, *m_lhsOfAssignment)
+                && !locationIsInRange(start, *m_unaryIncrementRange) 
+                && !locationIsInRange(start, *m_unaryDecrementRange) 
+                && !locationIsInRange(start, *m_addressOfOpRange))
+            {
+                if (canApplyVTWDTo(refName))
+                    generateVTWDMutant(&start, &end, refName);
+                else
+                    // Block VTWD mutation once and remove the reference name from the nonMutatable list.
+                    for (auto it = m_nonVTWDMutatable.begin(); it != m_nonVTWDMutatable.end(); ++it)
+                        if (refName.compare(*it) == 0)
+                        {
+                            m_nonVTWDMutatable.erase(it);
+                            break;
+                        }
+            }
+        }
+
+        //===============================
+        //=== GENERATING VSCR MUTANTS ===
+        //===============================
         if (m_holder->doVSCR)
         {
-            if (!isInsideArraySize && !isInsideEnumDecl && targetInMutationRange(&start, &end))
+            if (!m_isInsideArraySize && !m_isInsideEnumDecl && targetInMutationRange(&start, &end))
                 generateVSCRMutant(me, end);
+        }
+
+        //===============================
+        //=== GENERATING CRCR MUTANTS ===
+        //===============================
+        if ((m_holder->CRCR_floating).size() != 0)
+        {
+            if (!m_isInsideArraySize
+                && !m_isInsideEnumDecl
+                && targetInMutationRange(&start, &end)
+                && !locationIsInRange(start, *m_lhsOfAssignment)
+                && !locationIsInRange(start, *m_unaryIncrementRange)
+                && !locationIsInRange(start, *m_unaryDecrementRange)
+                && !locationIsInRange(start, *m_addressOfOpRange))
+                generateCRCRMutant(cast<Expr>(me), start, end);
         }
 
         //=================================================
@@ -3968,7 +4510,7 @@ public:
         if (m_holder->doVGSR || m_holder->doVLSR || m_holder->doVGAR || m_holder->doVLAR ||
             m_holder->doVGTR || m_holder->doVLTR || m_holder->doVGPR || m_holder->doVLPR)
         {
-            if (!isInsideArraySize && !isInsideEnumDecl && targetInMutationRange(&start, &end))
+            if (!m_isInsideArraySize && !m_isInsideEnumDecl && targetInMutationRange(&start, &end))
             {
                 if (exprIsScalar(cast<Expr>(me)) && !exprIsPointer(cast<Expr>(me)))
                 {
@@ -4013,6 +4555,43 @@ public:
         SourceLocation start = s->getLocStart();
         SourceLocation end = s->getLocEnd();
 
+        // set up Proteum-style line number
+        if (getLineNumber(&start) > m_proteumEndOfStmt)
+        {
+            m_proteumStmtLineNum = getLineNumber(&start);
+            
+            if (isa<IfStmt>(s) || isa<WhileStmt>(s) || isa<SwitchStmt>(s)) 
+            {
+                SourceLocation endOfStmt = end;
+
+                if (IfStmt *is = dyn_cast<IfStmt>(s))
+                    endOfStmt = is->getCond()->getLocEnd();
+                else if (WhileStmt *ws = dyn_cast<WhileStmt>(s))
+                    endOfStmt = ws->getCond()->getLocEnd();
+                else if (SwitchStmt *ss = dyn_cast<SwitchStmt>(s))
+                    endOfStmt = ss->getCond()->getLocEnd();
+
+                while (*(m_srcmgr.getCharacterData(endOfStmt)) != '\n'
+                    && *(m_srcmgr.getCharacterData(endOfStmt)) != '{')
+                    endOfStmt = endOfStmt.getLocWithOffset(1);
+
+                m_proteumEndOfStmt = getLineNumber(&endOfStmt);
+            }
+            /*else if (ForStmt *fs = dyn_cast<ForStmt>(s))
+            {
+                SourceLocation endOfStmt = fs->getRParenLoc();
+                m_proteumEndOfStmt = getLineNumber(&endOfStmt);
+            }*/
+            else if (isa<CompoundStmt>(s) || isa<LabelStmt>(s) || isa<DoStmt>(s) || isa<SwitchCase>(s) || isa<ForStmt>(s))
+                m_proteumEndOfStmt = m_proteumStmtLineNum;
+            else
+                m_proteumEndOfStmt = getLineNumber(&end);
+        }
+
+
+        // cout << "Statement: " << m_rewriter.ConvertToString(s) << "//\n";
+        // cout << "location: "; printLocation(start);
+
         while (!m_currentScope.empty())
         {
             if (!locationIsInRange(start, m_currentScope.back()))
@@ -4029,9 +4608,9 @@ public:
             }
         }
 
-        if (isInsideArraySize && !locationIsInRange(start, *arrayDeclRange))
+        if (m_isInsideArraySize && !locationIsInRange(start, *m_arrayDeclRange))
         {
-            isInsideArraySize = false;
+            m_isInsideArraySize = false;
         }
 
         return true;
@@ -4041,9 +4620,9 @@ public:
     {   
         // Function with nobody, and function declaration within another function is function prototype.
         // no global or local variable mutation will be applied here.
-        if (!f->hasBody() || locationIsInRange(f->getLocStart(), *currentFunctionDeclRange))
+        if (!f->hasBody() || locationIsInRange(f->getLocStart(), *m_currentFunctionDeclRange))
         {
-            functionPrototypeRange = new SourceRange(f->getLocStart(), f->getLocEnd());
+            m_functionPrototypeRange = new SourceRange(f->getLocStart(), f->getLocEnd());
         }
         else
         {
@@ -4060,18 +4639,18 @@ public:
             m_allLocalStructs.push_back(DeclInScope());
             m_allLocalPointers.push_back(DeclInScope());
 
-            isInsideEnumDecl = false;
+            m_isInsideEnumDecl = false;
             // isInsideFunctionDecl = true;
 
-            if (currentFunctionDeclRange != nullptr)
-                delete currentFunctionDeclRange;
+            if (m_currentFunctionDeclRange != nullptr)
+                delete m_currentFunctionDeclRange;
 
-            currentFunctionDeclRange = new SourceRange(f->getLocStart(), f->getLocEnd());
+            m_currentFunctionDeclRange = new SourceRange(f->getLocStart(), f->getLocEnd());
 
             // remove local constants appearing before currently parsed function
             auto it = m_allLocalConsts->begin();
             for ( ; it != m_allLocalConsts->end(); ++it)
-                if (!locationBeforeRange(it->second.first, *currentFunctionDeclRange))
+                if (!locationBeforeRange(it->second.first, *m_currentFunctionDeclRange))
                     break;
             
             if (it != m_allLocalConsts->begin())
