@@ -5687,7 +5687,7 @@ int main(int argc, char *argv[])
 
     if (useAllOperator) 
     {
-        // holder->useAll();
+        holder->useAll();
     }
 
     // Make mutation database file named <inputfilename>_mut_db.out
