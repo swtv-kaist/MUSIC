@@ -1017,6 +1017,8 @@ public:
 
     ScalarRefNameList m_nonVTWDMutatable;
 
+    bool onlyIntOCOR;
+
     MyASTVisitor(SourceManager &sm, LangOptions &langopt, UserInput *userInput,  
                 MutantOperatorHolder *holder, CompilerInstance *CI, vector<SourceLocation> *labels,
                 LabelUsageMap *usageMap, GlobalScalarConstants *globalConsts, 
@@ -1041,6 +1043,7 @@ public:
         firstBinOpAfterArrayDecl = false;
         // isInsideFunctionDecl = false;
         m_isInsideEnumDecl = false;
+        onlyIntOCOR = false;
 
         m_lhsOfAssignment = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()));
@@ -3058,11 +3061,7 @@ public:
                                     "unsigned long", "char", "unsigned char", "signed char"};
                 vector<string> floatType{"float", "double", "long double"};
 
-                // vector<string> rangeOCOR{"int", "unsigned", "short", "long", "unsigned long", "char", "unsigned char", "signed char", "float", "double", "long double"};
-
                 string typeString{csce->getTypeAsWritten().getCanonicalType().getAsString()};
-                // vector<string> words;
-                // split_string_into_vector(type, words, string(" "));
 
                 if (typeString.compare("unsigned int") == 0)
                     typeString = "unsigned";
@@ -3089,17 +3088,26 @@ public:
                     }
                 }
 
-                if (!locationIsInRange(start, *m_arraySubscriptRange)
-                    && !locationIsInRange(start, *m_switchCaseRange)
-                    && !locationIsInRange(start, *m_switchConditionRange)
-                    && !locationIsInRange(start, *m_nonOCORMutatableRange))
+                bool subExprIsPointer{csce->getSubExpr()->IgnoreImpCasts()->getType().getCanonicalType().getTypePtr()->isPointerType()};
+
+
+                if (onlyIntOCOR)
+                    onlyIntOCOR = false;
+                else
                 {
-                    for (auto e: floatType)
+                    if (!locationIsInRange(start, *m_arraySubscriptRange)
+                        && !locationIsInRange(start, *m_switchCaseRange)
+                        && !locationIsInRange(start, *m_switchConditionRange)
+                        && !locationIsInRange(start, *m_nonOCORMutatableRange)
+                        && !subExprIsPointer)
                     {
-                        if (e.compare(typeString) != 0)
+                        for (auto e: floatType)
                         {
-                            string replacingToken = "(" + e + ")";
-                            generateMutant_new(op, &start, &end, token, replacingToken);
+                            if (e.compare(typeString) != 0)
+                            {
+                                string replacingToken = "(" + e + ")";
+                                generateMutant_new(op, &start, &end, token, replacingToken);
+                            }
                         }
                     }
                 }
@@ -3878,6 +3886,16 @@ public:
                 {
                     startIt = (m_holder->bin_plainAssign).begin();
                     endIt = (m_holder->bin_plainAssign).end();
+
+                    if (CStyleCastExpr *csce = dyn_cast<CStyleCastExpr>(binOp_s->getRHS()->IgnoreImpCasts()))
+                    {
+                        const Type *typeOfCast = csce->getTypeAsWritten().getCanonicalType().getTypePtr();
+                        if (binOp_s->getLHS()->IgnoreImpCasts()->getType().getCanonicalType().getTypePtr()->isPointerType()
+                            && (typeOfCast->isIntegerType() || typeOfCast->isCharType()))
+                        {
+                            onlyIntOCOR = true;
+                        }
+                    }
                 }
                 else
                 {
