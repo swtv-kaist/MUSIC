@@ -223,7 +223,7 @@ void validate_replacee(string &op, set<string> &replacee)
     set<string> empty_replacee{"CRCR", "SSDL", "VLSR", "VGSR", "VGAR", "VLAR", 
                             "VGTR", "VLTR", "VGPR", "VLPR", "VSCR", "CGCR", "CLCR",
                             "CGSR", "CLSR", "OMMO", "OPPO", "OLNG", "OCNG", "OBNG", 
-                            "OBOM", "VTWD", "OIPM"};
+                            "OBOM", "VTWD", "OIPM", "OCOR"};
 
     // Determine the set of valid tokens based on the type of operator
     set<string> valid;
@@ -372,7 +372,7 @@ void validate_replacer(string &op, set<string> &replacer)
     set<string> empty_replacer{"SSDL", "VLSR", "VGSR", "VGAR", "VLAR", "VGTR",
                                 "VLTR", "VGPR", "VLPR", "VSCR", "CGCR", "CLCR",
                                 "CGSR", "CLSR", "OMMO", "OPPO", "OLNG", "OCNG",
-                                "OBNG", "OBOM", "VTWD", "OIPM"};
+                                "OBNG", "OBOM", "VTWD", "OIPM", "OCOR"};
 
     // Determine the set of valid tokens based on the type of operator
     set<string> valid;  
@@ -542,6 +542,7 @@ public:
     bool doOCNG;
     bool doVTWD;
     bool doOIPM;
+    bool doOCOR;
 
     MutantOperatorHolder()
     {
@@ -566,6 +567,7 @@ public:
         doOCNG = false; 
         doVTWD = false;
         doOIPM = false;
+        doOCOR = false;
     }
     ~MutantOperatorHolder(){}
 
@@ -768,6 +770,10 @@ public:
         {
             doOIPM = true;
         }
+        else if (op.getName().compare("OCOR") == 0)
+        {
+            doOCOR = true;
+        }
         else {
             // The operator does not belong to any of the supported categories
             return false;
@@ -874,6 +880,7 @@ public:
         doOCNG = true;  
         doVTWD = true;  
         doOIPM = true;
+        doOCOR = true;
     }
 };
 
@@ -995,9 +1002,14 @@ public:
     SourceRange *m_unaryIncrementRange;
     SourceRange *m_unaryDecrementRange;
     SourceRange *m_arraySubscriptRange;
+    SourceRange *m_switchCaseRange;
+
     // variable declaration inside a struct or union is called field declaration
     SourceRange *m_fieldDeclRange; 
-    SourceRange *m_switchCaseRange;   
+
+    // range of bitwise, shift, and modulo operator
+    // OCOR cannot mutate to float type
+    SourceRange *m_nonOCORMutatableRange;
 
     Sema *m_sema;
 
@@ -1051,6 +1063,8 @@ public:
         m_fieldDeclRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID())); 
         m_switchCaseRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
+                                            m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID())); 
+        m_nonOCORMutatableRange = new SourceRange(m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID()),
                                             m_srcmgr.getLocForStartOfFile(m_srcmgr.getMainFileID())); 
 
         m_arrayDeclRange = nullptr;
@@ -3025,6 +3039,74 @@ public:
         }
     }
 
+    void handleCStyleCastExpr(CStyleCastExpr *csce)
+    {
+        //===============================
+        //=== GENERATING OCOR MUTANTS ===
+        //===============================
+        if (m_holder->doOCOR)
+        {
+            SourceLocation start = csce->getLocStart();
+            SourceLocation end = getLocBeforeSemiColon(cast<Expr>(csce));
+            const Type *type{csce->getTypeAsWritten().getCanonicalType().getTypePtr()};
+
+            if (targetInMutationRange(&start, &end)
+                && !locationIsInRange(start, *m_fieldDeclRange)
+                && (type->isIntegerType() || type->isCharType() || type->isFloatingType()))
+            {
+                vector<string> intType{"int", "unsigned", "short", "long", 
+                                    "unsigned long", "char", "unsigned char", "signed char"};
+                vector<string> floatType{"float", "double", "long double"};
+
+                // vector<string> rangeOCOR{"int", "unsigned", "short", "long", "unsigned long", "char", "unsigned char", "signed char", "float", "double", "long double"};
+
+                string typeString{csce->getTypeAsWritten().getCanonicalType().getAsString()};
+                // vector<string> words;
+                // split_string_into_vector(type, words, string(" "));
+
+                if (typeString.compare("unsigned int") == 0)
+                    typeString = "unsigned";
+
+                start = csce->getLParenLoc();
+                end = csce->getRParenLoc();
+                end = end.getLocWithOffset(1);
+
+                string token;
+                SourceLocation walk = start;
+                while (walk != end)
+                {
+                    token += *(m_srcmgr.getCharacterData(walk));
+                    walk = walk.getLocWithOffset(1);                     
+                }
+
+                string op{"OCOR"};
+                for (auto e: intType)
+                {
+                    if (e.compare(typeString) != 0)
+                    {
+                        string replacingToken = "(" + e + ")";
+                        generateMutant_new(op, &start, &end, token, replacingToken);
+                    }
+                }
+
+                if (!locationIsInRange(start, *m_arraySubscriptRange)
+                    && !locationIsInRange(start, *m_switchCaseRange)
+                    && !locationIsInRange(start, *m_switchConditionRange)
+                    && !locationIsInRange(start, *m_nonOCORMutatableRange))
+                {
+                    for (auto e: floatType)
+                    {
+                        if (e.compare(typeString) != 0)
+                        {
+                            string replacingToken = "(" + e + ")";
+                            generateMutant_new(op, &start, &end, token, replacingToken);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void handleUnaryOperator(UnaryOperator *uo)
     {
         SourceLocation start = uo->getLocStart();
@@ -3607,6 +3689,10 @@ public:
         {
             handleScalarConstant(e);
         }
+        else if (CStyleCastExpr *csce = dyn_cast<CStyleCastExpr>(e))
+        {
+            handleCStyleCastExpr(csce);
+        }
         else if (AbstractConditionalOperator *aco = dyn_cast<AbstractConditionalOperator>(e))   // condition ? then : else
         {
             handleAbstractConditionalOperator(aco);
@@ -3664,7 +3750,17 @@ public:
                     startIt = (m_holder->bin_arith).begin();
                     endIt = (m_holder->bin_arith).end();
 
-                    // printExprType(e);
+                    // Setting up for blocking uncompilable mutants for OCOR
+                    if (m_holder->doOCOR && op.compare("%") == 0)
+                    {
+                        if (!locationIsInRange(binOp_s->getLocStart(), *m_nonOCORMutatableRange))
+                        {
+                            if (m_nonOCORMutatableRange != nullptr)
+                                delete m_nonOCORMutatableRange;
+
+                            m_nonOCORMutatableRange = new SourceRange(binOp_s->getLocStart(), getEndLocOfExpr(e));
+                        }
+                    }
 
                     // mark an expression that should not be 0 to prevent divide-by-zero error.
                     if (op.compare("/") == 0)
@@ -3715,6 +3811,18 @@ public:
 
                 else if (binOp_s->isBitwiseOp())
                 {
+                    // Setting up for blocking uncompilable mutants for OCOR
+                    if (m_holder->doOCOR)
+                    {
+                        if (!locationIsInRange(binOp_s->getLocStart(), *m_nonOCORMutatableRange))
+                        {
+                            if (m_nonOCORMutatableRange != nullptr)
+                                delete m_nonOCORMutatableRange;
+
+                            m_nonOCORMutatableRange = new SourceRange(binOp_s->getLocStart(), getEndLocOfExpr(e));
+                        }
+                    }
+
                     startIt = (m_holder->bin_bitwise).begin();
                     endIt = (m_holder->bin_bitwise).end();
 
@@ -3738,6 +3846,18 @@ public:
                 {
                     startIt = (m_holder->bin_shift).begin();
                     endIt = (m_holder->bin_shift).end();
+
+                    // Setting up for blocking uncompilable mutants for OCOR
+                    if (m_holder->doOCOR)
+                    {
+                        if (!locationIsInRange(binOp_s->getLocStart(), *m_nonOCORMutatableRange))
+                        {
+                            if (m_nonOCORMutatableRange != nullptr)
+                                delete m_nonOCORMutatableRange;
+
+                            m_nonOCORMutatableRange = new SourceRange(binOp_s->getLocStart(), getEndLocOfExpr(e));
+                        }
+                    }
                 }
                 else if (isArithmeticAssignmentOperator(binOp_s))
                 {
