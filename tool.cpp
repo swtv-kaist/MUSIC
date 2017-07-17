@@ -1191,8 +1191,8 @@ public:
     */
     string getArrayElementType(QualType type)
     {
-        cout << type.getAsString() << endl;
-        cout << type.getCanonicalType().getAsString() << endl << endl;
+        // cout << type.getAsString() << endl;
+        // cout << type.getCanonicalType().getAsString() << endl << endl;
 
         string res;
 
@@ -1211,9 +1211,10 @@ public:
         }
 
         // remove const from element type
-        string firstWord = res.substr(0, res.find_first_of(' '));
+        /*string firstWord = res.substr(0, res.find_first_of(' '));
         if (firstWord.compare("const") == 0)
-            res = res.substr(6);
+            res = res.substr(6);*/
+        
         return res;
     }
 
@@ -1738,43 +1739,42 @@ public:
             ret = e->getLocEnd();
             ret = getRealEndLoc(&ret);
         }
-        else
-            if (isa<DeclRefExpr>(e) || isa<MemberExpr>(e))
-            {
-                int length = m_rewriter.ConvertToString(e).length();
-                SourceLocation start = e->getLocStart();
-                ret = m_srcmgr.translateLineCol(m_srcmgr.getMainFileID(),
-                                                getLineNumber(&start),
-                                                getColNumber(&start) + length);
-            }
-            else if (isa<CharacterLiteral>(e) || isa<FloatingLiteral>(e) || isa<IntegerLiteral>(e))
-            {
-                ret = getEndLocForConst(e->getLocStart());
-            }
-            else if (isa<CStyleCastExpr>(e))    // explicit cast
-            {
-                return getEndLocOfExpr(cast<CStyleCastExpr>(e)->getSubExpr()->IgnoreImpCasts());
-            }
-            if (ParenExpr *pe = dyn_cast<ParenExpr>(e))
-            {
-                ret = pe->getRParen();
-                ret = ret.getLocWithOffset(1);
-            }
-            else 
-            {
+        else if (isa<DeclRefExpr>(e) || isa<MemberExpr>(e))
+        {
+            int length = m_rewriter.ConvertToString(e).length();
+            SourceLocation start = e->getLocStart();
+            ret = m_srcmgr.translateLineCol(m_srcmgr.getMainFileID(),
+                                            getLineNumber(&start),
+                                            getColNumber(&start) + length);
+        }
+        else if (isa<CharacterLiteral>(e) || isa<FloatingLiteral>(e) || isa<IntegerLiteral>(e))
+        {
+            ret = getEndLocForConst(e->getLocStart());
+        }
+        else if (isa<CStyleCastExpr>(e))    // explicit cast
+        {
+            return getEndLocOfExpr(cast<CStyleCastExpr>(e)->getSubExpr()->IgnoreImpCasts());
+        }
+        else if (ParenExpr *pe = dyn_cast<ParenExpr>(e))
+        {
+            ret = pe->getRParen();
+            ret = ret.getLocWithOffset(1);
+        }
+        else 
+        {
+            ret = e->getLocEnd();
+            ret = getRealEndLoc(&ret);
+
+            if (ret.isInvalid())
                 ret = e->getLocEnd();
-                ret = getRealEndLoc(&ret);
 
-                if (ret.isInvalid())
-                    ret = e->getLocEnd();
-
-                // getRealEndLoc returns location after semicolon (depends)
-                SourceLocation prevLoc = m_srcmgr.translateLineCol(m_srcmgr.getMainFileID(),
-                                                                    getLineNumber(&ret),
-                                                                    getColNumber(&ret) - 1);
-                if (*(m_srcmgr.getCharacterData(prevLoc)) == ';')
-                    ret = prevLoc;
-            }
+            // getRealEndLoc returns location after semicolon (depends)
+            SourceLocation prevLoc = m_srcmgr.translateLineCol(m_srcmgr.getMainFileID(),
+                                                                getLineNumber(&ret),
+                                                                getColNumber(&ret) - 1);
+            if (*(m_srcmgr.getCharacterData(prevLoc)) == ';')
+                ret = prevLoc;
+        }
 
         return ret;
     }
@@ -1968,7 +1968,7 @@ public:
     void generateVLSRMutant(SourceLocation *start, SourceLocation *end, string refName)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
         bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
@@ -2013,7 +2013,7 @@ public:
     void generateVGARMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
         bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
@@ -2047,10 +2047,10 @@ public:
     void generateVLARMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         // cannot mutate a variable inside addressOf op (&) to a register variable
         bool skipRegister = locationIsInRange(*start, *m_addressOfOpRange);
@@ -2092,10 +2092,10 @@ public:
     void generateVGTRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         string structType = getStructureType(type);
 
@@ -2129,10 +2129,10 @@ public:
     void generateVLTRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         // cannot mutate a variable inside addressOf op (&) to a register variable
         bool skipRegister = locationIsInRange(*start, *m_addressOfOpRange);
@@ -2178,10 +2178,10 @@ public:
     void generateVGPRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         string pointeeType = getPointerType(type);
 
@@ -2215,10 +2215,10 @@ public:
     void generateVLPRMutant(SourceLocation *start, SourceLocation *end, string refName, QualType type)
     {
         // cannot mutate the variable in switch condition to a floating-type variable
-		bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
+        bool skipFloating = locationIsInRange(*start, *m_switchConditionRange);
 
         // cannot mutate a variable in lhs of assignment to a const variable
-		bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
+        bool skipConst = locationIsInRange(*start, *m_lhsOfAssignment);
 
         // cannot mutate a variable inside addressOf op (&) to a register variable
         bool skipRegister = locationIsInRange(*start, *m_addressOfOpRange);
