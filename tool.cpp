@@ -1462,11 +1462,25 @@ public:
         return static_cast<int>(m_srcmgr.getExpansionLineNumber(*loc));
     }
 
+
     // Return the column number of a source location.
     int getColNumber(SourceLocation *loc) 
     {
         return static_cast<int>(m_srcmgr.getExpansionColumnNumber(*loc));
     }   
+
+    // Retrun the presumed line number of a source location.
+    int getPresumedLineNumber(SourceLocation *loc)
+    {
+        return static_cast<int>(m_srcmgr.getPresumedLineNumber(*loc));
+    }
+
+    // Return the presumed column number of a source location.
+    int getPresumedColNumber(SourceLocation *loc)
+    {
+        return static_cast<int>(m_srcmgr.getPresumedColumnNumber(*loc));
+    }
+
 
     string convertIntToString(int num)
     {
@@ -1596,14 +1610,23 @@ public:
         out_mutDb << getColNumber(startloc) << "\t";
         out_mutDb << getLineNumber(endloc) << "\t";
         out_mutDb << getColNumber(endloc) << "\t";
-        out_mutDb << token << "\t";
+        out_mutDb << getPresumedLineNumber(startloc) << "\t";
+        out_mutDb << getPresumedColNumber(startloc) << "\t";
+        out_mutDb << getPresumedLineNumber(endloc) << "\t";
+        out_mutDb << getPresumedColNumber(endloc) << "\t";
+        //out_mutDb << token << "\t";
 
         // write information about token AFTER mutation (range and token)
         out_mutDb << getLineNumber(newstartloc) << "\t";
         out_mutDb << getColNumber(newstartloc) << "\t";
         out_mutDb << getLineNumber(newendloc) << "\t";
         out_mutDb << getColNumber(newendloc) << "\t";
-        out_mutDb << newtoken << endl;
+        out_mutDb << getPresumedLineNumber(newstartloc) << "\t";
+        out_mutDb << getPresumedColNumber(newstartloc) << "\t";
+        out_mutDb << getPresumedLineNumber(newendloc) << "\t";
+        out_mutDb << getPresumedColNumber(newendloc) << "\t";
+        out_mutDb << endl;
+        //out_mutDb << newtoken << endl;
 
         out_mutDb.close(); 
     }
