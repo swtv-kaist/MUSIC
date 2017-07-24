@@ -64,6 +64,9 @@ typedef vector<pair<string, pair<SourceLocation, bool>>> LocalScalarConstants;
 // pair<range of switch statement, list of case values' string representation>
 typedef vector<pair<SourceRange, vector<string>>> SwitchCaseTracker;
 
+typedef vector<string> GlobalStringLiterals;
+typedef vector<pair<string, SourceLocation>> LocalStringLiterals;
+
 struct comp
 {
     bool operator() (const LabelDeclLocation &lhs, const LabelDeclLocation &rhs) const
@@ -162,6 +165,17 @@ void split_string_into_vector(string target, vector<string> &output, string deli
         target.erase(0, pos + delimiter.length());
     }
     output.push_back(target);
+}
+
+bool stringIsInVector(string s, vector<string> &v)
+{
+    auto it = v.begin();
+
+    while (it != v.end() && (*it).compare(s) != 0)
+        ++it;
+
+    // if the iterator reach the end then the string is NOT in vector v
+    return !(it == v.end());
 }
 
 // Return the number of not-newline character
@@ -1098,6 +1112,9 @@ public:
     GlobalScalarConstants *m_allGlobalConsts;
     LocalScalarConstants *m_allLocalConsts;
 
+    GlobalStringLiterals *m_allGlobalStringLiterals;
+    LocalStringLiterals *m_allLocalStringLiterals;
+
     vector<VarDecl *> m_allGlobalScalars;
     vector<DeclInScope> m_allLocalScalars;
 
@@ -1140,11 +1157,13 @@ public:
     MyASTVisitor(SourceManager &sm, LangOptions &langopt, UserInput *userInput,  
                 MutantOperatorHolder *holder, CompilerInstance *CI, vector<SourceLocation> *labels,
                 LabelUsageMap *usageMap, GlobalScalarConstants *globalConsts, 
-                LocalScalarConstants *localConsts) 
+                LocalScalarConstants *localConsts, GlobalStringLiterals *globalStrings,
+                LocalStringLiterals *localStrings) 
         : m_srcmgr(sm), m_langopt(langopt), m_holder(holder),
         m_userinput(userInput), m_mutFileNum(1), m_compinst(CI),
         m_labels(labels), m_labelUsageMap(usageMap),
-        m_allGlobalConsts(globalConsts), m_allLocalConsts(localConsts)
+        m_allGlobalConsts(globalConsts), m_allLocalConsts(localConsts),
+        m_allGlobalStringLiterals(globalStrings), m_allLocalStringLiterals(localStrings)
     {
         m_proteumEndOfStmt = 0;
 
@@ -1190,6 +1209,12 @@ public:
 
         m_arrayDeclRange = nullptr;
         m_targetExpr = nullptr;
+
+        // print_vec(*(m_allGlobalStringLiterals));
+        // cout << endl;
+
+        // for (auto it: *(m_allLocalStringLiterals))
+        //     cout << it.first << endl;
     }
 
     void printIdentifierTable(const ASTContext &astcontext)
@@ -3616,6 +3641,52 @@ public:
                 }
             }
         }
+
+        //===============================
+        //=== GENERATING SCSR MUTANTS ===
+        //===============================
+        if (m_holder->doSCSR)
+        {
+            if (!m_isInsideEnumDecl &&
+                targetInMutationRange(&start, &end) &&
+                !locationIsInRange(start, *m_fieldDeclRange))
+            {
+                string op{"SCSR"};
+
+                // use to prevent duplicate mutants from local and global string literals
+                set<string> stringCache;
+
+                for (auto literal: *m_allGlobalStringLiterals)
+                    if (literal.compare(token) != 0)
+                    {
+                        generateMutant_new(op, &start, &end, token, literal);
+                        stringCache.insert(literal);
+                    }
+
+                if (locationIsInRange(start, *m_currentFunctionDeclRange))
+                {
+                    // mutate to local strings only if this token is inside a function
+                    for (auto literal: *m_allLocalStringLiterals)
+                    {
+                        if (locationBeforeRange(literal.second, *m_currentFunctionDeclRange))
+                            continue;
+
+                        // all the strings after this are outside the currently parsed function
+                        if (!locationIsInRange(literal.second, *m_currentFunctionDeclRange))
+                            break;
+
+                        // mutate if the literal is not the same as the token
+                        // and prevent duplicate if the literal is already in the cache
+                        if (literal.first.compare(token) != 0 &&
+                            stringCache.find(literal.first) == stringCache.end())
+                        {
+                            stringCache.insert(literal.first);
+                            generateMutant_new(op, &start, &end, token, literal.first);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     int getPrecedence(BinaryOperator::Opcode op)
@@ -5240,6 +5311,15 @@ public:
             
             if (it != m_allLocalConsts->begin())
                 m_allLocalConsts->erase(m_allLocalConsts->begin(), it);
+
+            // remove local stirngs appearing before currently parsed function
+            auto stringIt = m_allLocalStringLiterals->begin();
+            for ( ; stringIt != m_allLocalStringLiterals->end(); ++stringIt)
+                if (!locationBeforeRange(stringIt->second, *m_currentFunctionDeclRange))
+                    break;
+            
+            if (stringIt != m_allLocalStringLiterals->begin())
+                m_allLocalStringLiterals->erase(m_allLocalStringLiterals->begin(), stringIt);
         }
 
         return true;
@@ -5253,9 +5333,11 @@ public:
                 UserInput *userInput, MutantOperatorHolder *holder,
                 CompilerInstance *CI, vector<SourceLocation> *labels,
                 LabelUsageMap *usageMap, GlobalScalarConstants *globalConsts,
-                LocalScalarConstants *localConsts) 
+                LocalScalarConstants *localConsts, GlobalStringLiterals *globalStrings,
+                LocalStringLiterals *localStrings) 
         : Visitor(sm, langopt, userInput, holder, CI, 
-                    labels, usageMap, globalConsts, localConsts) 
+                    labels, usageMap, globalConsts, localConsts,
+                    globalStrings, localStrings) 
     { 
     }
 
@@ -5307,6 +5389,9 @@ public:
 
     set<string> localConstCache;
     set<string> globalConstCache;
+
+    GlobalStringLiterals m_allGlobalStringLiterals;
+    LocalStringLiterals m_allLocalStringLiterals;
 
     InformationVisitor(CompilerInstance *CI, MutantOperatorHolder *holder)
         :m_compinst(CI), m_holder(holder), m_srcmgr(CI->getSourceManager()),
@@ -5427,6 +5512,32 @@ public:
                 // print_set(m_allGlobalConsts);
             }
         }
+        else if (isa<StringLiteral>(e))
+        {
+            SourceLocation start = e->getLocStart();
+            string literal{m_rewriter.ConvertToString(e)};
+
+            if (locationIsInRange(start, *lastParsedFunctionRange))
+            {
+                // local string literal
+                auto it = m_allLocalStringLiterals.begin();
+
+                while (it != m_allLocalStringLiterals.end() &&
+                        (it->first.compare(literal) != 0 ||
+                            (it->first.compare(literal) == 0 &&
+                                !locationIsInRange(it->second, *lastParsedFunctionRange))))
+                    ++it;
+
+                if (it == m_allLocalStringLiterals.end())
+                    m_allLocalStringLiterals.push_back(make_pair(literal, start));
+            }
+            else
+            {
+                // global string literal
+                if (!stringIsInVector(literal, m_allGlobalStringLiterals))
+                    m_allGlobalStringLiterals.push_back(literal);
+            }
+        }
 
         return true;
     }
@@ -5484,6 +5595,16 @@ public:
     LocalScalarConstants* getAllLocalConstants()
     {
         return &(Visitor.m_allLocalConsts);
+    }
+
+    GlobalStringLiterals* getAllGlobalStringLiterals()
+    {
+        return &(Visitor.m_allGlobalStringLiterals);
+    }
+
+    LocalStringLiterals* getAllLocalStringLiterals()
+    {
+        return &(Visitor.m_allLocalStringLiterals);
     }
     
 private:
@@ -6033,8 +6154,10 @@ int main(int argc, char *argv[])
 
     // Create an AST consumer instance which is going to get called by ParseAST.
     MyASTConsumer TheConsumer(SourceMgr, TheCompInst.getLangOpts(), userInput, 
-                            holder, &TheCompInst, TheGatherer->getLabels(), TheGatherer->getLabelUsageMap(),
-                            TheGatherer->getAllGlobalConstants(), TheGatherer->getAllLocalConstants());
+                        holder, &TheCompInst, TheGatherer->getLabels(), 
+                        TheGatherer->getLabelUsageMap(), TheGatherer->getAllGlobalConstants(), 
+                        TheGatherer->getAllLocalConstants(), TheGatherer->getAllGlobalStringLiterals(),
+                        TheGatherer->getAllLocalStringLiterals());
 
     Sema sema(TheCompInst.getPreprocessor(), TheCompInst.getASTContext(), TheConsumer);
     TheConsumer.setSema(&sema);
