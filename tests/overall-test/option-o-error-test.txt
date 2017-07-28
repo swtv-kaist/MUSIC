@@ -1,0 +1,2 @@
+-o
+-o output/non-existed-dir
