@@ -61,3 +61,13 @@
 -m VLTR
 -m VSCR
 -m VTWD
+-m SANL
+-m SRWS
+-m SCSR
+-m VGSF
+-m VLSF
+-m VGTF
+-m VLTF
+-m VGPF
+-m VLPF
+-m VTWF

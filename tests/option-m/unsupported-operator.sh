@@ -1,11 +1,6 @@
 #!/bin/sh
-# COMUT exits on error in which users provides negative number for option -l
-
-if test $# = 0; then
-    echo "Usage: sh filename.sh executable-COMUT"
-    echo "Error: no executable-COMUT file was given"
-    exit 1
-fi
+# When user provides an operator name that COMUT does not support
+# COMUT exits on error
 
 # DIR: the directory that this script is in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -26,16 +21,16 @@ do
     OUTPUT_FOLDER_NAME=`echo "output/$TEST_INPUT" | sed 's/.\{2\}$//'`
     mkdir $OUTPUT_FOLDER_NAME
     
-    # Run the tool with the input source and negative input for option -l
-    $1 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -l -1234 > /dev/null 2>&1
+    # Run the tool with the input source and operator STRP
+    ../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -m STRP > /dev/null 2>&1
 
     # The test success if exit value is NOT 0
     # and no files are generated in output folder
     if test $? != 0 && test `find ${OUTPUT_FOLDER_NAME} -type f -name \* | wc -l` = 0
     then
-        echo "[SUCCESS] $TEST_INPUT input is negative"
+        echo "[SUCCESS] $TEST_INPUT specify unsupported operator"
     else
-        echo "[FAIL] $TEST_INPUT input is negative"
+        echo "[FAIL] $TEST_INPUT specify unsupported operator"
     fi
     
     # Remove created output folder for this input source file

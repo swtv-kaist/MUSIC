@@ -3,6 +3,12 @@
 # MAX_INT for C++ is 2147483647
 # A number higher than 2147483647 is considered the same as NaN
 
+if test $# = 0; then
+    echo "Usage: sh filename.sh executable-COMUT"
+    echo "Error: no executable-COMUT file was given"
+    exit 1
+fi
+
 test_exceed_max_int()
 {
 	if test $2 = "line" ; then
@@ -14,8 +20,8 @@ test_exceed_max_int()
 	mkdir $OUTPUT_FOLDER_NAME
     
     # Run the tool with the input source and line/col larger than 2147483647
-    echo "../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION" 
-    ../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION > /dev/null 2>&1
+    echo "$3 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION" 
+    $3 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION > /dev/null 2>&1
 
     # The test success if exit value is NOT 0
     # and no files are generated in output folder
@@ -49,10 +55,10 @@ do
     # Make folder name in output directory with input source name without .c
     OUTPUT_FOLDER_NAME=`echo "output/$TEST_INPUT" | sed 's/.\{2\}$//'`
 
-    test_exceed_max_int "-rs" "line"
-    test_exceed_max_int "-rs" "col"
-    test_exceed_max_int "-re" "line"
-    test_exceed_max_int "-re" "col"
+    test_exceed_max_int "-rs" "line" $1
+    test_exceed_max_int "-rs" "col" $1
+    test_exceed_max_int "-re" "line" $1
+    test_exceed_max_int "-re" "col" $1
 
     cd input-src
 done

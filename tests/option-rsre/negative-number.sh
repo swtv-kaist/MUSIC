@@ -1,6 +1,12 @@
 #!/bin/sh
 # COMUT exits on error in which user provides negative line/col number for option rs/re
 
+if test $# = 0; then
+    echo "Usage: sh filename.sh executable-COMUT"
+    echo "Error: no executable-COMUT file was given"
+    exit 1
+fi
+
 test_negative()
 {
 	if test $2 = "line" ; then
@@ -12,8 +18,8 @@ test_negative()
 	mkdir $OUTPUT_FOLDER_NAME
     
     # Run the tool with the input source and negative line/col
-    echo "../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION" 
-    ../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION > /dev/null 2>&1
+    echo "$3 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION" 
+    $3 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION > /dev/null 2>&1
 
     # The test success if exit value is NOT 0
     # and no files are generated in output folder
@@ -47,10 +53,10 @@ do
     # Make folder name in output directory with input source name without .c
     OUTPUT_FOLDER_NAME=`echo "output/$TEST_INPUT" | sed 's/.\{2\}$//'`
 
-    test_negative "-rs" "line"
-    test_negative "-rs" "col"
-    test_negative "-re" "line"
-    test_negative "-re" "col"
+    test_negative "-rs" "line" $1
+    test_negative "-rs" "col" $1
+    test_negative "-re" "line" $1
+    test_negative "-re" "col" $1
 
     cd input-src
 done

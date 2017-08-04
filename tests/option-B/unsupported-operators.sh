@@ -2,6 +2,12 @@
 # When user provides option -B for an unsupported operator
 # COMUT exits on error
 
+if test $# = 0; then
+    echo "Usage: sh filename.sh executable-COMUT"
+    echo "Error: no executable-COMUT file was given"
+    exit 1
+fi
+
 # DIR: the directory that this script is in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -26,8 +32,8 @@ do
     	COUNT=$((COUNT+1))
     	mkdir $OUTPUT_FOLDER_NAME
 
-    	echo "../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -m $LINE -B something"
-    	../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -m $LINE -B something > /dev/null 2>&1
+    	echo "$1 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -m $LINE -B something"
+    	$1 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -m $LINE -B something > /dev/null 2>&1
 
     	# The test success if exit value is NOT 0
 		# and no files are generated in output folder

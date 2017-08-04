@@ -2,6 +2,12 @@
 # When user provides mutation range with start larger than end
 # COMUT will generate no mutants. (only mutation database file)
 
+if test $# = 0; then
+    echo "Usage: sh filename.sh executable-COMUT"
+    echo "Error: no executable-COMUT file was given"
+    exit 1
+fi
+
 # DIR: the directory that this script is in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -27,10 +33,10 @@ do
     OUTPUT_FOLDER_NAME=`echo "output/$TEST_INPUT" | sed 's/.\{2\}$//'`
     mkdir $OUTPUT_FOLDER_NAME
     
-    echo "../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -rs $LAST_LINE_NUMBER $LAST_LINE_COL_NUMBER -re 1 1"
+    echo "$1 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -rs $LAST_LINE_NUMBER $LAST_LINE_COL_NUMBER -re 1 1"
     # Run the tool with the input source and 
     # mutation range with start is EOF and end is start of file
-    ../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -rs $LAST_LINE_NUMBER $LAST_LINE_COL_NUMBER -re 1 1 > /dev/null 2>&1
+    $1 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -rs $LAST_LINE_NUMBER $LAST_LINE_COL_NUMBER -re 1 1 > /dev/null 2>&1
 
     MUTDB_NAME="`echo "$TEST_INPUT" | sed 's/.\{2\}$//'`_mut_db.out"
 

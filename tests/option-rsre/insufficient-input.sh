@@ -2,6 +2,12 @@
 # When user provides 0 or 1 number only for option -rs -re
 # COMUT exits on error
 
+if test $# = 0; then
+    echo "Usage: sh filename.sh executable-COMUT"
+    echo "Error: no executable-COMUT file was given"
+    exit 1
+fi
+
 test_insufficient_input()
 {
 	# if second parameter is 0 then run test with no input for rs/re
@@ -15,8 +21,8 @@ test_insufficient_input()
 	mkdir $OUTPUT_FOLDER_NAME
     
     # Run the tool with the input source and line/col number 0
-    echo "../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION" 
-    ../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION > /dev/null 2>&1
+    echo "$3 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION" 
+    $3 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME $1 $LOCATION > /dev/null 2>&1
 
     # The test success if exit value is NOT 0
     # and no files are generated in output folder
@@ -49,10 +55,10 @@ do
     # make folder name in output directory with input source name without .c
     OUTPUT_FOLDER_NAME=`echo "output/$TEST_INPUT" | sed 's/.\{2\}$//'`
 
-    test_insufficient_input "-rs" 0
-    test_insufficient_input "-rs" 1
-    test_insufficient_input "-re" 0
-    test_insufficient_input "-re" 1
+    test_insufficient_input "-rs" 0 $1
+    test_insufficient_input "-rs" 1 $1
+    test_insufficient_input "-re" 0 $1
+    test_insufficient_input "-re" 1 $1
 
     cd input-src
 done

@@ -1,6 +1,12 @@
 #!/bin/sh
 # COMUT exit on error that user provides no directory for -o
 
+if test $# = 0; then
+    echo "Usage: sh filename.sh executable-COMUT"
+    echo "Error: no executable-COMUT file was given"
+    exit 1
+fi
+
 # DIR: the directory that this script exist in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -16,7 +22,7 @@ do
     mkdir $OUTPUT_FOLDER_NAME
     
     # Run the tool with the input source and a non-existed directory
-    ../../tool input-src/${t} -o > /dev/null 2>&1
+    $1 input-src/${t} -o > /dev/null 2>&1
 
     # The test success if exit value is NOT 0
     # and no files are generated in output folder

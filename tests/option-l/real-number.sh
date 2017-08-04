@@ -1,6 +1,12 @@
 #!/bin/sh
 # COMUT exits on error in which users provide real number for option -l
 
+if test $# = 0; then
+    echo "Usage: sh filename.sh executable-COMUT"
+    echo "Error: no executable-COMUT file was given"
+    exit 1
+fi
+
 # DIR: the directory that this script is in
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -21,7 +27,7 @@ do
     mkdir $OUTPUT_FOLDER_NAME
     
     # Run the tool with the input source and real number input for option -l
-    ../../tool input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -l 1.23 > /dev/null 2>&1
+    $1 input-src/${TEST_INPUT} -o $OUTPUT_FOLDER_NAME -l 1.23 > /dev/null 2>&1
 
     # The test success if exit value is NOT 0
     # and no files are generated in output folder
