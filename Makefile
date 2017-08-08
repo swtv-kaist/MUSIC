@@ -5,8 +5,10 @@ LLVM_BUILD_DIRECTORY_NAME=llvm_build
 LLVM_BUILD_MODE=Debug+Asserts
 #LLVM_BUILD_MODE=Release+Asserts
 
-OBJS=	tool.o 
-SRCS=	tool.cpp 
+SRCS=tool.cpp user_input.cpp mutant_operator.cpp comut_utility.cpp \
+		 mutant_operator_holder.cpp
+OBJS=tool.o user_input.o mutant_operator.o comut_utility.o \
+		 mutant_operator_holder.o
 TARGET=	tool
 
 ################
@@ -34,9 +36,25 @@ CXXFLAGS=$(CXX_INCLUDE) $(CLANG_BUILD_FLAGS) $(CLANGLIBS) `$(LLVM_CONFIG_COMMAND
 		
 all: $(TARGET)
 
-$(TARGET):$(OBJS)
-	$(CXX) $(OBJS) $(CXXFLAGS) -o $@ 
+$(TARGET) : $(OBJS)
+	$(CXX) $(OBJS) $(CXXFLAGS) -o $@
 
-	
+tool.o : tool.cpp comut_utility.h user_input.h mutant_operator.h \
+	mutant_operator_holder.h
+	$(CXX) $(CXXFLAGS) -c tool.cpp
+
+user_input.o : user_input.h user_input.cpp
+	$(CXX) $(CXXFLAGS) -c user_input.cpp
+
+mutant_operator.o : mutant_operator.h mutant_operator.cpp
+	$(CXX) $(CXXFLAGS) -c mutant_operator.cpp
+
+comut_utility.o : comut_utility.h comut_utility.cpp
+	$(CXX) $(CXXFLAGS) -c comut_utility.cpp
+
+mutant_operator_holder.o : mutant_operator_holder.h mutant_operator_holder.cpp \
+	mutant_operator.h comut_utility.h
+	$(CXX) $(CXXFLAGS) -c mutant_operator_holder.cpp
+
 clean:
 	rm -rf $(OBJS) $(TARGET)
