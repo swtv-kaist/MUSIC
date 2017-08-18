@@ -42,23 +42,13 @@ MutantOperatorHolder::MutantOperatorHolder()
 
 MutantOperatorHolder::~MutantOperatorHolder() { }
 
-bool MutantOperatorHolder::NumIsFloat(std::string num) 
-{
-  for (int i = 0; i < num.length(); ++i)
-  {
-    if (num[i] == '.')
-      return true;
-  }
-  return false;
-}
-
 bool MutantOperatorHolder::AddMutantOperator(MutantOperator &mutant_name)
 {
   // set of operators mutating logical operator
   std::set<std::string> logical{"OLLN", "OLAN", "OLBN", "OLRN", "OLSN"};
 
   // set of operators mutating relational operator.
-  std::set<std::string> relational{"ORLN", "ORAN", "ORBN", "ORRN", "ORSN"};
+  std::set<std::string> relational{"ORLN", "ORAN", "ORBN", /*"ORRN",*/ "ORSN"};
 
   // set of operators mutating arithmetic operators.
   std::set<std::string> arithmetic{"OALN", "OAAN", "OABN", "OARN", "OASN"};
@@ -125,7 +115,7 @@ bool MutantOperatorHolder::AddMutantOperator(MutantOperator &mutant_name)
   }
   else if (mutant_name.getName().compare("CRCR") == 0) 
   {
-    CRCR_integral_range_ = {"0", "1", "-1"};
+    /*CRCR_integral_range_ = {"0", "1", "-1"};
     CRCR_floating_range_ = {"0.0", "1.0", "-1.0"};
 
     for (auto it: mutant_name.range_)
@@ -139,83 +129,83 @@ bool MutantOperatorHolder::AddMutantOperator(MutantOperator &mutant_name)
     std::cout << "crcr float\n";
     PrintStringSet(CRCR_floating_range_);
     std::cout << "crcr integral\n";
-    PrintStringSet(CRCR_integral_range_);
+    PrintStringSet(CRCR_integral_range_);*/
   }
   else if (mutant_name.getName().compare("SSDL") == 0)
   {
-    apply_SSDL_ = true;
+    apply_SSDL_ = false;
   }
   else if (mutant_name.getName().compare("VLSR") == 0)
   {
-    apply_VLSR_ = true;
+    apply_VLSR_ = false;
   }
   else if (mutant_name.getName().compare("VGSR") == 0)
   {
-    apply_VGSR_ = true;
+    apply_VGSR_ = false;
   }
   else if (mutant_name.getName().compare("VGAR") == 0)
   {
-    apply_VGAR_ = true;
+    apply_VGAR_ = false;
   }
   else if (mutant_name.getName().compare("VLAR") == 0)
   {
-    apply_VLAR_ = true;
+    apply_VLAR_ = false;
   }
   else if (mutant_name.getName().compare("VGTR") == 0)
   {
-    apply_VGTR_ = true;
+    apply_VGTR_ = false;
   }
   else if (mutant_name.getName().compare("VLTR") == 0)
   {
-    apply_VLTR_ = true;
+    apply_VLTR_ = false;
   }
   else if (mutant_name.getName().compare("VGPR") == 0)
   {
-    apply_VGPR_ = true;
+    apply_VGPR_ = false;
   }
   else if (mutant_name.getName().compare("VLPR") == 0)
   {
-    apply_VLPR_ = true;
+    apply_VLPR_ = false;
   }
   else if (mutant_name.getName().compare("VSCR") == 0)
   {
-    apply_VSCR_ = true;
+    apply_VSCR_ = false;
   }
   else if (mutant_name.getName().compare("CGCR") == 0)
   {
-    apply_CGCR_ = true;
+    apply_CGCR_ = false;
   }
   else if (mutant_name.getName().compare("CLCR") == 0)
   {
-    apply_CLCR_ = true;
+    apply_CLCR_ = false;
   }
   else if (mutant_name.getName().compare("CGSR") == 0)
   {
-    apply_CGSR_ = true;
+    apply_CGSR_ = false;
   }
   else if (mutant_name.getName().compare("CLSR") == 0)
   {
-    apply_CLSR_ = true;
+    apply_CLSR_ = false;
   }
   else if (mutant_name.getName().compare("OMMO") == 0)
   {
-    apply_OMMO_ = true;
+    apply_OMMO_ = false;
   }
   else if (mutant_name.getName().compare("OPPO") == 0)
   {
-    apply_OPPO_ = true;
+    apply_OPPO_ = false;
   }
   else if (mutant_name.getName().compare("OLNG") == 0)
   {
-    apply_OLNG_ = true;
+    apply_OLNG_ = false;
   }
   else if (mutant_name.getName().compare("OCNG") == 0)
   {
-    apply_OCNG_ = true;
+    apply_OCNG_ = false;
   }
   else if (mutant_name.getName().compare("OBNG") == 0)
   {
-    apply_OBNG_ = true;
+    apply_OBNG_ = false;
   }
   else if (mutant_name.getName().compare("OBOM") == 0)
   {
@@ -223,11 +213,11 @@ bool MutantOperatorHolder::AddMutantOperator(MutantOperator &mutant_name)
   }
   else if (mutant_name.getName().compare("VTWD") == 0)
   {
-    apply_VTWD_ = true;
+    apply_VTWD_ = false;
   }
   else if (mutant_name.getName().compare("OIPM") == 0)
   {
-    apply_OIPM_ = true;
+    apply_OIPM_ = false;
   }
   else if (mutant_name.getName().compare("OCOR") == 0)
   {
@@ -235,44 +225,48 @@ bool MutantOperatorHolder::AddMutantOperator(MutantOperator &mutant_name)
   }
   else if (mutant_name.getName().compare("SANL") == 0)
   {
-    apply_SANL_ = true;
+    apply_SANL_ = false;
   }
   else if (mutant_name.getName().compare("SRWS") == 0)
   {
-    apply_SRWS_ = true;
+    apply_SRWS_ = false;
   }
   else if (mutant_name.getName().compare("SCSR") == 0)
   {
-    apply_SCSR_ = true;
+    apply_SCSR_ = false;
   }
 
   else if (mutant_name.getName().compare("VLSF") == 0)
   {
-    apply_VLSF_ = true;
+    apply_VLSF_ = false;
   }
   else if (mutant_name.getName().compare("VGSF") == 0)
   {
-    apply_VGSF_ = true;
+    apply_VGSF_ = false;
   }
   else if (mutant_name.getName().compare("VGTF") == 0)
   {
-    apply_VGTF_ = true;
+    apply_VGTF_ = false;
   }
   else if (mutant_name.getName().compare("VLTF") == 0)
   {
-    apply_VLTF_ = true;
+    apply_VLTF_ = false;
   }
   else if (mutant_name.getName().compare("VGPF") == 0)
   {
-    apply_VGPF_ = true;
+    apply_VGPF_ = false;
   }
   else if (mutant_name.getName().compare("VLPF") == 0)
   {
-    apply_VLPF_ = true;
+    apply_VLPF_ = false;
   }
   else if (mutant_name.getName().compare("VTWF") == 0)
   {
-    apply_VTWF_ = true;
+    apply_VTWF_ = false;
+  }
+  else if (mutant_name.getName().compare("ORRN") == 0)
+  {
+    cout << "do not add orrn\n";
   }
 
   else {
@@ -294,7 +288,7 @@ void MutantOperatorHolder::AddAllObomMutantOperators()
   AddBinaryOperatorMutator(std::string("ORLN"));
   AddBinaryOperatorMutator(std::string("ORAN"));
   AddBinaryOperatorMutator(std::string("ORBN"));
-  AddBinaryOperatorMutator(std::string("ORRN"));
+  // AddBinaryOperatorMutator(std::string("ORRN"));
   AddBinaryOperatorMutator(std::string("ORSN"));
 
   AddBinaryOperatorMutator(std::string("OALN"));
@@ -347,44 +341,44 @@ void MutantOperatorHolder::AddBinaryOperatorMutator(std::string mutant_name)
   AddMutantOperator(new_operator);
 }
 
-void MutantOperatorHolder::useAll()
+void MutantOperatorHolder::ApplyAllMutantOperators()
 {
   AddAllObomMutantOperators();
 
-  CRCR_integral_range_ = {"0", "1", "-1"};
-  CRCR_floating_range_ = {"0.0", "1.0", "-1.0"};
+  // CRCR_integral_range_ = {"0", "1", "-1"};
+  // CRCR_floating_range_ = {"0.0", "1.0", "-1.0"};
 
-  apply_SSDL_ = true;
-  apply_VGSR_ = true;
-  apply_VLSR_ = true;
-  apply_VGAR_ = true;
-  apply_VLAR_ = true;
-  apply_VGTR_ = true;
-  apply_VLTR_ = true;
-  apply_VGPR_ = true;
-  apply_VLPR_ = true;
-  apply_VSCR_ = true;
-  apply_CGCR_ = true;
-  apply_CLCR_ = true;
-  apply_CGSR_ = true;
-  apply_CLSR_ = true;
-  apply_OPPO_ = true;
-  apply_OMMO_ = true;
-  apply_OLNG_ = true;
-  apply_OBNG_ = true;
-  apply_OCNG_ = true;  
-  apply_VTWD_ = true;  
-  apply_OIPM_ = true;
+  apply_SSDL_ = false;
+  apply_VGSR_ = false;
+  apply_VLSR_ = false;
+  apply_VGAR_ = false;
+  apply_VLAR_ = false;
+  apply_VGTR_ = false;
+  apply_VLTR_ = false;
+  apply_VGPR_ = false;
+  apply_VLPR_ = false;
+  apply_VSCR_ = false;
+  apply_CGCR_ = false;
+  apply_CLCR_ = false;
+  apply_CGSR_ = false;
+  apply_CLSR_ = false;
+  apply_OPPO_ = false;
+  apply_OMMO_ = false;
+  apply_OLNG_ = false;
+  apply_OBNG_ = false;
+  apply_OCNG_ = false;  
+  apply_VTWD_ = false;  
+  apply_OIPM_ = false;
   apply_OCOR_ = true;
-  apply_SANL_ = true;
-  apply_SRWS_ = true;
-  apply_SCSR_ = true;
+  apply_SANL_ = false;
+  apply_SRWS_ = false;
+  apply_SCSR_ = false;
 
-  apply_VLSF_ = true;
-  apply_VGSF_ = true;
-  apply_VGTF_ = true;
-  apply_VLTF_ = true;
-  apply_VGPF_ = true;
-  apply_VLPF_ = true;
-  apply_VTWF_ = true;
+  apply_VLSF_ = false;
+  apply_VGSF_ = false;
+  apply_VGTF_ = false;
+  apply_VLTF_ = false;
+  apply_VGPF_ = false;
+  apply_VLPF_ = false;
+  apply_VTWF_ = false;
 }

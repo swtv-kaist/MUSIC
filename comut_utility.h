@@ -1,11 +1,94 @@
 #ifndef COMUT_UTILITY_H_
 #define COMUT_UTILITY_H_
 
+#include <cstdio>
 #include <set>
 #include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <utility>
+#include <iomanip>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <cctype>
+
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetOptions.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Parse/ParseAST.h"
+#include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Rewrite/Frontend/Rewriters.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "clang/Lex/HeaderSearch.h"
+#include "clang/Frontend/Utils.h"
+
+using namespace clang;
+using namespace std;
 
 // Print out each element of a string set in a single line.
 void PrintStringSet(std::set<std::string> &string_set);
+
+// remove spaces at the beginning and end_loc of string str
+string TrimBeginningAndEndingWhitespace(const string &str);
+
+// Divide string into elements of a string set with delimiter
+void SplitStringIntoSet(string target, set<string> &out_set, 
+                        const string delimiter);
+
+void SplitStringIntoVector(string target, vector<string> &out_vector, 
+                           const string delimiter);
+
+/**
+  @param  hexa: hexa string of the following form "'\xF...F'"
+  @return string of the integer value of the given hexa string
+*/
+string ConvertHexaStringToIntString(const string hexa_str);
+
+string ConvertCharStringToIntString(const string s);
+
+bool StringIsInVector(string s, vector<string> &string_vector);
+
+bool ConvertStringToInt(string s, int &n);
+
+/**
+  @param  s string literal from C input file
+          pos index at which to check if the character there is a whitespace
+  @return True if the character at pos is a whitespace
+          False otherwise
+          If the character at pos is whitespace, pos is changed to the
+          position after the whitespace
+*/
+bool IsWhitespace(const string &s, int &pos);
+
+/**
+  @param  s string literal from input file
+  @return index of the first non whitespace character (space, \f, \n, \r, \t, \v)
+
+  Return an int higher than 1
+*/
+int GetFirstNonWhitespaceIndex(const string &s);
+
+int GetLastNonWhitespaceIndex(const string &s);
+
+/**
+  Check if a given string is a float number. (existence of dot(.))
+
+  @param  num targeted string
+  @return true if it is floating type
+          false otherwise
+*/
+bool NumIsFloat(std::string num);
 
 /**
   Check whether a string is a number (int or real)
@@ -33,5 +116,104 @@ void ValidateDomainOfMutantOperator(std::string &mutant_name,
 */
 void ValidateRangeOfMutantOperator(std::string &mutant_name, 
 																	 std::set<std::string> &range);
+
+int GetLineNumber(SourceManager &src_mgr, SourceLocation loc);
+
+int GetColumnNumber(SourceManager &src_mgr, SourceLocation loc);
+
+SourceLocation GetEndLocOfStmt(SourceLocation loc, 
+                               CompilerInstance *comp_inst);
+
+void PrintLocation(SourceManager &src_mgr, SourceLocation loc);
+
+int CountNonNewlineChar(const string &s);
+
+bool LocationBeforeRangeStart(SourceLocation loc, SourceRange range);
+
+bool LocationAfterRangeEnd(SourceLocation loc, SourceRange range);
+
+bool LocationIsInRange(SourceLocation loc, SourceRange range);
+
+bool Range1IsPartOfRange2(SourceRange range1, SourceRange range2);
+
+int CountNonNullStmtInCompoundStmt(CompoundStmt *c);
+
+SourceLocation GetLocationAfterSemicolon(SourceManager &src_mgr_, 
+                                         SourceLocation loc);
+
+bool ExprIsPointer(Expr *e);
+bool ExprIsScalar(Expr *e);
+bool ExprIsFloat(Expr *e);
+bool ExprIsIntegral(CompilerInstance *comp_inst, Expr *e);
+bool ExprIsArray(Expr *e);
+bool ExprIsStruct(Expr *e);
+bool ExprIsDeclRefExpr(Expr *e);
+bool ExprIsPointerDereferenceExpr(Expr *e);
+bool ExprIsScalarReference(Expr *e);
+bool ExprIsArrayReference(Expr *e);
+bool ExprIsStructReference(Expr *e);
+bool ExprIsPointerReference(Expr *e);
+
+bool OperatorIsArithmeticAssignment(BinaryOperator *b);
+bool OperatorIsShiftAssignment(BinaryOperator *b);
+bool OperatorIsBitwiseAssignment(BinaryOperator *b);
+
+SourceLocation GetEndLocOfStringLiteral(
+    SourceManager &src_mgr, SourceLocation start_loc);
+
+/**
+  @param  start_loc: start_loc location of the targeted literal
+  @return end_loc location of number, char literal
+*/
+SourceLocation GetEndLocOfConstantLiteral(
+    SourceManager &src_mgr, SourceLocation start_loc);
+
+/**
+  @param  uo: pointer to expression with unary operator
+  @return end_loc location of given expression
+*/
+SourceLocation GetEndLocOfUnaryOpExpr(
+    UnaryOperator *uo, CompilerInstance *comp_inst);
+
+SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst);
+
+string GetVarDeclName(const VarDecl *vd);
+bool IsVarDeclConst(const VarDecl *vd);
+bool IsVarDeclPointer(const VarDecl *vd);
+bool IsVarDeclArray(const VarDecl *vd);
+bool IsVarDeclScalar(const VarDecl *vd);
+bool IsVarDeclFloating(const VarDecl *vd);
+bool IsVarDeclStruct(const VarDecl *vd);
+
+/**
+  Return the type of array element
+  Example: int[] -> int
+
+  @param: type  type of the array
+*/
+string getArrayElementType(QualType type);
+
+string getStructureType(QualType type);
+
+// Return the type of the entity the pointer is pointing to.
+string getPointerType(QualType type);
+
+// Return True if the 2 types are same
+bool sameArrayElementType(QualType type1, QualType type2);
+
+/** 
+  Check if this directory exists
+
+  @param  directory the directory to be checked
+  @return True if the directory exists
+      False otherwise
+*/
+bool DirectoryExists(const std::string &directory);
+
+void PrintUsageErrorMsg();
+
+void PrintLineColNumberErrorMsg();
+
+
 
 #endif

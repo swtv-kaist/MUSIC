@@ -11,7 +11,6 @@
 #include <vector>
 #include <set>
 #include <cctype>
-#include <map>
 #include <limits.h>
 
 #include "clang/AST/ASTConsumer.h"
@@ -38,18 +37,47 @@
 #include "clang/Sema/ScopeInfo.h"
 
 #include "comut_utility.h"
-#include "user_input.h"
+#include "configuration.h"
 #include "mutant_operator.h"
 #include "mutant_operator_holder.h"
 
-using namespace clang;
-using namespace std;
-
-// <line number, column number>
-typedef pair<int, int> LabelStmtLocation; 
-
-// list of locations of goto statements
-typedef vector<SourceLocation> GotoStmtLocationList;
+#include "comut_context.h"
+#include "mutation_operators/mutant_operator_template.h"
+#include "mutation_operators/ssdl.h"
+#include "mutation_operators/orrn.h"
+#include "mutation_operators/vtwf.h"
+#include "mutation_operators/crcr.h"
+#include "mutation_operators/sanl.h"
+#include "mutation_operators/srws.h"
+#include "mutation_operators/scsr.h"
+#include "mutation_operators/vlsf.h"
+#include "mutation_operators/vgsf.h"
+#include "mutation_operators/vltf.h"
+#include "mutation_operators/vgtf.h"
+#include "mutation_operators/vlpf.h"
+#include "mutation_operators/vgpf.h"
+#include "mutation_operators/vgsr.h"
+#include "mutation_operators/vlsr.h"
+#include "mutation_operators/vgar.h"
+#include "mutation_operators/vlar.h"
+#include "mutation_operators/vgtr.h"
+#include "mutation_operators/vltr.h"
+#include "mutation_operators/vgpr.h"
+#include "mutation_operators/vlpr.h"
+#include "mutation_operators/vtwd.h"
+#include "mutation_operators/vscr.h"
+#include "mutation_operators/cgcr.h"
+#include "mutation_operators/clcr.h"
+#include "mutation_operators/cgsr.h"
+#include "mutation_operators/clsr.h"
+#include "mutation_operators/oppo.h"
+#include "mutation_operators/ommo.h"
+#include "mutation_operators/olng.h"
+#include "mutation_operators/obng.h"
+#include "mutation_operators/ocng.h"
+#include "mutation_operators/oipm.h"
+#include "new-astvisitor.h"
+#include "new-astconsumer.h"
 
 // Block scope are bounded by curly braces {}.
 // The closer the scope is to the end_loc of vector, the smaller it is.
@@ -62,42 +90,6 @@ typedef vector<SourceLocation> GotoStmtLocationList;
 // }
 typedef vector<SourceRange> ScopeRangeList;  
 
-typedef vector<VarDecl *> VarDeclList;
-
-// pair<string representation, isFloat?>
-typedef vector<pair<string, bool>> GlobalScalarConstantList;
-
-// pair<string representation, pair<location, isFloat?>>
-typedef vector<pair<string, pair<SourceLocation, bool>>> LocalScalarConstantList;
-
-// pair<range of switch statement, list of case values' string representation>
-typedef vector<pair<SourceRange, vector<string>>> SwitchStmtInfoList;
-
-typedef vector<string> GlobalStringLiteralList;
-typedef vector<pair<string, SourceLocation>> LocalStringLiteralList;
-
-struct comp
-{
-  bool operator() (const LabelStmtLocation &lhs, const LabelStmtLocation &rhs) const
-  {
-    // if lhs appear before rhs, return true
-    // else return false.
-
-    if (lhs.first < rhs.first)
-      return true;
-
-    if (lhs.first == rhs.first && lhs.second < rhs.second)
-      return true;
-
-    return false;
-  }
-};
-
-// Map label declaration location with its usage locations (goto)
-// Key is location instead of name to resolve same named labels in different ftn.
-typedef map<LabelStmtLocation, GotoStmtLocationList, comp> LabelStmtToGotoStmtListMap;
-
-typedef vector<string> ScalarReferenceNameList;
 
 enum class UserInputAnalyzingState
 {
@@ -134,59 +126,6 @@ enum class UserInputAnalyzingState
   // B_SDL_LINE, B_SDL_COL,  // expecting a number
 };
 
-// Print out each elemet of a string vector in a single line.
-void PrintStringVector(vector<string> &string_vector)
-{
-  for (vector<string>::iterator it = string_vector.begin(); 
-      it != string_vector.end(); ++it) {
-    std::cout << "//" << *it;
-  }
-  std::cout << "//\n";
-}
-
-// remove spaces at the beginning and end_loc of string str
-string TrimBeginningAndEndingWhitespace(string str)
-{
-  string whitespace{" "};
-
-  auto first_non_whitespace_index = str.find_first_not_of(whitespace);
-
-  if (first_non_whitespace_index == string::npos)
-    return ""; // no content
-
-  auto last_non_whitespace_index = str.find_last_not_of(whitespace);
-  auto string_range = last_non_whitespace_index - first_non_whitespace_index + 1;
-  return str.substr(first_non_whitespace_index, string_range);
-}
-
-// Divide string into elements of a string set with delimiter
-void SplitStringIntoSet(string target, set<string> &out_set, string delimiter)
-{
-  size_t pos = 0;
-  string token;
-
-  while ((pos = target.find(delimiter)) != string::npos) {
-    token = target.substr(0, pos);
-    out_set.insert(TrimBeginningAndEndingWhitespace(token));
-    target.erase(0, pos + delimiter.length());
-  }
-
-  out_set.insert(TrimBeginningAndEndingWhitespace(target));
-}
-
-void SplitStringIntoVector(string target, vector<string> &out_vector, string delimiter)
-{
-  size_t pos = 0;
-  string token;
-
-  while ((pos = target.find(delimiter)) != string::npos) {
-    token = target.substr(0, pos);
-    out_vector.push_back(token);
-    target.erase(0, pos + delimiter.length());
-  }
-  out_vector.push_back(target);
-}
-
 // return the first non-ParenExpr inside this Expr e
 Expr* IgnoreParenExpr(Expr *e)
 {
@@ -200,227 +139,6 @@ Expr* IgnoreParenExpr(Expr *e)
       ret = pe->getSubExpr()->IgnoreImpCasts();
   }
   
-  return ret;
-}
-
-/**
-  @param  hexa: hexa string of the following form "'\xF...F'"
-  @return string of the integer value of the given hexa string
-*/
-string ConvertHexaStringToIntString(string hexa_str)
-{
-  char first_hexa_digit = hexa_str.at(3);
-
-  if (!((first_hexa_digit >= '0' && first_hexa_digit <= '9') || 
-    (first_hexa_digit >= 'a' && first_hexa_digit <= 'f') || 
-    (first_hexa_digit >= 'A' && first_hexa_digit <= 'F')))
-    return hexa_str;
-
-  char secondh_hexa_digit = hexa_str.at(4);
-  
-  if (secondh_hexa_digit != '\'')
-    if (!((secondh_hexa_digit >= '0' && secondh_hexa_digit <= '9') || 
-        (secondh_hexa_digit >= 'a' && secondh_hexa_digit <= 'f') || 
-        (secondh_hexa_digit >= 'A' && secondh_hexa_digit <= 'F')))
-      return hexa_str;
-
-  return to_string(stoul(hexa_str.substr(3, hexa_str.length() - 4), nullptr, 16));
-}
-
-string ConvertCharStringToIntString(string s)
-{
-  // it is a single, non-escaped character like 'a'
-  if (s.length() == 3)
-    return to_string(int(s.at(1)));
-
-  if (s.at(1) == '\\')
-  {
-    // it is an escaped character like '\n'
-
-    int length = s.length() - 3;
-
-    switch (s.at(2))
-    {
-      case 'a':
-        if (length == 1)
-          return to_string(int('\a'));
-        break;
-      case 'b':
-        if (length == 1)
-          return to_string(int('\b'));
-        break;
-      case 'f':
-        if (length == 1)
-          return to_string(int('\f'));
-        break;
-      case 'n':
-        if (length == 1)
-          return to_string(int('\n'));
-        break;
-      case 'r':
-        if (length == 1)
-          return to_string(int('\r'));
-        break;
-      case 't':
-        if (length == 1)
-          return to_string(int('\t'));
-        break;
-      case 'v':
-        if (length == 1)
-          return to_string(int('\v'));
-        break;
-      case '0':
-        if (length == 1)
-          return to_string(int('\0'));
-        break; 
-      case '\\':
-      case '\'':
-      case '\"':
-        if (length == 1)
-          return to_string(int(s.at(2)));
-        break;
-      case 'x':
-      case 'X':
-        if (length <= 3 && length > 1)
-          return ConvertHexaStringToIntString(s);
-        else 
-          return s;   // hexadecimal value higher than FF. not a char
-      default:
-        cout << "cannot convert " << s << " to string of int\n";
-        return s;  
-    }
-  }
-  
-  // the function does not handle cases like 'abc'
-  cout << "cannot convert " << s << " to string of int\n";
-  return s;
-}
-
-bool StringIsInVector(string s, vector<string> &string_vector)
-{
-  auto it = string_vector.begin();
-
-  while (it != string_vector.end() && (*it).compare(s) != 0)
-    ++it;
-
-  // if the iterator reach the end_loc then the string is NOT in vector v
-  return !(it == string_vector.end());
-}
-
-// Return the number of not-newline character
-int CountNonNewlineChar(string &s)
-{  
-  int res = 0;
-  for (int i = 0; i < s.length(); ++i)
-  {
-    if (s[i] != '\n')
-      ++res;
-  }
-  return res;
-}
-
-int CountNonNullStmtInCompoundStmt(CompoundStmt *c)
-{
-  int res{0};
-
-  for (CompoundStmt::body_iterator it = c->body_begin(); it != c->body_end(); ++it)
-  {
-    if (!isa<NullStmt>(*it))
-      ++res;
-  }
-
-  return res;
-}
-
-bool ConvertStringToInt(string s, int &n)
-{
-  stringstream convert(s);
-  if (!(convert >> n))
-    return false;
-  return true;
-}
-
-/**
-  @param  s string literal from C input file
-      pos index at which to check if the character there is a whitespace
-  @return True if the character at pos is a whitespace
-      False otherwise
-      If the character at pos is whitespace, pos is changed to the
-      position after the whitespace
-*/
-bool IsWhitespace(string s, int& pos)
-{
-  if (s[pos] == ' ')
-  {
-    ++pos;
-    return true;
-  }
-
-  if (s[pos] == '\\')
-  {
-    if (s[pos+1] == 'f' || s[pos+1] == 'n' ||
-      s[pos+1] == 'r' || s[pos+1] == 't' ||
-      s[pos+1] == 'v')
-    {
-      pos += 2;
-      return true;
-    }
-
-    if (pos + 3 < s.length())
-    {
-      string temp{s.substr(pos,4)};
-      if (temp.compare("\\011") == 0 ||
-        temp.compare("\\012") == 0 ||
-        temp.compare("\\013") == 0 ||
-        temp.compare("\\014") == 0 ||
-        temp.compare("\\015") == 0)
-      {
-        pos += 4;
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
-  @param  s string literal from input file
-  @return index of the first non whitespace character (whitespace, \f, \n, \r, \t, \v)
-
-  Return an int higher than 1
-*/
-int GetFirstNonWhitespaceIndex(string s)
-{
-  // Skip the first character which is double quote
-  int ret{1};
-
-  while (IsWhitespace(s, ret)) {}
-
-  return ret;
-}
-
-int GetLastNonWhitespaceIndex(string s)
-{
-  int ret{GetFirstNonWhitespaceIndex(s)};
-  int i = ret;
-  int length{(int) s.length()};
-
-  while (i != length-1)
-  {   
-    // If the character is not whitespace, change ret position.
-    if (!IsWhitespace(s, i))
-    {
-      // i is not changed because this character is NOT whitespace
-      if (s[i] == '\\')  // escaped character
-        i += 2;
-      else
-        ++i;
-
-      ret = i - 1;
-    }
-  }
-
   return ret;
 }
 
@@ -444,7 +162,7 @@ public:
   string mutant_filename_;
 
   // analyzed user's input
-  UserInput *userinput_;
+  Configuration *userinput_;
 
   // this object holds all info about mutant operators to be applied
   MutantOperatorHolder *mutantoperator_holder_;
@@ -542,14 +260,18 @@ public:
 
   bool OCOR_mutates_to_int_type_only;
 
+  ComutContext context_;
+  vector<MutantOperatorTemplate *> mutant_operator_list_;
+
   MyASTVisitor(SourceManager &src_mgr, LangOptions &lang_option, 
-               UserInput *user_input, MutantOperatorHolder *holder, 
+               Configuration *user_input, MutantOperatorHolder *holder, 
                CompilerInstance *CI, vector<SourceLocation> *labels, 
                LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
                GlobalScalarConstantList *global_scalar_constant_list, 
                LocalScalarConstantList *local_scalar_constant_list, 
                GlobalStringLiteralList *global_string_literal_list, 
-               LocalStringLiteralList *local_string_literal_list) 
+               LocalStringLiteralList *local_string_literal_list,
+               vector<MutantOperatorTemplate*> &mutant_list) 
     : src_mgr_(src_mgr), lang_option_(lang_option), 
       mutantoperator_holder_(holder), userinput_(user_input), 
       next_mutant_file_id_(1), comp_inst_(CI), 
@@ -597,8 +319,25 @@ public:
     switchcase_range_ = new SourceRange(start_of_file, start_of_file); 
     non_OCOR_mutatable_expr_range_ = new SourceRange(start_of_file, start_of_file); 
 
-    array_decl_range_ = nullptr;
-    target_expr_range_ = nullptr;
+    array_decl_range_ = new SourceRange(start_of_file, start_of_file);
+    target_expr_range_ = new SourceRange(start_of_file, start_of_file);
+
+    context_ = {false, false, false, comp_inst_, label_to_gotolist_map_, 
+                &switchstmt_info_list_, 1, 
+                userinput_, 0, mutant_filename_, lhs_of_assignment_range_,
+                addressop_range_, unary_increment_range_, 
+                unary_decrement_range_, fielddecl_range_,
+                currently_parsed_function_range_, switchstmt_condition_range_,
+                arraysubscript_range_, switchcase_range_,
+                global_scalarconstant_list_, local_scalarconstant_list_,
+                global_stringliteral_list_, local_stringliteral_list_,
+                &global_scalar_vardecl_list_, &local_scalar_vardecl_list_,
+                &global_array_vardecl_list_, &local_array_vardecl_list_,
+                &global_struct_vardecl_list_, &local_struct_vardecl_list_,
+                &global_pointer_vardecl_list_, &local_pointer_vardecl_list_,
+                &non_VTWD_mutatable_scalarref_list_};
+    mutant_operator_list_ = mutant_list;
+
 
     /*cout << "global const: " << endl;
     for (auto e: *global_scalarconstant_list_)
@@ -612,55 +351,9 @@ public:
     }*/
   }
 
-  /*void PrintIdentifierTable(const ASTContext &astcontext)
-  {
-    IdentifierTable &identTable = astcontext.Idents;
-    // identTable.AddKeywords(lang_option_);
-    for (IdentifierTable::iterator e = identTable.begin(); e != identTable.end(); ++e)
-    {
-      cout << string(e->first()) << endl;
-    }
-  }*/
-
   void setSema(Sema *sema)
   {
     sema_ = sema;
-  }
-
-  string getVarDeclName(VarDecl *vd)
-  {
-    return vd->getNameAsString();
-  }
-
-  bool VarDeclIsConst(VarDecl *vd)
-  {
-    return (vd->getType()).isConstQualified();
-  }
-
-  bool VarDeclIsPointer(VarDecl *vd)
-  {
-    return ((vd->getType()).getTypePtr())->isPointerType();   
-  }
-
-  bool VarDeclIsArray(VarDecl *vd)
-  {
-    return ((vd->getType()).getTypePtr())->isArrayType();   
-  }
-
-  bool VarDeclIsScalar(VarDecl *vd)
-  {
-    return ((vd->getType()).getTypePtr())->isScalarType() && 
-            !VarDeclIsPointer(vd);   
-  }
-
-  bool VarDeclIsFloating(VarDecl *vd)
-  {
-    return ((vd->getType()).getTypePtr())->isFloatingType();
-  }
-
-  bool VarDeclIsStruct(VarDecl *vd)
-  {
-    return ((vd->getType()).getTypePtr())->isStructureType();
   }
 
   void PrintAllGlobalScalarVarDecl()
@@ -668,7 +361,7 @@ public:
     cout << "all global scalars:\n";
     for (auto e: global_scalar_vardecl_list_)
     {
-      cout << getVarDeclName(e) << "\t" << VarDeclIsConst(e) << "\n";
+      cout << GetVarDeclName(e) << "\t" << IsVarDeclConst(e) << "\n";
     }
     cout << "end_loc all global scalars\n";
   }
@@ -678,7 +371,7 @@ public:
     cout << "all global arrays:\n";
     for (auto e: global_array_vardecl_list_)
     {
-      cout << getVarDeclName(e) << "\t" << VarDeclIsConst(e) << "\n";
+      cout << GetVarDeclName(e) << "\t" << IsVarDeclConst(e) << "\n";
     }
     cout << "end_loc all global arrays\n";
   }
@@ -690,7 +383,7 @@ public:
     {
       cout << "new scope\n";
       for (auto scalar: e)
-        cout << getVarDeclName(scalar) << "\t" << VarDeclIsConst(scalar) << "\n";
+        cout << GetVarDeclName(scalar) << "\t" << IsVarDeclConst(scalar) << "\n";
     }
     cout << "end_loc all local scalars\n";
   }
@@ -702,70 +395,9 @@ public:
     {
       cout << "new scope\n";
       for (auto scalar: e)
-        cout << getVarDeclName(scalar) << "\t" << VarDeclIsConst(scalar) << "\n";
+        cout << GetVarDeclName(scalar) << "\t" << IsVarDeclConst(scalar) << "\n";
     }
     cout << "end_loc all local arrays\n";
-  }
-
-  /**
-    Return the type of array element
-    Example: int[] -> int
-
-    @param: type  type of the array
-  */
-  string getArrayElementType(QualType type)
-  {
-    string res;
-
-    // getElementType can only be called from an ArrayType
-    if (const ArrayType *type_ptr = dyn_cast<ArrayType>((type.getTypePtr())))
-    {
-      QualType array_type = type_ptr->getElementType().getCanonicalType();
-      res = TrimBeginningAndEndingWhitespace(array_type.getAsString());
-    }
-    else 
-    {
-      // Since type parameter is definitely an array type,
-      // if somehow cannot convert to ArrayType, use string processing to retrieve element type.
-      res = type.getCanonicalType().getAsString();
-      auto pos = res.find_last_of('[');
-      res = TrimBeginningAndEndingWhitespace(res.substr(0, pos));
-    }
-
-    // remove const from element type. why?
-    /*string firstWord = res.substr(0, res.find_first_of(' '));
-    if (firstWord.compare("const") == 0)
-      res = res.substr(6);*/
-    
-    return res;
-  }
-
-  string getStructureType(QualType type)
-  {
-    return type.getCanonicalType().getAsString();
-  }
-
-  // Return the type of the entity the pointer is pointing to.
-  string getPointerType(QualType type)
-  {
-    const Type *type_ptr = cast<PointerType>(type.getCanonicalType().getTypePtr());
-    return type_ptr->getPointeeType().getCanonicalType().getAsString();
-  }
-
-  // Return True if the 2 types are same
-  bool sameArrayElementType(QualType type1, QualType type2)
-  {
-    if (!type1.getTypePtr()->isArrayType() || 
-        !type2.getTypePtr()->isArrayType())
-    {
-      cout << "sameArrayElementType: one of the type is not array type\n";
-      return false;
-    }
-
-    string elementType1 = getArrayElementType(type1);
-    string elementType2 = getArrayElementType(type2);
-
-    return elementType1.compare(elementType2) == 0;
   }
 
   // Return True if location loc appears before range. 
@@ -868,10 +500,10 @@ public:
   }
 
   // Return True if given operator is an arithmetic operator.
-  bool OperatorIsArithmetic(const string &mutant_name) 
+  bool OperatorIsArithmetic(const string &op) 
   {
-    return mutant_name == "+" || mutant_name == "-" || 
-        mutant_name == "*" || mutant_name == "/" || mutant_name == "%";
+    return op == "+" || op == "-" || op == "*" || 
+           op == "/" || op == "%";
   }
 
   // Return the line number of a source location.
@@ -907,6 +539,7 @@ public:
         delete addressop_range_;
 
       addressop_range_ = new SourceRange(*start_loc, *end_loc);
+      context_.addressop_range = addressop_range_;
     }
   }
 
@@ -959,7 +592,7 @@ public:
     mutant_db_file << proteumstyle_stmt_start_line_num_ << "\t"; 
     
     // write information about token BEFORE mutation (range and token)
-    mutant_db_file << getLineNumber(start_loc) << "\t";       
+    mutant_db_file << getLineNumber(start_loc) << "\t";      
     mutant_db_file << getColNumber(start_loc) << "\t";
     mutant_db_file << getLineNumber(end_loc) << "\t";
     mutant_db_file << getColNumber(end_loc) << "\t";
@@ -1017,37 +650,6 @@ public:
     // each output mutated code file needs to have different name.
     ++next_mutant_file_id_;
   }
-
-  /*void generateSdlMutant(string &mutant_name, SourceLocation *start_loc, SourceLocation *end_loc, 
-            string &token, string &mutated_token) 
-  {
-    // Create a Rewriter objected needed for edit input file
-    Rewriter theRewriter;
-    theRewriter.setSourceMgr(src_mgr_, lang_option_);
-
-    int length = src_mgr_.getFileOffset(*end_loc) - src_mgr_.getFileOffset(*start_loc);
-
-    theRewriter.ReplaceText(*start_loc, length, mutated_token);
-
-    string mutant_filename;
-    mutant_filename = getNextMutantFilename();
-
-    // Make and write mutated code to output file.
-    const RewriteBuffer *RewriteBuf = theRewriter.getRewriteBufferFor(src_mgr_.getMainFileID());
-    ofstream output(mutant_filename.data());
-    output << string(RewriteBuf->begin(), RewriteBuf->end());
-    output.close();
-
-    SourceLocation newendloc = src_mgr_.translateLineCol(src_mgr_.getMainFileID(),
-                              getLineNumber(start_loc),
-                              getColNumber(start_loc)+CountNonNewlineChar(mutated_token));
-
-    // Write information of the new mutated file into mutation database file
-    WriteMutantInfoToDatabaseFile(mutant_name, start_loc, end_loc, start_loc, &newendloc, token, mutated_token);
-
-    // each output mutated code file needs to have different name.
-    ++next_mutant_file_id_;
-  }*/
 
   void GenerateMutant_new(string &mutant_name, SourceLocation *start_loc, 
                           SourceLocation *end_loc, string &token, 
@@ -1113,154 +715,6 @@ public:
     return true;
   }
 
-  SourceLocation GetEndLocOfStmt(SourceLocation *loc)
-  {
-    SourceLocation ret{};
-
-    if (*(src_mgr_.getCharacterData(*loc)) == '}' || 
-        *(src_mgr_.getCharacterData(*loc)) == ';' ||
-        *(src_mgr_.getCharacterData(*loc)) == ']' || 
-        *(src_mgr_.getCharacterData(*loc)) == ')')
-      ret = (*loc).getLocWithOffset(1);
-    else
-      ret = clang::Lexer::findLocationAfterToken(*loc,
-                              tok::semi, src_mgr_,
-                              lang_option_, 
-                              false);
-    return ret;
-  }
-
-  /**
-    @param  start_loc: start_loc location of the targeted literal
-    @return end_loc location of number, char literal
-  */
-  SourceLocation GetEndLocOfConstantLiteral(SourceLocation start_loc)
-  {
-    int line_num = getLineNumber(&start_loc);
-    int col_num = getColNumber(&start_loc);
-
-    SourceLocation ret = src_mgr_.translateLineCol(src_mgr_.getMainFileID(), 
-                                                  line_num, col_num);
-
-    // a char starts and ends with a single quote
-    bool is_char_literal = false;
-
-    if (*(src_mgr_.getCharacterData(ret)) == '\'')
-      is_char_literal = true;
-
-    if (is_char_literal)
-    {
-      ret = ret.getLocWithOffset(1);
-
-      while (*(src_mgr_.getCharacterData(ret)) != '\'')
-      {
-        // if there is a backslash then skip the next character
-        if (*(src_mgr_.getCharacterData(ret)) == '\\')
-        {
-          ret = ret.getLocWithOffset(1);
-        }
-
-        ret = ret.getLocWithOffset(1);
-      }
-
-      // End of while loop result in location right before a single quote
-      ret = ret.getLocWithOffset(1);
-    }
-    else  // not char
-    {
-      // Here, I am assuming the appearance of these characters
-      // signals the end_loc of a number literal.
-      while (*(src_mgr_.getCharacterData(ret)) != ' ' &&
-          *(src_mgr_.getCharacterData(ret)) != ';' &&
-          *(src_mgr_.getCharacterData(ret)) != '+' &&
-          *(src_mgr_.getCharacterData(ret)) != '-' &&
-          *(src_mgr_.getCharacterData(ret)) != '*' &&
-          *(src_mgr_.getCharacterData(ret)) != '/' &&
-          *(src_mgr_.getCharacterData(ret)) != '%' &&
-          *(src_mgr_.getCharacterData(ret)) != ',' &&
-          *(src_mgr_.getCharacterData(ret)) != ')' &&
-          *(src_mgr_.getCharacterData(ret)) != ']' &&
-          *(src_mgr_.getCharacterData(ret)) != '}' &&
-          *(src_mgr_.getCharacterData(ret)) != '>' &&
-          *(src_mgr_.getCharacterData(ret)) != '<' &&
-          *(src_mgr_.getCharacterData(ret)) != '=' &&
-          *(src_mgr_.getCharacterData(ret)) != '!' &&
-          *(src_mgr_.getCharacterData(ret)) != '|' &&
-          *(src_mgr_.getCharacterData(ret)) != '?' &&
-          *(src_mgr_.getCharacterData(ret)) != '&' &&
-          *(src_mgr_.getCharacterData(ret)) != '~' &&
-          *(src_mgr_.getCharacterData(ret)) != '`' &&
-          *(src_mgr_.getCharacterData(ret)) != ':' &&
-          *(src_mgr_.getCharacterData(ret)) != '\n')
-        ret = ret.getLocWithOffset(1);
-    }
-
-    return ret;
-  }
-
-  /**
-    @param  start_loc: start_loc location of the targeted string literal
-    @return end_loc location of string literal
-  */
-  SourceLocation GetEndLocOfStringLiteral(SourceLocation start_loc)
-  {
-    int line_num = getLineNumber(&start_loc);
-    int col_num = getColNumber(&start_loc) + 1;
-
-    // Get the location right AFTER the first double quote
-    SourceLocation ret = src_mgr_.translateLineCol(src_mgr_.getMainFileID(), 
-                                                  line_num, col_num);
-
-    while (*(src_mgr_.getCharacterData(ret)) != '\"')
-    {
-      // if there is a backslash then skip the next character
-      if (*(src_mgr_.getCharacterData(ret)) == '\\')
-      {
-        ret = ret.getLocWithOffset(1);
-      }
-
-      ret = ret.getLocWithOffset(1);
-    }
-
-    ret = ret.getLocWithOffset(1);
-    return ret;
-  }
-
-  /**
-    @param  uo: pointer to expression with unary operator
-    @return end_loc location of given expression
-  */
-  SourceLocation GetEndLocOfUnaryOpExpr(UnaryOperator *uo)
-  {
-    SourceLocation ret = uo->getLocEnd();
-
-    if (uo->getOpcode() == UO_PostInc || uo->getOpcode() == UO_PostDec)
-      // for post increment/decrement, getLocEnd returns 
-      // the location right BEFORE ++/--
-      ret = ret.getLocWithOffset(2);
-    else
-      if (uo->getOpcode() == UO_PreInc || uo->getOpcode() == UO_PreDec ||
-          uo->getOpcode() == UO_AddrOf || uo->getOpcode() == UO_Deref ||
-          uo->getOpcode() == UO_Plus || uo->getOpcode() == UO_Minus ||
-          uo->getOpcode() == UO_Not || uo->getOpcode() == UO_LNot)
-      {
-        // getLocEnd returns the location right AFTER the unary operator
-        // end_loc location of the expression is end_loc location of the sub-expr
-        Expr *subexpr = uo->getSubExpr()->IgnoreImpCasts();
-
-        SourceLocation start_loc = uo->getLocStart();
-        SourceLocation end_loc = uo->getLocEnd();
-
-        ret = GetEndLocOfExpr(subexpr);
-      }
-      else  // other cases, if any
-      {
-        ;   // just return clang end_loc loc
-      }
-
-    return ret;
-  }
-
   /**
     This function assumes the given location is either before or after
     a semicolon (;). Though I can use a while loop to go back and forth
@@ -1284,78 +738,6 @@ public:
       return loc.getLocWithOffset(1);
 
     return loc;
-  }
-
-  SourceLocation GetEndLocOfExpr(Expr *e)
-  {
-    if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
-      return GetEndLocOfUnaryOpExpr(uo);
-
-    if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
-      return GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts());
-
-    SourceLocation ret = e->getLocEnd();
-
-    // classify expression and get end_loc location accordingly
-    if (isa<ArraySubscriptExpr>(e))
-    {
-      ret = e->getLocEnd();
-      ret = GetEndLocOfStmt(&ret);
-    }
-    else if (isa<DeclRefExpr>(e) || isa<MemberExpr>(e))
-    {
-      int length = rewriter_.ConvertToString(e).length();
-      SourceLocation start_loc = e->getLocStart();
-      ret = src_mgr_.translateLineCol(src_mgr_.getMainFileID(),
-                      getLineNumber(&start_loc),
-                      getColNumber(&start_loc) + length);
-    }
-    else if (isa<CharacterLiteral>(e) || 
-              isa<FloatingLiteral>(e) || 
-              isa<IntegerLiteral>(e))
-    {
-      ret = GetEndLocOfConstantLiteral(e->getLocStart());
-    }
-    else if (isa<CStyleCastExpr>(e))  // explicit cast
-    {
-      return GetEndLocOfExpr(cast<CStyleCastExpr>(e)->getSubExpr()->IgnoreImpCasts());
-    }
-    else if (ParenExpr *pe = dyn_cast<ParenExpr>(e))
-    {
-      ret = pe->getRParen();
-      ret = ret.getLocWithOffset(1);
-    }
-    else if (isa<StringLiteral>(e))
-    {
-      ret = GetEndLocOfStringLiteral(e->getLocStart());
-    }
-    else 
-    {
-      ret = e->getLocEnd();
-      ret = GetEndLocOfStmt(&ret);
-
-      if (ret.isInvalid())
-        ret = e->getLocEnd();
-
-      // GetEndLocOfStmt sometimes returns location after semicolon
-      SourceLocation prevLoc = src_mgr_.translateLineCol(src_mgr_.getMainFileID(),
-                                getLineNumber(&ret),
-                                getColNumber(&ret) - 1);
-      if (*(src_mgr_.getCharacterData(prevLoc)) == ';')
-        ret = prevLoc;
-    }
-
-    return ret;
-  }
-
-  SourceLocation GetLeftBracketOfArraySubscript(ArraySubscriptExpr *ase)
-  {
-    SourceLocation ret = ase->getLocStart();
-
-    while (*(src_mgr_.getCharacterData(ret)) != '[')
-      ret = ret.getLocWithOffset(1);
-
-    return ret;
   }
 
   /**
@@ -1516,402 +898,6 @@ public:
     }
   }
 
-  void GenerateVgsrMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto vardecl: global_scalar_vardecl_list_)
-    {
-      if (skip_const_vardecl && VarDeclIsConst(vardecl)) 
-        continue;   
-
-      if (skip_float_vardecl && VarDeclIsFloating(vardecl))
-        continue;
-
-      string mutated_token{getVarDeclName(vardecl)};
-
-      if (reference_name.compare(mutated_token) != 0)
-      {
-        GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                            reference_name, mutated_token);
-
-        // Apply limit option on number of generated mutants 
-        --mutant_num_limit;
-        if (mutant_num_limit == 0)
-          break;
-      }
-    }
-  }
-
-  void GenerateVlsrMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    bool skip_register_vardecl = LocationIsInRange(*start_loc, 
-                                                    *addressop_range_);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto scope: local_scalar_vardecl_list_)
-    {
-      for (auto vardecl: scope)
-      {
-        if (skip_const_vardecl && VarDeclIsConst(vardecl)) 
-          continue;   
-
-        if (skip_float_vardecl && VarDeclIsFloating(vardecl))
-          continue;
-
-        if (skip_register_vardecl && 
-            vardecl->getStorageClass() == SC_Register)
-        {
-          continue;
-        }
-
-        string mutated_token{getVarDeclName(vardecl)};
-
-        if (reference_name.compare(mutated_token) != 0)
-        {
-          GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                              reference_name, mutated_token);
-
-          // Apply limit option on number of generated mutants 
-          --mutant_num_limit;
-          if (mutant_num_limit == 0)
-            return;
-        }
-      }
-    }
-  }
-
-  void GenerateVgarMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, QualType type, 
-                          string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto vardecl: global_array_vardecl_list_)
-    {
-      if (skip_const_vardecl && VarDeclIsConst(vardecl)) 
-        continue;
-
-      if (skip_float_vardecl && VarDeclIsFloating(vardecl))
-        continue;
-
-      string mutated_token{getVarDeclName(vardecl)};
-
-      if (reference_name.compare(mutated_token) != 0 && 
-          sameArrayElementType(type, vardecl->getType()))
-      {
-        GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                            reference_name, mutated_token);
-
-        // Apply limit option on number of generated mutants 
-        --mutant_num_limit;
-        if (mutant_num_limit == 0)
-          break;
-      }
-    }
-  }
-
-  void GenerateVlarMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, QualType type, 
-                          string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    // cannot mutate a variable inside address op to a register variable
-    bool skip_register_vardecl = LocationIsInRange(*start_loc, 
-                                                    *addressop_range_);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto scope: local_array_vardecl_list_)
-    {
-      for (auto vardecl: scope)
-      {
-        if (skip_const_vardecl && VarDeclIsConst(vardecl)) 
-          continue;
-
-        if (skip_float_vardecl && VarDeclIsFloating(vardecl))
-          continue;
-
-        if (skip_register_vardecl && 
-            vardecl->getStorageClass() == SC_Register)
-        {
-          continue;
-        }
-
-        string mutated_token{getVarDeclName(vardecl)};
-
-        if (reference_name.compare(mutated_token) != 0 && 
-            sameArrayElementType(type, vardecl->getType()))
-        {
-          GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                            reference_name, mutated_token);
-
-          // Apply limit option on number of generated mutants 
-          --mutant_num_limit;
-          if (mutant_num_limit == 0)
-            return;
-        }
-      }
-    }
-  }
-
-  void GenerateVgtrMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, QualType type, 
-                          string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    string struct_type = getStructureType(type);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto structure: global_struct_vardecl_list_)
-    {
-      if (skip_const_vardecl && VarDeclIsConst(structure)) 
-        continue;   
-
-      if (skip_float_vardecl && VarDeclIsFloating(structure))
-        continue;
-
-      string mutated_token{getVarDeclName(structure)};
-
-      if (reference_name.compare(mutated_token) != 0 &&
-        struct_type.compare(getStructureType(structure->getType())) == 0)
-      {
-        GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                            reference_name, mutated_token);
-
-        // Apply limit option on number of generated mutants 
-        --mutant_num_limit;
-        if (mutant_num_limit == 0)
-          break;
-      }
-    }
-  }
-
-  void GenerateVltrMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, QualType type, 
-                          string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    // cannot mutate a variable inside address op (&) to a register variable
-    bool skip_register_vardecl = LocationIsInRange(*start_loc, 
-                                                    *addressop_range_);
-
-    string struct_type = getStructureType(type);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto scope: local_struct_vardecl_list_)
-    {
-      for (auto vardecl: scope)
-      {
-        if (skip_const_vardecl && VarDeclIsConst(vardecl)) 
-          continue;   
-
-        if (skip_float_vardecl && VarDeclIsFloating(vardecl))
-          continue;
-
-        if (skip_register_vardecl && 
-            vardecl->getStorageClass() == SC_Register)
-        {
-          cout << "cannot mutate to " << getVarDeclName(vardecl) << endl;
-          continue;
-        }
-
-        string mutated_token{getVarDeclName(vardecl)};
-
-        if (reference_name.compare(mutated_token) != 0 &&
-            struct_type.compare(getStructureType(vardecl->getType())) == 0)
-        {
-          GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                              reference_name, mutated_token);
-
-          // Apply limit option on number of generated mutants 
-          --mutant_num_limit;
-          if (mutant_num_limit == 0)
-            return;
-        }
-      }
-    }
-  }
-
-  void GenerateVgprMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, QualType type, 
-                          string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    string pointee_type = getPointerType(type);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto vardecl: global_pointer_vardecl_list_)
-    {
-      if (skip_const_vardecl && VarDeclIsConst(vardecl)) 
-        continue;   
-
-      if (skip_float_vardecl && VarDeclIsFloating(vardecl))
-        continue;
-
-      string mutated_token{getVarDeclName(vardecl)};
-
-      if (reference_name.compare(mutated_token) != 0 &&
-          pointee_type.compare(getPointerType(vardecl->getType())) == 0)
-      {
-        GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                            reference_name, mutated_token);
-
-        // Apply limit option on number of generated mutants 
-        --mutant_num_limit;
-        if (mutant_num_limit == 0)
-          break;
-      }
-    }
-  }
-
-  void GenerateVlprMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string reference_name, QualType type, 
-                          string mutant_name)
-  {
-    // cannot mutate variable in switch condition to a floating-type variable
-    bool skip_float_vardecl = LocationIsInRange(*start_loc, 
-                                                *switchstmt_condition_range_);
-
-    // cannot mutate a variable in lhs of assignment to a const variable
-    bool skip_const_vardecl = LocationIsInRange(*start_loc, 
-                                                *lhs_of_assignment_range_);
-
-    // cannot mutate a variable inside address op (&) to a register variable
-    bool skip_register_vardecl = LocationIsInRange(*start_loc, 
-                                                  *addressop_range_);
-
-    string pointee_type = getPointerType(type);
-
-    int mutant_num_limit = userinput_->getLimit();
-
-    for (auto scope: local_pointer_vardecl_list_)
-    {
-      for (auto vardecl: scope)
-      {
-        if (skip_const_vardecl && VarDeclIsConst(vardecl)) 
-          continue;   
-
-        if (skip_float_vardecl && VarDeclIsFloating(vardecl))
-          continue;
-
-        if (skip_register_vardecl && 
-            vardecl->getStorageClass() == SC_Register)
-        {
-          continue;
-        }
-
-        string mutated_token{getVarDeclName(vardecl)};
-
-        if (reference_name.compare(mutated_token) != 0 &&
-            pointee_type.compare(getPointerType(vardecl->getType())) == 0)
-        {
-          GenerateMutant_new(mutant_name, start_loc, end_loc, 
-                              reference_name, mutated_token);
-
-          // Apply limit option on number of generated mutants 
-          --mutant_num_limit;
-          if (mutant_num_limit == 0)
-            return;
-        }
-      }
-    }
-  }
-
-  void GenerateVgsfMutant(SourceLocation *start_loc, 
-                          SourceLocation *end_loc, string token)
-  {
-    GenerateVgsrMutant(start_loc, end_loc, token, "VGSF");
-  }
-
-  void GenerateVlsfMutant(SourceLocation *start_loc, 
-                          SourceLocation *end_loc, string token)
-  {
-    GenerateVlsrMutant(start_loc, end_loc, token, "VLSF");
-  }
-
-  void GenerateVgtfMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string token, QualType type)
-  {
-    GenerateVgtrMutant(start_loc, end_loc, token, type, "VGTF");
-  }
-
-  void GenerateVltfMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string token, QualType type)
-  {
-    GenerateVltrMutant(start_loc, end_loc, token, type, "VLTF");
-  }
-
-  void GenerateVgpfMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string token, QualType type)
-  {
-    GenerateVgprMutant(start_loc, end_loc, token, type, "VGPF");
-  }
-
-  void GenerateVlpfMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string token, QualType type)
-  {
-    GenerateVlprMutant(start_loc, end_loc, token, type, "VLPF");
-  }
-
   void GenerateVscrMutant(MemberExpr *me, SourceLocation end_loc)
   {
     auto baseQualType = me->getBase()->getType().getCanonicalType();
@@ -2035,261 +1021,6 @@ public:
       exit(1);
     }  
   }
-
-  void GenerateOppoMutant(UnaryOperator *uo)
-  {
-    if (!(mutantoperator_holder_->apply_OPPO_))
-      return;
-
-    SourceLocation start_loc = uo->getLocStart();
-    SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo);
-
-    string mutant_name{"OPPO"};
-    string token = rewriter_.ConvertToString(uo);
-
-    if (uo->getOpcode() == UO_PostInc)  // x++
-    {   
-      // generate ++x
-      uo->setOpcode(UO_PreInc);
-      string mutated_token = rewriter_.ConvertToString(uo);
-
-      GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                        token, mutated_token);
-
-      // generate x--
-      uo->setOpcode(UO_PostDec);
-      mutated_token = rewriter_.ConvertToString(uo);
-
-      if (userinput_->getLimit() > 1)
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                            token, mutated_token);
-
-      // reset the code structure
-      uo->setOpcode(UO_PostInc);
-    }
-    else  // ++x
-    {
-      // generate x++
-      uo->setOpcode(UO_PostInc);
-      string mutated_token = rewriter_.ConvertToString(uo);
-      GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                          token, mutated_token);
-
-      // generate --x
-      uo->setOpcode(UO_PreDec);
-      mutated_token = rewriter_.ConvertToString(uo);
-
-      if (userinput_->getLimit() > 1)
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                          token, mutated_token);
-
-      // reset the code structure
-      uo->setOpcode(UO_PreInc);
-    }
-  }
-
-  void GenerateOmmoMutant(UnaryOperator *uo)
-  {    
-    if (!(mutantoperator_holder_->apply_OMMO_))
-      return;
-
-    SourceLocation start_loc = uo->getLocStart();
-    SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo);
-
-    string mutant_name{"OMMO"};
-    string token = rewriter_.ConvertToString(uo);
-
-    if (uo->getOpcode() == UO_PostDec)  // x--
-    {   
-      // generate --x
-      uo->setOpcode(UO_PreDec);
-      string mutated_token = rewriter_.ConvertToString(uo);
-
-      GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                          token, mutated_token);
-
-      // generate x++
-      uo->setOpcode(UO_PostInc);
-      mutated_token = rewriter_.ConvertToString(uo);
-      if (userinput_->getLimit() > 1)
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                            token, mutated_token);
-
-      // reset the code structure
-      uo->setOpcode(UO_PostDec);
-    }
-    else  // --x
-    {
-      // generate x--
-      uo->setOpcode(UO_PostDec);
-      string mutated_token = rewriter_.ConvertToString(uo);
-      GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                          token, mutated_token);
-
-      // generate --x
-      uo->setOpcode(UO_PreDec);
-      mutated_token = rewriter_.ConvertToString(uo);
-
-      if (userinput_->getLimit() > 1)
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                            token, mutated_token);
-
-      // reset the code structure
-      uo->setOpcode(UO_PreDec);
-    }
-  }
-
-  void GenerateVtwdMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string token, string mutant_name)
-  {
-    string mutated_token = "(" + token + "+1)";
-    GenerateMutant_new(mutant_name, start_loc, end_loc, token, mutated_token);
-
-    if (userinput_->getLimit() > 1)
-    {
-      mutated_token = "(" + token + "-1)";
-      GenerateMutant_new(mutant_name, start_loc, end_loc, token, mutated_token);
-    }
-  }
-
-  void GenerateVtwfMutant(SourceLocation *start_loc, SourceLocation *end_loc, 
-                          string token)
-  {
-    GenerateVtwdMutant(start_loc, end_loc, token, "VTWF");
-  }
-
-  void GenerateOipmMutant(UnaryOperator *uo)
-  {
-    string mutant_name{"OIPM"};
-    string token{rewriter_.ConvertToString(uo)};
-
-    Expr *first_non_deref_subexpr = cast<Expr>(uo);
-    // int numberOfDeref{0};
-
-    while (true)
-    {
-      UnaryOperator *subexpr;
-
-      if (subexpr = dyn_cast<UnaryOperator>(first_non_deref_subexpr))
-        if (subexpr->getOpcode() == UO_Deref)
-        {
-          first_non_deref_subexpr = subexpr->getSubExpr()->IgnoreImpCasts();
-          // ++numberOfDeref;
-          continue;
-        }
-
-      break;
-    }
-
-    bool subexpr_is_array_subscript{false};
-    bool subexpr_is_pointer{false};
-    SourceLocation start_of_array_index;
-    // QualType type;
-
-    if (ArraySubscriptExpr *ase = dyn_cast<ArraySubscriptExpr>(first_non_deref_subexpr))
-    {
-      // The given expression has this form *..*arr[idx] or *..*arr[idx]
-      subexpr_is_array_subscript = true;
-
-      start_of_array_index = GetLeftBracketOfArraySubscript(ase);
-      // type = ase->getBase()->IgnoreImpCasts()->getType().getCanonicalType();
-    }
-
-    if (UnaryOperator *uop = dyn_cast<UnaryOperator>(first_non_deref_subexpr))
-      if (uop->getOpcode() == UO_PostDec || uop->getOpcode() == UO_PostInc)
-      {
-        // The given expression has this form *..*ptr++ or *..*ptr--
-        subexpr_is_pointer = true;
-
-        // start_of_array_index = uop->getLocEnd();
-        // type = uop->getSubExpr()->IgnoreImpCasts()->getType().getCanonicalType();
-      }
-
-    if (subexpr_is_pointer)
-    {
-      SourceLocation start_loc = uo->getLocStart();
-      SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo);
-
-      // If the expression is on left hand side of assignment
-      // cannot apply OIPM to the first Deref operator -> uncompilable
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc)
-        && !uo->getType().getCanonicalType().isConstQualified()
-        && start_loc != lhs_of_assignment_range_->getBegin())
-      {
-        // retrieve the string form of given expression without ++/--
-        string mutated_token{rewriter_.ConvertToString(uo)};
-        mutated_token.pop_back();
-        mutated_token.pop_back();
-
-        string mutated_token1;
-        if (uo->getOpcode() == UO_PostDec)
-          mutated_token1 = "--(" + mutated_token + ")";
-        else
-          mutated_token1 = "++(" + mutated_token + ")";
-
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, token, mutated_token1);
-
-        string mutated_token2;
-        if (uo->getOpcode() == UO_PostDec)
-          mutated_token2 = "(" + mutated_token + ")--";
-        else
-          mutated_token2 = "(" + mutated_token + ")++";
-
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, token, mutated_token2);
-      }
-    }
-
-    if (subexpr_is_array_subscript)
-    {
-      SourceLocation start_loc = uo->getLocStart();
-      SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo);
-
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-      {
-        string array_index;
-
-        while (start_of_array_index != end_loc)
-        {
-          array_index += *(src_mgr_.getCharacterData(start_of_array_index));
-          start_of_array_index = start_of_array_index.getLocWithOffset(1);
-        }
-
-        string mutated_token = "(" + token.substr(0, token.length() - \
-                                array_index.length()) + ")" + array_index;
-
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                            token, mutated_token);
-      }
-    }
-  }
-
-  void GenerateMutantByNegation(Expr *e, string mutant_name)
-  {
-
-
-    SourceLocation start_loc = e->getLocStart();
-    SourceLocation end_loc = GetEndLocOfExpr(e); 
-    string token{rewriter_.ConvertToString(e)};    
-
-    string mutated_token = "!(" + token + ")";
-
-    if (mutant_name.compare("OBNG") == 0)
-      mutated_token = "~(" + token + ")";
-
-    GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                        token, mutated_token);
-  }
-
-  /*SourceLocation GetEndLocOfExpr(Expr *e)
-  {
-    if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
-      return GetEndLocOfUnaryOpExpr(uo);
-
-    if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
-      return GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts());
-
-    return GetEndLocOfExpr(e);
-  }*/
 
   // Called to check if lhs of an additive expression is a pointer
   bool LhsOfExprIsPointer(Expr *e)
@@ -2449,6 +1180,7 @@ public:
     {
       // PROBLEM: everything else in this function might not be necessary
       is_inside_stmtexpr_ = true;
+      context_.is_inside_stmtexpr = true;
     }
   }
 
@@ -2456,7 +1188,7 @@ public:
   {
     SourceLocation start_loc = ase->getLocStart();
     SourceLocation end_loc = ase->getLocEnd();
-    end_loc = GetEndLocOfStmt(&end_loc);
+    end_loc = GetEndLocOfStmt(end_loc, comp_inst_);
 
     string reference_name{rewriter_.ConvertToString(ase)};
 
@@ -2464,34 +1196,7 @@ public:
       delete arraysubscript_range_;
 
     arraysubscript_range_ = new SourceRange(start_loc, end_loc);
-
-    //===============================
-    //=== GENERATING VTWD MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_VTWD_
-      && ExprIsScalar(cast<Expr>(ase)))
-    {
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc)
-        && !is_inside_enumdecl_ 
-        && !LocationIsInRange(start_loc, *lhs_of_assignment_range_)
-        && !LocationIsInRange(start_loc, *unary_increment_range_) 
-        && !LocationIsInRange(start_loc, *unary_decrement_range_) 
-        && !LocationIsInRange(start_loc, *addressop_range_))
-      {
-        if (ScalarRefCanBeMutatedByVtwd(reference_name))
-          GenerateVtwdMutant(&start_loc, &end_loc, reference_name, "VTWD");
-        else
-          // Block VTWD mutation once and 
-          // remove the reference name from the nonMutatable list.
-          for (auto it = non_VTWD_mutatable_scalarref_list_.begin(); 
-                it != non_VTWD_mutatable_scalarref_list_.end(); ++it)
-            if (reference_name.compare(*it) == 0)
-            {
-              non_VTWD_mutatable_scalarref_list_.erase(it);
-              break;
-            }
-      }
-    }
+    context_.arraysubscript_range = arraysubscript_range_;
 
     //===============================
     //=== GENERATING CRCR MUTANTS ===
@@ -2506,64 +1211,6 @@ public:
         && !LocationIsInRange(start_loc, *unary_decrement_range_)
         && !LocationIsInRange(start_loc, *addressop_range_))
         GenerateCrcrMutant(cast<Expr>(ase), start_loc, end_loc);
-    }
-
-    //=================================================
-    //=== GENERATING Vsrr, Varr, Vtrr, Vprr MUTANTS ===
-    //=================================================
-    // PROBLEM: most outer if is not necessary
-    if (mutantoperator_holder_->apply_VGSR_ || 
-        mutantoperator_holder_->apply_VLSR_ || 
-        mutantoperator_holder_->apply_VGAR_ || 
-        mutantoperator_holder_->apply_VLAR_ ||
-        mutantoperator_holder_->apply_VGTR_ || 
-        mutantoperator_holder_->apply_VLTR_ || 
-        mutantoperator_holder_->apply_VGPR_ || 
-        mutantoperator_holder_->apply_VLPR_)
-    {
-      if (!is_inside_array_decl_size_ && 
-          !is_inside_enumdecl_ 
-          && TargetRangeIsInMutationRange(&start_loc, &end_loc))
-      {
-        if (ExprIsScalar(cast<Expr>(ase)))
-        {
-          if (mutantoperator_holder_->apply_VGSR_)
-            GenerateVgsrMutant(&start_loc, &end_loc, reference_name, "VGSR");
-
-          if (mutantoperator_holder_->apply_VLSR_)
-            GenerateVlsrMutant(&start_loc, &end_loc, reference_name, "VLSR");
-        }
-        else if (ExprIsArray(cast<Expr>(ase)))
-        {
-          if (mutantoperator_holder_->apply_VGAR_)
-            GenerateVgarMutant(&start_loc, &end_loc, reference_name, 
-                                ase->getType(), "VGAR");
-
-          if (mutantoperator_holder_->apply_VLAR_)
-            GenerateVlarMutant(&start_loc, &end_loc, reference_name, 
-                                ase->getType(), "VLAR");
-        }
-        else if (ExprIsStruct(cast<Expr>(ase)))
-        {
-          if (mutantoperator_holder_->apply_VGTR_)
-            GenerateVgtrMutant(&start_loc, &end_loc, reference_name, 
-                                ase->getType(), "VGTR");
-
-          if (mutantoperator_holder_->apply_VLTR_)
-            GenerateVltrMutant(&start_loc, &end_loc, reference_name, 
-                                ase->getType(), "VLTR");
-        }
-        else if (ExprIsPointer(cast<Expr>(ase)))
-        {
-          if (mutantoperator_holder_->apply_VGPR_)
-            GenerateVgprMutant(&start_loc, &end_loc, reference_name, 
-                                ase->getType(), "VGPR");
-
-          if (mutantoperator_holder_->apply_VLPR_)
-            GenerateVlprMutant(&start_loc, &end_loc, reference_name, 
-                                ase->getType(), "VLPR");
-        }
-      }
     }
   }
 
@@ -2580,39 +1227,6 @@ public:
     // Do not mutate those.
     if (isa<EnumConstantDecl>(dre->getDecl()))
       return;
-
-    //===============================
-    //=== GENERATING VTWD MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_VTWD_
-      && ExprIsScalar(cast<Expr>(dre)))
-    {
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc)
-        && !is_inside_enumdecl_ 
-        && !LocationIsInRange(start_loc, *lhs_of_assignment_range_)
-        && !LocationIsInRange(start_loc, *unary_increment_range_) 
-        && !LocationIsInRange(start_loc, *unary_decrement_range_) 
-        && !LocationIsInRange(start_loc, *addressop_range_))
-      {
-        // During the process of collect non-mutable reference,
-        // rewriter_.ConvertToString was used, so now, I use the
-        // function just to prevent anything abnormal from happening.
-        string declName{rewriter_.ConvertToString(dre)};
-
-        if (ScalarRefCanBeMutatedByVtwd(declName))
-          GenerateVtwdMutant(&start_loc, &end_loc, declName, "VTWD");
-        else
-          // Block VTWD mutation once and remove the reference name 
-          // from the nonMutatable list.
-          for (auto it = non_VTWD_mutatable_scalarref_list_.begin(); 
-                it != non_VTWD_mutatable_scalarref_list_.end(); ++it)
-            if (declName.compare(*it) == 0)
-            {
-              non_VTWD_mutatable_scalarref_list_.erase(it);
-              break;
-            }
-      }
-    }
 
     //===============================
     //=== GENERATING Ccsr MUTANTS ===
@@ -2707,96 +1321,6 @@ public:
           GenerateCrcrMutant(cast<Expr>(dre), start_loc, end_loc);
       }
     }
-
-    //=================================================
-    //=== GENERATING Vsrr, Varr, Vtrr, Vprr MUTANTS ===
-    //=================================================
-    if (mutantoperator_holder_->apply_VGSR_ || 
-        mutantoperator_holder_->apply_VLSR_ || 
-        mutantoperator_holder_->apply_VGAR_ || 
-        mutantoperator_holder_->apply_VLAR_ || 
-        mutantoperator_holder_->apply_VGTR_ || 
-        mutantoperator_holder_->apply_VLTR_ || 
-        mutantoperator_holder_->apply_VGPR_ || 
-        mutantoperator_holder_->apply_VLPR_)
-    {
-      if (!is_inside_array_decl_size_ && 
-          !is_inside_enumdecl_ && 
-          TargetRangeIsInMutationRange(&start_loc, &end_loc))
-      {
-        //===============================
-        //=== GENERATING Vsrr MUTANTS ===
-        //===============================
-        if (ExprIsScalar(cast<Expr>(dre)))
-        {
-          if (mutantoperator_holder_->apply_VGSR_)
-            GenerateVgsrMutant(&start_loc, &end_loc, reference_name, "VGSR");
-
-          if (mutantoperator_holder_->apply_VLSR_)
-            GenerateVlsrMutant(&start_loc, &end_loc, reference_name, "VLSR");
-        }
-        //===============================
-        //=== GENERATING Varr MUTANTS ===
-        //===============================
-        else if (ExprIsArray(cast<Expr>(dre)))
-        {
-          if (mutantoperator_holder_->apply_VGAR_)
-            GenerateVgarMutant(&start_loc, &end_loc, reference_name, 
-                                dre->getType(), "VGAR");
-
-          if (mutantoperator_holder_->apply_VLAR_)
-            GenerateVlarMutant(&start_loc, &end_loc, reference_name, 
-                                dre->getType(), "VLAR");
-        }
-        //===============================
-        //=== GENERATING Vtrr MUTANTS ===
-        //===============================
-        else if (ExprIsStruct(cast<Expr>(dre)))
-        {
-          if (mutantoperator_holder_->apply_VGTR_)
-            GenerateVgtrMutant(&start_loc, &end_loc, reference_name, 
-                                dre->getType(), "VGTR");
-
-          if (mutantoperator_holder_->apply_VLTR_)
-            GenerateVltrMutant(&start_loc, &end_loc, reference_name, 
-                                dre->getType(), "VLTR");
-        }
-        //===============================
-        //=== GENERATING Vprr MUTANTS ===
-        //===============================
-        else if (ExprIsPointer(cast<Expr>(dre)))
-        {
-          if (mutantoperator_holder_->apply_VGPR_)
-            GenerateVgprMutant(&start_loc, &end_loc, reference_name, 
-                                dre->getType(), "VGPR");
-
-          if (mutantoperator_holder_->apply_VLPR_)
-            GenerateVlprMutant(&start_loc, &end_loc, reference_name, 
-                                dre->getType(), "VLPR");
-        }
-      }
-    }
-  }
-
-  void HandleAbstractConditionalOperator(AbstractConditionalOperator *aco)
-  {
-    // handle (condition) ? (then) : (else)
-
-    //===============================
-    //=== GENERATING OCNG MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_OCNG_ && 
-        aco->getCond() != nullptr)
-    {
-      // Negate the condition of if statement
-      Expr *condition = aco->getCond()->IgnoreImpCasts();
-      SourceLocation start_loc = condition->getLocStart();
-      SourceLocation end_loc = condition->getLocEnd();
-      string mutant_name{"OCNG"};
-
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-        GenerateMutantByNegation(condition, mutant_name);
-    }
   }
 
   void HandleCStyleCastExpr(CStyleCastExpr *csce)
@@ -2807,7 +1331,7 @@ public:
     if (mutantoperator_holder_->apply_OCOR_)
     {
       SourceLocation start_loc = csce->getLocStart();
-      SourceLocation end_loc = GetEndLocOfExpr(cast<Expr>(csce));
+      SourceLocation end_loc = GetEndLocOfExpr(cast<Expr>(csce), comp_inst_);
       const Type *type{csce->getTypeAsWritten().getCanonicalType().getTypePtr()};
 
       if (TargetRangeIsInMutationRange(&start_loc, &end_loc)
@@ -2884,48 +1408,10 @@ public:
   void HandleUnaryOperator(UnaryOperator *uo)
   {
     SourceLocation start_loc = uo->getLocStart();
-    SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo);
+    SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, comp_inst_);
 
     if (uo->getOpcode() == UO_Deref)
     {
-      //===============================
-      //=== GENERATING OIPM MUTANTS ===
-      //===============================
-      if (mutantoperator_holder_->apply_OIPM_ && !is_inside_enumdecl_)
-      {
-        GenerateOipmMutant(uo);
-      }
-
-      //===============================
-      //=== GENERATING VTWD MUTANTS ===
-      //===============================
-      if (mutantoperator_holder_->apply_VTWD_ && 
-          ExprIsScalar(cast<Expr>(uo)))
-      {
-        if (TargetRangeIsInMutationRange(&start_loc, &end_loc) &&
-            !is_inside_enumdecl_ &&
-            !LocationIsInRange(start_loc, *lhs_of_assignment_range_) &&
-            !LocationIsInRange(start_loc, *unary_increment_range_) &&
-            !LocationIsInRange(start_loc, *unary_decrement_range_) &&
-            !LocationIsInRange(start_loc, *addressop_range_))
-        {
-          string reference_name{rewriter_.ConvertToString(uo)};
-
-          if (ScalarRefCanBeMutatedByVtwd(reference_name))
-            GenerateVtwdMutant(&start_loc, &end_loc, reference_name, "VTWD");
-          else
-            // Block VTWD mutation once and 
-            // remove the reference name from the nonMutatable list.
-            for (auto it = non_VTWD_mutatable_scalarref_list_.begin(); 
-                  it != non_VTWD_mutatable_scalarref_list_.end(); ++it)
-              if (reference_name.compare(*it) == 0)
-              {
-                non_VTWD_mutatable_scalarref_list_.erase(it);
-                break;
-              }
-        }
-      }
-
       //===============================
       //=== GENERATING CRCR MUTANTS ===
       //===============================
@@ -2940,66 +1426,6 @@ public:
             !LocationIsInRange(start_loc, *addressop_range_))
           GenerateCrcrMutant(cast<Expr>(uo), start_loc, end_loc);
       }
-
-      //=================================================
-      //=== GENERATING Vsrr, Varr, Vtrr, Vprr MUTANTS ===
-      //=================================================
-      if (!is_inside_array_decl_size_ && !is_inside_enumdecl_ && 
-          TargetRangeIsInMutationRange(&start_loc, &end_loc))
-      {
-        string reference_name{rewriter_.ConvertToString(uo)};
-
-        //===============================
-        //=== GENERATING Vsrr MUTANTS ===
-        //===============================
-        if (ExprIsScalar(cast<Expr>(uo)))
-        {
-          if (mutantoperator_holder_->apply_VGSR_)
-            GenerateVgsrMutant(&start_loc, &end_loc, reference_name, "VGSR");
-
-          if (mutantoperator_holder_->apply_VLSR_)
-            GenerateVlsrMutant(&start_loc, &end_loc, reference_name, "VLSR");
-        }
-        //===============================
-        //=== GENERATING Varr MUTANTS ===
-        //===============================
-        else if (ExprIsArray(cast<Expr>(uo)))
-        {
-          if (mutantoperator_holder_->apply_VGAR_)
-            GenerateVgarMutant(&start_loc, &end_loc, reference_name, 
-                                uo->getType(), "VGAR");
-
-          if (mutantoperator_holder_->apply_VLAR_)
-            GenerateVlarMutant(&start_loc, &end_loc, reference_name, 
-                                uo->getType(), "VLAR");
-        }
-        //===============================
-        //=== GENERATING Vtrr MUTANTS ===
-        //===============================
-        else if (ExprIsStruct(cast<Expr>(uo)))
-        {
-          if (mutantoperator_holder_->apply_VGTR_)
-            GenerateVgtrMutant(&start_loc, &end_loc, reference_name, 
-                                uo->getType(), "VGTR");
-
-          if (mutantoperator_holder_->apply_VLTR_)
-            GenerateVltrMutant(&start_loc, &end_loc, reference_name, 
-                                uo->getType(), "VLTR");
-        }
-        //===============================
-        //=== GENERATING Vprr MUTANTS ===
-        //===============================
-        else if (ExprIsPointer(cast<Expr>(uo)))
-        {
-          if (mutantoperator_holder_->apply_VGPR_)
-            GenerateVgprMutant(&start_loc, &end_loc, reference_name, 
-                                uo->getType(), "VGPR");
-
-          if (mutantoperator_holder_->apply_VLPR_)
-            GenerateVlprMutant(&start_loc, &end_loc, reference_name, 
-                                uo->getType(), "VLPR");
-        }
-      }
     }
 
     // Retrieve the range of UnaryOperator getting address of scalar reference
@@ -3010,370 +1436,13 @@ public:
               uo->getOpcode() == UO_PreInc)
     {
       unary_increment_range_ = new SourceRange(start_loc, end_loc);
-
-      //===============================
-      //=== GENERATING OPPO MUTANTS ===
-      //===============================
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-        GenerateOppoMutant(uo);
+      context_.unary_increment_range = unary_increment_range_;
     }   
     else if (uo->getOpcode() == UO_PostDec || 
               uo->getOpcode() == UO_PreDec)
     {
       unary_decrement_range_ = new SourceRange(start_loc, end_loc);
-
-      //===============================
-      //=== GENERATING OMMO MUTANTS ===
-      //===============================
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-        GenerateOmmoMutant(uo);
-    }
-  }
-
-  void HandleScalarConstant(Expr *e)
-  {
-    SourceLocation start_loc = e->getLocStart();
-
-    string token{rewriter_.ConvertToString(e)};
-    SourceLocation end_loc = GetEndLocOfConstantLiteral(start_loc);
-
-    //===============================
-    //=== GENERATING Cccr MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_CGCR_ || 
-        mutantoperator_holder_->apply_CLCR_)
-    {
-      // cannot mutate the variable in switch condition, case value, 
-      // array subscript to a floating-type variable
-      bool skip_float_literal = LocationIsInRange(start_loc, 
-                                                  *arraysubscript_range_) ||
-                                LocationIsInRange(start_loc, 
-                                                  *switchstmt_condition_range_) ||
-                                LocationIsInRange(start_loc, *switchcase_range_);
-
-      if (!is_inside_array_decl_size_ && 
-          !is_inside_enumdecl_ &&
-          TargetRangeIsInMutationRange(&start_loc, &end_loc) &&
-          !LocationIsInRange(start_loc, *fielddecl_range_))
-      {
-        if (mutantoperator_holder_->apply_CGCR_)
-        {
-          string mutant_name{"CGCR"};
-
-          int mutant_num_limit = userinput_->getLimit();
-
-          for (auto element: *global_scalarconstant_list_)
-          {
-            if (skip_float_literal && element.second)
-              continue;
-
-            // Avoid mutating to the same scalar constant
-            // If token is char, then convert it to iint string for comparison
-            if (token.front() == '\'' && token.back() == '\'')
-              token = ConvertCharStringToIntString(token);
-
-            if (token.compare(element.first) == 0)
-              continue;
-
-            token = rewriter_.ConvertToString(e);
-
-            // Mitigate mutation from causing duplicate-case-label error.
-            // If this constant is in range of a case label
-            // then check if the replacing token is same with any other label.
-            bool duplicatedCase = false;
-
-            if (LocationIsInRange(start_loc, *switchcase_range_))
-            {   
-              string temp = element.first;
-
-              // Convert char value to int for convenient comparison
-              if (temp.front() == '\'' && temp.back() == '\'')
-                temp = ConvertCharStringToIntString(temp);
-
-              for (auto case_value: switchstmt_info_list_.back().second)
-                if (temp.compare(case_value) == 0)
-                {
-                  duplicatedCase = true;
-                  break;
-                }
-            }
-
-            if (!duplicatedCase)
-            {
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                  token, element.first);
-
-              // Apply limit option on number of generated mutants 
-              --mutant_num_limit;
-              if (mutant_num_limit == 0)
-                break;            
-            }
-          }
-        }
-
-        // CLCR is only applied to constants inside a function
-        if (mutantoperator_holder_->apply_CLCR_ && 
-            LocationIsInRange(start_loc, *currently_parsed_function_range_))
-        {
-          string mutant_name{"CLCR"};
-
-          int mutant_num_limit = userinput_->getLimit();
-
-          // generate mutants with constants inside the current function
-          for (auto element: *local_scalarconstant_list_)
-          {
-            if (LocationBeforeRangeStart(element.second.first, 
-                                        *currently_parsed_function_range_))
-            {
-              // cout << "before range. NEXT.\n";
-              continue;
-            }
-
-            // all the consts after this are outside this function
-            if (!LocationIsInRange(element.second.first, 
-                                    *currently_parsed_function_range_))
-            {
-              // cout << "out of the function\n";
-              break;
-            }
-
-            // Prevent mutating anything inside an array subscript to floating type
-            if (skip_float_literal && element.second.second)
-            {
-              // cout << "skip floating\n";
-              continue;
-            }
-
-            // Avoid mutating to the same scalar constant
-            // If token is char, then convert it to int string for comparison
-            if (token.front() == '\'' && token.back() == '\'')
-              token = ConvertCharStringToIntString(token);
-
-            if (token.compare(element.first) == 0)
-            {
-              // cout << "exact same\n";
-              continue;
-            }
-
-            token = rewriter_.ConvertToString(e);
-
-            // Mitigate mutation from causing duplicate-case-label error.
-            // If this constant is in range of a case label
-            // then check if the replacing token is same with any other label.
-            bool duplicatedCase = false;
-
-            if (LocationIsInRange(start_loc, *switchcase_range_))
-            {
-              string temp = element.first;
-              if (temp.front() == '\'' && temp.back() == '\'')
-                temp = ConvertCharStringToIntString(temp);
-
-               for (auto case_value: switchstmt_info_list_.back().second)
-                if (temp.compare(case_value) == 0)
-                {
-                  duplicatedCase = true;
-                  break;
-                }
-            }
-
-            if (!duplicatedCase)
-            {
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                  token, element.first);
-
-              // Apply limit option on number of generated mutants 
-              --mutant_num_limit;
-              if (mutant_num_limit == 0)
-                break;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  void HandleStringLiteral(StringLiteral *sl)
-  {
-    SourceLocation start_loc = sl->getLocStart();
-    SourceLocation end_loc = GetEndLocOfStringLiteral(start_loc);
-    string token{rewriter_.ConvertToString(sl)};
-
-    //===============================
-    //=== GENERATING SANL MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_SANL_)
-    {
-      if (!is_inside_enumdecl_ &&
-          TargetRangeIsInMutationRange(&start_loc, &end_loc) &&
-          !LocationIsInRange(start_loc, *fielddecl_range_))
-      {
-        string mutant_name{"SANL"};
-
-        string mutated_token{token};
-
-        // remove the last double quote
-        mutated_token.pop_back();
-
-        mutated_token += "\\n\"";
-
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                            token, mutated_token);
-      }
-    }
-
-    //===============================
-    //=== GENERATING SRWS MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_SRWS_)
-    {
-      if (!is_inside_enumdecl_ &&
-          TargetRangeIsInMutationRange(&start_loc, &end_loc) &&
-          !LocationIsInRange(start_loc, *fielddecl_range_))
-      {
-        string mutant_name{"SRWS"};
-
-        int firstNonWhitespace = GetFirstNonWhitespaceIndex(token);
-        int lastNonWhitespace = GetLastNonWhitespaceIndex(token);
-
-        // Generate mutant only when there is some whitespace in front
-        if (firstNonWhitespace != 1)
-        {
-          string mutated_token = "\"" + token.substr(firstNonWhitespace);
-          GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                              token, mutated_token);
-        }
-
-        // Generate mutant only when there is whitespace in the back
-        if (lastNonWhitespace < token.length()-2)
-        {
-          string mutated_token = token.substr(0, lastNonWhitespace+1) + "\"";
-          GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                              token, mutated_token);
-
-          // Generate the third mutant only when there are whitespaces
-          // in both the front and the back of the string
-          if (firstNonWhitespace != 1)
-          {
-            string mutated_token = "\"";
-            int str_length = lastNonWhitespace - firstNonWhitespace + 1;
-
-            mutated_token += token.substr(firstNonWhitespace, str_length);
-            mutated_token += "\"";
-
-            GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                token, mutated_token);
-          }
-        }
-      }
-    }
-
-    //===============================
-    //=== GENERATING SCSR MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_SCSR_)
-    {
-      if (!is_inside_enumdecl_ &&
-          TargetRangeIsInMutationRange(&start_loc, &end_loc) &&
-          !LocationIsInRange(start_loc, *fielddecl_range_))
-      {
-        string mutant_name{"SCSR"};
-
-        // use to prevent duplicate mutants from local/global string literals
-        set<string> stringCache;
-
-        // All string literals from global list are distinct 
-        // (filtered from InformationGatherer).
-        for (auto literal: *global_stringliteral_list_)
-          if (literal.compare(token) != 0)
-          {
-            GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                token, literal);
-
-            stringCache.insert(literal);
-          }
-
-        // mutate to local strings only if this token is inside a function
-        if (LocationIsInRange(start_loc, *currently_parsed_function_range_))
-        {
-          for (auto literal: *local_stringliteral_list_)
-          {
-            // Do not mutate to any string literals outside current function
-            if (LocationBeforeRangeStart(literal.second, 
-                                        *currently_parsed_function_range_))
-              continue;
-
-            // A string literal outside current function range signals
-            // all following string literals are also outside.
-            if (!LocationIsInRange(literal.second, 
-                                    *currently_parsed_function_range_))
-              break;
-
-            // mutate if the literal is not the same as the token
-            // and prevent duplicate if the literal is already in the cache
-            if (literal.first.compare(token) != 0 &&
-                stringCache.find(literal.first) == stringCache.end())
-            {
-              stringCache.insert(literal.first);
-
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                  token, literal.first);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  void HandleFunctionCall(CallExpr *ce)
-  {
-    SourceLocation start_loc = ce->getLocStart();
-
-    // getRParenLoc returns the location before the right parenthesis
-    SourceLocation end_loc = ce->getRParenLoc();
-    end_loc = end_loc.getLocWithOffset(1);
-
-    string token{rewriter_.ConvertToString(ce)};
-
-    // cout << rewriter_.ConvertToString(ce) << endl;
-    // cout << ce->getCallReturnType().getCanonicalType().getAsString() << endl;
-
-    if (TargetRangeIsInMutationRange(&start_loc, &end_loc) &&
-        !is_inside_enumdecl_)
-    {
-      if (ExprIsScalar(cast<Expr>(ce)))
-      {
-        if (mutantoperator_holder_->apply_VGSF_)
-          GenerateVgsfMutant(&start_loc, &end_loc, token);
-
-        if (mutantoperator_holder_->apply_VLSF_)
-          GenerateVlsfMutant(&start_loc, &end_loc, token);
-
-        // different from declaration reference, function call
-        // cannot be lhs of assignment (foo() = ...), operand of
-        // unary increment/decrement or address operator.
-        if (mutantoperator_holder_->apply_VTWF_)
-          GenerateVtwfMutant(&start_loc, &end_loc, token);
-      }
-      else if (ExprIsStruct(cast<Expr>(ce)))
-      {
-        if (mutantoperator_holder_->apply_VGTF_)
-          GenerateVgtfMutant(&start_loc, &end_loc, token, 
-                              ce->getType().getCanonicalType());
-
-        if (mutantoperator_holder_->apply_VLTF_)
-          GenerateVltfMutant(&start_loc, &end_loc, token, 
-                              ce->getType().getCanonicalType());
-      }
-      else if (ExprIsPointer(cast<Expr>(ce)))
-      {
-        if (mutantoperator_holder_->apply_VGPF_)
-          GenerateVgpfMutant(&start_loc, &end_loc, token, 
-                              ce->getType().getCanonicalType());
-
-        if (mutantoperator_holder_->apply_VLPF_)
-          GenerateVlpfMutant(&start_loc, &end_loc, token, 
-                              ce->getType().getCanonicalType());
-      }
+      context_.unary_decrement_range = unary_decrement_range_;
     }
   }
 
@@ -3654,95 +1723,13 @@ public:
       return rhs->IgnoreParens()->IgnoreImpCasts();
   }
 
-  bool OperatorIsArithmeticAssignment(BinaryOperator *b)
-  {
-    return b->getOpcode() >= BO_MulAssign && 
-           b->getOpcode() <= BO_SubAssign;
-  }
-
-  bool OperatorIsShiftAssignment(BinaryOperator *b)
-  {
-    return b->getOpcode() == BO_ShlAssign && 
-           b->getOpcode() == BO_ShrAssign;
-  }
-
-  bool OperatorIsBitwiseAssignment(BinaryOperator *b)
-  {
-    return b->getOpcode() >= BO_AndAssign && 
-           b->getOpcode() <= BO_OrAssign;
-  }
-
-  bool ExprIsDeclRefExpr(Expr *e)
-  {
-    // An Enum value is not a declaration reference
-    if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(e))
-    {
-      if (isa<EnumConstantDecl>(dre->getDecl()))
-        return false;
-      return true;
-    }
-    return false;
-  }
-
-  bool ExprIsPointerDereferenceExpr(Expr *e)
-  {
-    if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
-    {
-      if (uo->getOpcode() == UO_Deref)
-        return true;
-      return false;
-    }
-    return false;
-  }
-
-  bool ExprIsScalarReference(Expr *e)
-  {
-    if (ExprIsDeclRefExpr(e) ||  ExprIsPointerDereferenceExpr(e) ||
-        isa<ArraySubscriptExpr>(e) || isa<MemberExpr>(e))
-      if (ExprIsScalar(e))
-        return true;
-
-    return false;
-  }
-
-  bool ExprIsPointer(Expr *e)
-  {
-    return e->getType().getCanonicalType().getTypePtr()->isPointerType();
-  }
-
-  bool ExprIsFloat(Expr *e)
-  {
-    return ((e->getType()).getCanonicalType().getTypePtr())->isFloatingType();
-  }
-
-  bool ExprIsIntegral(Expr *e)
-  {
-    auto type = ((e->getType()).getCanonicalType().getTypePtr());
-    return type->isIntegralType(comp_inst_->getASTContext());
-  }
-
-  bool ExprIsScalar(Expr *e)
-  {
-    auto type = ((e->getType().getCanonicalType()).getTypePtr());
-    return type->isScalarType() && !ExprIsPointer(e); 
-  }
-
-  bool ExprIsArray(Expr *e)
-  {
-    return ((e->getType().getCanonicalType()).getTypePtr())->isArrayType(); 
-  }
-
-  bool ExprIsStruct(Expr *e)
-  {
-    return e->getType().getCanonicalType().getTypePtr()->isStructureType(); 
-  }
-
   bool VisitEnumDecl(EnumDecl *ed)
   {
     SourceLocation start_loc = ed->getLocStart();
     SourceLocation end_loc = ed->getLocEnd();
 
     is_inside_enumdecl_ = true;
+    context_.is_inside_enumdecl = true;
     return true;
   }
 
@@ -3754,11 +1741,15 @@ public:
 
   bool VisitExpr(Expr *e)
   {
+    for (auto mutant_operator: mutant_operator_list_)
+      if (mutant_operator->CanMutate(e, &context_))
+        mutant_operator->Mutate(e, &context_);
+
     // Do not mutate or consider anything inside a typedef definition
     if (LocationIsInRange(e->getLocStart(), *typedef_range_))
       return true;
 
-    if (isa<CharacterLiteral>(e) || 
+    /*if (isa<CharacterLiteral>(e) || 
         isa<FloatingLiteral>(e) || 
         isa<IntegerLiteral>(e))
     {
@@ -3772,15 +1763,15 @@ public:
     {
       HandleStringLiteral(sl);
     }
-    else if (CStyleCastExpr *csce = dyn_cast<CStyleCastExpr>(e))
+    else */if (CStyleCastExpr *csce = dyn_cast<CStyleCastExpr>(e))
     {
       HandleCStyleCastExpr(csce);
     }
-    else if (AbstractConditionalOperator *aco = dyn_cast<AbstractConditionalOperator>(e))
+    /*else if (AbstractConditionalOperator *aco = dyn_cast<AbstractConditionalOperator>(e))
     {
       // condition ? then : else
       HandleAbstractConditionalOperator(aco);
-    }
+    }*/
     else if (StmtExpr *se = dyn_cast<StmtExpr>(e))  
     {
       HandleStmtExpr(se);
@@ -3821,6 +1812,7 @@ public:
 
         lhs_of_assignment_range_ = new SourceRange(
             bo->getLHS()->getLocStart(), start_loc);
+        context_.lhs_of_assignment_range = lhs_of_assignment_range_;
 
         // Expr *lhs = IgnoreParenExpr(bo->getLHS()->IgnoreImpCasts());
         // cout << rewriter_.ConvertToString(lhs) << endl;
@@ -3855,7 +1847,7 @@ public:
                 delete non_OCOR_mutatable_expr_range_;
 
               non_OCOR_mutatable_expr_range_ = new SourceRange(
-                  bo->getLocStart(), GetEndLocOfExpr(e));
+                  bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_));
             }
           }
 
@@ -3873,7 +1865,7 @@ public:
           }
 
           // Setting up for prevent redundant VTWD mutants
-          if (bo->isAdditiveOp() && mutantoperator_holder_->apply_VTWD_)
+          if (bo->isAdditiveOp())
           {
             CollectNonVtwdMutatableScalarRef(e, true);
           }
@@ -3882,24 +1874,6 @@ public:
         {
           it_start = (mutantoperator_holder_->logical_operator_mutators_).begin();
           it_end = (mutantoperator_holder_->logical_operator_mutators_).end();
-
-          //===============================
-          //=== GENERATING OLNG MUTANTS ===
-          //===============================
-          if (mutantoperator_holder_->apply_OLNG_)
-          {
-            string olng{"OLNG"};
-
-            GenerateMutantByNegation(e, olng);
-
-            if (userinput_->getLimit() > 1)
-              GenerateMutantByNegation(
-                  bo->getRHS()->IgnoreImpCasts(), olng);
-
-            if (userinput_->getLimit() > 2)
-              GenerateMutantByNegation(
-                  bo->getLHS()->IgnoreImpCasts(), olng);
-          }
         }
         else if (bo->isRelationalOp() || bo->isEqualityOp())
         {
@@ -3918,30 +1892,12 @@ public:
                 delete non_OCOR_mutatable_expr_range_;
 
               non_OCOR_mutatable_expr_range_ = new SourceRange(
-                  bo->getLocStart(), GetEndLocOfExpr(e));
+                  bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_));
             }
           }
 
           it_start = mutantoperator_holder_->bitwise_operator_mutators_.begin();
           it_end = mutantoperator_holder_->bitwise_operator_mutators_.end();
-
-          //===============================
-          //=== GENERATING OBNG MUTANTS ===
-          //===============================
-          if (mutantoperator_holder_->apply_OBNG_)
-          {
-            string obng{"OBNG"};
-
-            GenerateMutantByNegation(e, obng);
-
-            if (userinput_->getLimit() > 1)
-              GenerateMutantByNegation(bo->getRHS()->IgnoreImpCasts(), 
-                                       obng);
-
-            if (userinput_->getLimit() > 2)
-              GenerateMutantByNegation(bo->getLHS()->IgnoreImpCasts(), 
-                                       obng);
-          }
         }
         else if (bo->isShiftOp())
         {
@@ -3958,7 +1914,7 @@ public:
                 delete non_OCOR_mutatable_expr_range_;
 
               non_OCOR_mutatable_expr_range_ = new SourceRange(
-                  bo->getLocStart(), GetEndLocOfExpr(e));
+                  bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_));
             }
           }
         }
@@ -4117,9 +2073,9 @@ public:
                     bo->getRHS()->IgnoreImpCasts());
 
                 bool new_lhs_is_pointer = ExprIsPointer(new_left_expr);
-                bool new_lhs_is_integral = ExprIsIntegral(new_left_expr);
+                bool new_lhs_is_integral = ExprIsIntegral(comp_inst_, new_left_expr);
                 bool new_rhs_is_pointer = ExprIsPointer(new_right_expr);
-                bool new_rhs_is_integral = ExprIsIntegral(new_right_expr);
+                bool new_rhs_is_integral = ExprIsIntegral(comp_inst_, new_right_expr);
 
                 // cannot perform addition subtraction on non-pointer, non-integral
                 // PROBLEM: forget floating
@@ -4143,10 +2099,10 @@ public:
                 else  // multiplicative operator
                 {
                   // multiplicative operators can only be applied to numbers
-                  new_lhs_is_integral = ExprIsIntegral(
+                  new_lhs_is_integral = ExprIsIntegral(comp_inst_, 
                       GetLeftOperandAfterMutationToMultiplicativeOp(
                           bo->getLHS()->IgnoreImpCasts()));
-                  new_rhs_is_integral = ExprIsIntegral(
+                  new_rhs_is_integral = ExprIsIntegral(comp_inst_, 
                       GetRightOperandAfterMutationToMultiplicativeOp(
                           bo->getRHS()->IgnoreImpCasts()));
                   
@@ -4233,406 +2189,6 @@ public:
     return true;
   }
 
-  bool VisitIfStmt(IfStmt *is)
-  {
-    //===============================
-    //=== GENERATING SSDL MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_SSDL_)
-    {
-      if (Stmt *then_stmt = is->getThen())
-      {
-        if (CompoundStmt *c = dyn_cast<CompoundStmt>(then_stmt))
-        {          
-          deleteCompoundContent(c);
-        }
-        // Apply SSDL for single non-compound stmt of THEN part of if stmt
-        else if (!isa<NullStmt>(then_stmt))
-        {
-          string mutant_name{"SSDL"};
-          string token{rewriter_.ConvertToString(then_stmt)};
-          SourceLocation start_loc = then_stmt->getLocStart();
-          SourceLocation end_loc = then_stmt->getLocEnd();
-
-          // make replacing token
-          string mutated_token{";"};
-          mutated_token.append(
-              getLineNumber(&end_loc) - getLineNumber(&start_loc), '\n');
-
-          end_loc = GetEndLocOfStmt(&end_loc);
-
-          if (end_loc.isInvalid())
-          {
-            cout << "error getting end_loc location. no SSDL mutants generated here.\n";
-            cout << "error end_loc is: " << getLineNumber(&end_loc) << ":\n";
-            cout << getColNumber(&end_loc) << endl;
-            // exit(1);
-          }
-          else
-          {
-            end_loc = GetLocationAfterSemicolon(end_loc);
-
-            if (TargetRangeIsInMutationRange(&start_loc, &end_loc) && 
-                NoLabelStmtInsideRange(SourceRange(start_loc, end_loc)))
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                token, mutated_token);
-          }
-        }  
-      }
-      else 
-      {
-        // cout << "no then\n";
-        ;
-      }
-
-      // generate SSDL mutant deleting the whole ELSE part of if statement
-      if (Stmt *else_stmt = is->getElse())
-      {
-        if (!isa<NullStmt>(else_stmt))
-        {
-          string mutant_name{"SSDL"};
-          string token{rewriter_.ConvertToString(else_stmt)};
-          SourceLocation start_loc = is->getElseLoc();
-          SourceLocation end_loc = else_stmt->getLocEnd();
-
-          // make replacing token
-          string mutated_token{";"};
-          mutated_token.append(
-              getLineNumber(&end_loc) - getLineNumber(&start_loc), '\n');
-
-          end_loc = GetEndLocOfStmt(&end_loc);
-
-          if (end_loc.isInvalid())
-          {
-            cout << "error getting end_loc location. no SSDL mutants generated here.\n";
-            cout << "error end_loc is: " << getLineNumber(&end_loc) << ":\n";
-            cout << getColNumber(&end_loc) << endl;
-            // exit(1);
-          }
-          else 
-          {
-            if (TargetRangeIsInMutationRange(&start_loc, &end_loc) && 
-                NoUnremovableLabelInsideRange(SourceRange(start_loc, end_loc)))
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                token, mutated_token);
-          }            
-        }
-      }
-      else
-        // cout << "no else\n";
-        ;
-    }
-
-    //===============================
-    //=== GENERATING OCNG MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_OCNG_ && is->getCond() != nullptr)
-    {
-      // Negate the condition of if statement
-      Expr *condition = is->getCond()->IgnoreImpCasts();
-      SourceLocation start_loc = condition->getLocStart();
-      SourceLocation end_loc = GetEndLocOfExpr(condition);
-      string mutant_name{"OCNG"};
-
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-        GenerateMutantByNegation(condition, mutant_name);
-    }
-
-    return true;
-  }
-
-  bool VisitWhileStmt(WhileStmt *ws)
-  {
-    //===============================
-    //=== GENERATING OCNG MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_OCNG_ && ws->getCond() != nullptr)
-    {
-      // Negate the condition of while statement
-      Expr *condition = ws->getCond()->IgnoreImpCasts();
-      SourceLocation start_loc = condition->getLocStart();
-      SourceLocation end_loc = condition->getLocEnd();
-      string mutant_name{"OCNG"};
-
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-        GenerateMutantByNegation(condition, mutant_name);
-    }
-
-    //===============================
-    //=== GENERATING SSDL MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_SSDL_)
-    {
-      if (Stmt *body = ws->getBody())
-      {
-        if (CompoundStmt *c = dyn_cast<CompoundStmt>(body))
-        {
-          deleteCompoundContent(c);
-        }
-        else if (!isa<NullStmt>(body))
-        {
-          string mutant_name{"SSDL"};
-          string token{rewriter_.ConvertToString(body)};
-          SourceLocation start_loc = body->getLocStart();
-          SourceLocation end_loc = body->getLocEnd();
-
-          // make replacing token
-          string mutated_token{";"};
-          mutated_token.append(
-              getLineNumber(&end_loc) - getLineNumber(&start_loc), '\n');
-
-          end_loc = GetEndLocOfStmt(&end_loc);
-
-          if (end_loc.isInvalid())
-          {
-            cout << "VisitWhileStmt: error getting end_loc location. no SSDL mutants generated here.\n";
-            cout << "error end_loc is: "; 
-            PrintLocation(end_loc);
-            // exit(1);
-          }
-          else
-          {
-            end_loc = GetLocationAfterSemicolon(end_loc);
-
-            if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                token, mutated_token);
-          }
-        }
-      }
-      else
-        cout << "while stmt with no body\n";
-    }
-
-    return true;
-  }
-
-  bool VisitDoStmt(DoStmt *ds)
-  {
-    //===============================
-    //=== GENERATING OCNG MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_OCNG_ && ds->getCond() != nullptr)
-    {
-      // Negate the condition of if statement
-      Expr *condition = ds->getCond()->IgnoreImpCasts();
-      SourceLocation start_loc = condition->getLocStart();
-      SourceLocation end_loc = condition->getLocEnd();
-      string mutant_name{"OCNG"};
-
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-        GenerateMutantByNegation(condition, mutant_name);
-    }
-
-    //===============================
-    //=== GENERATING SSDL MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_SSDL_)
-    {
-      if (Stmt *body = ds->getBody())
-      {
-        if (CompoundStmt *c = dyn_cast<CompoundStmt>(body))
-        {
-          deleteCompoundContent(c);
-        }
-        else if (!isa<NullStmt>(body))
-        {
-          string mutant_name{"SSDL"};
-          string token{rewriter_.ConvertToString(body)};
-          SourceLocation start_loc = body->getLocStart();
-          SourceLocation end_loc = body->getLocEnd();
-
-          // make replacing token
-          string mutated_token{";"};
-          mutated_token.append(
-              getLineNumber(&end_loc) - getLineNumber(&start_loc), '\n');
-
-          end_loc = GetEndLocOfStmt(&end_loc);
-
-          if (end_loc.isInvalid())
-          {
-            cout << "VisitDoStmt: error getting end_loc location. no SSDL mutants generated here.\n";
-            cout << "error end_loc is: "; 
-            PrintLocation(end_loc);
-            // exit(1);
-          }
-          else
-          {
-            end_loc = GetLocationAfterSemicolon(end_loc);
-
-            if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                token, mutated_token);
-          }
-        }
-      }
-      else
-        cout << "do stmt with no body\n";
-    }
-
-    return true;
-  }
-
-  bool VisitForStmt(ForStmt *fs)
-  {
-    //===============================
-    //=== GENERATING OCNG MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_OCNG_ && fs->getCond() != nullptr)
-    {
-      // Negate the condition of if statement
-      Expr *condition = fs->getCond()->IgnoreImpCasts();
-      SourceLocation start_loc = condition->getLocStart();
-      SourceLocation end_loc = condition->getLocEnd();
-      string mutant_name{"OCNG"};
-
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-        GenerateMutantByNegation(condition, mutant_name);
-    }
-
-    //===============================
-    //=== GENERATING SSDL MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_SSDL_)
-    {
-      if (Stmt *body = fs->getBody())
-      {
-        if (CompoundStmt *c = dyn_cast<CompoundStmt>(body))
-        {
-          deleteCompoundContent(c);
-        }
-        else if (!isa<NullStmt>(body))
-        {
-          string mutant_name{"SSDL"};
-          string token{rewriter_.ConvertToString(body)};
-          SourceLocation start_loc = body->getLocStart();
-          SourceLocation end_loc = body->getLocEnd();
-
-          // make replacing token
-          string mutated_token{";"};
-          mutated_token.append(
-              getLineNumber(&end_loc) - getLineNumber(&start_loc), '\n');
-
-          end_loc = GetEndLocOfStmt(&end_loc);
-
-          if (end_loc.isInvalid())
-          {
-            cout << "VisitForStmt: error getting end_loc location. no SSDL mutants generated here.\n";
-            cout << "error end_loc is: "; 
-            PrintLocation(end_loc);
-            // exit(1);
-          }
-          else
-          {
-            end_loc = GetLocationAfterSemicolon(end_loc);
-
-            if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-              GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                                  token, mutated_token);
-          }
-        }
-      }
-      else
-        cout << "for stmt with no body\n";
-    }
-
-    return true;
-  }
-
-  void deleteStatement(Stmt *s)
-  {
-    // cannot delete declaration statement
-    // deleting null statement causes equivalent mutant
-    if (isa<DeclStmt>(s) || isa<NullStmt>(s))
-      return; 
-
-    // Do not delete the label, case, default but only the statement right below them.
-    if (SwitchCase *sc = dyn_cast<SwitchCase>(s))
-    {
-      deleteStatement(sc->getSubStmt()); 
-      return;
-    }
-    else 
-      if (DefaultStmt *ds = dyn_cast<DefaultStmt>(s))
-      {
-        deleteStatement(ds->getSubStmt());
-        return;
-      }
-      else
-        if (LabelStmt *ls = dyn_cast<LabelStmt>(s))
-        {
-          deleteStatement(ls->getSubStmt());
-          return;
-        }
-        else
-          ;   // execute the rest of the function.
-
-
-    string mutant_name = "SSDL";
-    string token{rewriter_.ConvertToString(s)};
-    SourceLocation start_loc = (s)->getLocStart();
-    SourceLocation end_loc = (s)->getLocEnd();
-
-    // make replacing token
-    string mutated_token{";"};
-    mutated_token.append(
-        getLineNumber(&end_loc) - getLineNumber(&start_loc), '\n');
-
-    end_loc = GetEndLocOfStmt(&end_loc);
-
-    if (end_loc.isInvalid())
-    {
-      cout << "error end_loc is: " << getLineNumber(&end_loc) << ":\n";
-      cout << getColNumber(&end_loc) << endl;
-      cout << "error getting real end_loc location\n";
-      // exit(1);
-    }
-    else
-    {
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-      {
-        // For stmts that can have label inside their body, make sure
-        // there is no label that will be goto from outside before mutating
-        if ((isa<DoStmt>(s) || isa<ForStmt>(s) || isa<WhileStmt>(s) || 
-             isa<IfStmt>(s) || isa<SwitchStmt>(s)) &&
-            !NoUnremovableLabelInsideRange(SourceRange(start_loc, end_loc)))
-          return;
-        
-        GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                            token, mutated_token);
-      }
-    }      
-  }
-
-  void deleteCompoundContent(CompoundStmt *c)
-  {  
-    // No point deleting a CompoundStmt full of NullStmt
-    // If there is only 1 non-NullStmt, then this mutant is equivalent to deleting that single statement.
-    if (CountNonNullStmtInCompoundStmt(c) <= 1)
-      return;
-
-    SourceLocation start_loc = c->getLBracLoc();
-    SourceLocation end_loc = c->getRBracLoc().getLocWithOffset(1);
-
-    if (!NoUnremovableLabelInsideRange(SourceRange(start_loc, end_loc)))
-      return;
-
-    string mutant_name{"SSDL"};
-    string token{rewriter_.ConvertToString(c)};
-    
-    
-    // make replacing token
-    string mutated_token{"{"};
-    mutated_token.append(
-        getLineNumber(&end_loc) - getLineNumber(&start_loc), '\n');
-    mutated_token.append(1, '}');
-
-
-    if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
-      GenerateMutant_new(mutant_name, &start_loc, &end_loc, 
-                         token, mutated_token);
-  }
-
   bool VisitCompoundStmt(CompoundStmt *c)
   {
     // entering a new scope
@@ -4641,33 +2197,6 @@ public:
     local_array_vardecl_list_.push_back(VarDeclList());
     local_struct_vardecl_list_.push_back(VarDeclList());
     local_pointer_vardecl_list_.push_back(VarDeclList());
-
-    if (!mutantoperator_holder_->apply_SSDL_)
-      return true;
-
-    // Generate SSDL mutants for each statement in the compound that is not
-    // declaration, switch case, default case, label or null statement.
-    for (CompoundStmt::body_iterator it = c->body_begin(); 
-         it != c->body_end(); ++it)
-    {
-      // Do not apply SSDL to the last statement of statement expression
-      if (is_inside_stmtexpr_)
-      {
-        CompoundStmt::body_iterator nextStmt = it;
-        ++nextStmt;
-
-        if (nextStmt == c->body_end())  
-        {
-          // this is the last statement of a statement expression
-          is_inside_stmtexpr_ = false;
-
-          // no SDL mutants generated for this statement
-          continue;   
-        }
-      }
-
-      deleteStatement(*it);
-    }
 
     return true;
   }
@@ -4681,10 +2210,13 @@ public:
       delete fielddecl_range_;
 
     fielddecl_range_ = new SourceRange(start_loc, end_loc);
+    context_.fielddecl_range = fielddecl_range_;
 
     if (fd->getType().getTypePtr()->isArrayType())
     {
       is_inside_array_decl_size_ = true;
+      context_.is_inside_array_decl_size = true;
+
       first_binaryop_after_arraydecl_ = true;
 
       array_decl_range_ = new SourceRange(fd->getLocStart(), fd->getLocEnd());
@@ -4698,6 +2230,7 @@ public:
     SourceLocation end_loc = vd->getLocEnd();
 
     is_inside_enumdecl_ = false;
+    context_.is_inside_enumdecl = false;
 
     if (LocationIsInRange(start_loc, *typedef_range_))
       return true;
@@ -4705,7 +2238,7 @@ public:
     if (LocationIsInRange(start_loc, *functionprototype_range_))
       return true;
 
-    if (VarDeclIsScalar(vd))
+    if (IsVarDeclScalar(vd))
     {
       if (vd->isFileVarDecl())  
       {
@@ -4724,13 +2257,15 @@ public:
         local_scalar_vardecl_list_.back().push_back(vd);
       }
     }
-    else if (VarDeclIsArray(vd))
+    else if (IsVarDeclArray(vd))
     {
       auto type = vd->getType().getCanonicalType().getTypePtr();
 
       if (auto array_type =  dyn_cast_or_null<ConstantArrayType>(type)) 
       {  
         is_inside_array_decl_size_ = true;
+        context_.is_inside_array_decl_size = true;
+
         first_binaryop_after_arraydecl_ = true;
 
         array_decl_range_ = new SourceRange(start_loc, end_loc);
@@ -4753,7 +2288,7 @@ public:
         local_array_vardecl_list_.back().push_back(vd);
       }
     }
-    else if (VarDeclIsStruct(vd))
+    else if (IsVarDeclStruct(vd))
     {
       if (vd->isFileVarDecl())  // global variable
       {
@@ -4772,7 +2307,7 @@ public:
         local_struct_vardecl_list_.back().push_back(vd);
       }
     }
-    else if (VarDeclIsPointer(vd))
+    else if (IsVarDeclPointer(vd))
     {
       if (vd->isFileVarDecl())  // global variable
       {
@@ -4869,6 +2404,7 @@ public:
       delete switchcase_range_;
 
     switchcase_range_ = new SourceRange(sc->getLocStart(), sc->getColonLoc());
+    context_.switchcase_range = switchcase_range_;
 
     // remove switch statements that are already passed
     while (!switchstmt_info_list_.empty() && 
@@ -4887,34 +2423,6 @@ public:
         src_mgr_.getMainFileID(),
         getLineNumber(&start_loc),
         getColNumber(&start_loc) + reference_name.length());
-
-    //===============================
-    //=== GENERATING VTWD MUTANTS ===
-    //===============================
-    if (mutantoperator_holder_->apply_VTWD_ &&
-        ExprIsScalar(cast<Expr>(me)))
-    {
-      if (TargetRangeIsInMutationRange(&start_loc, &end_loc) &&
-          !is_inside_enumdecl_ &&
-          !LocationIsInRange(start_loc, *lhs_of_assignment_range_) &&
-          !LocationIsInRange(start_loc, *unary_increment_range_) &&
-          !LocationIsInRange(start_loc, *unary_decrement_range_) &&
-          !LocationIsInRange(start_loc, *addressop_range_))
-      {
-        if (ScalarRefCanBeMutatedByVtwd(reference_name))
-          GenerateVtwdMutant(&start_loc, &end_loc, reference_name, "VTWD");
-        else
-          // Block VTWD mutation once and 
-          // remove the reference name from the nonMutatable list.
-          for (auto it = non_VTWD_mutatable_scalarref_list_.begin(); 
-               it != non_VTWD_mutatable_scalarref_list_.end(); ++it)
-            if (reference_name.compare(*it) == 0)
-            {
-              non_VTWD_mutatable_scalarref_list_.erase(it);
-              break;
-            }
-      }
-    }
 
     //===============================
     //=== GENERATING VSCR MUTANTS ===
@@ -4941,62 +2449,6 @@ public:
         GenerateCrcrMutant(cast<Expr>(me), start_loc, end_loc);
     }
 
-    //=================================================
-    //=== GENERATING Vsrr, Varr, Vtrr, Vprr MUTANTS ===
-    //=================================================
-    if (mutantoperator_holder_->apply_VGSR_ || 
-        mutantoperator_holder_->apply_VLSR_ || 
-        mutantoperator_holder_->apply_VGAR_ || 
-        mutantoperator_holder_->apply_VLAR_ ||
-        mutantoperator_holder_->apply_VGTR_ || 
-        mutantoperator_holder_->apply_VLTR_ || 
-        mutantoperator_holder_->apply_VGPR_ || 
-        mutantoperator_holder_->apply_VLPR_)
-    {
-      if (!is_inside_array_decl_size_ && !is_inside_enumdecl_ && 
-          TargetRangeIsInMutationRange(&start_loc, &end_loc))
-      {
-        if (ExprIsScalar(cast<Expr>(me)))
-        {
-          if (mutantoperator_holder_->apply_VGSR_)
-            GenerateVgsrMutant(&start_loc, &end_loc, reference_name, "VGSR");
-
-          if (mutantoperator_holder_->apply_VLSR_)
-            GenerateVlsrMutant(&start_loc, &end_loc, reference_name, "VLSR");
-        }
-        else if (ExprIsArray(cast<Expr>(me)))
-        {
-          if (mutantoperator_holder_->apply_VGAR_)
-            GenerateVgarMutant(&start_loc, &end_loc, reference_name, 
-                               me->getType(), "VGAR");
-
-          if (mutantoperator_holder_->apply_VLAR_)
-            GenerateVlarMutant(&start_loc, &end_loc, reference_name, 
-                               me->getType(), "VLAR");
-        }
-        else if (ExprIsStruct(cast<Expr>(me)))
-        {
-          if (mutantoperator_holder_->apply_VGTR_)
-            GenerateVgtrMutant(&start_loc, &end_loc, reference_name, 
-                               me->getType(), "VGTR");
-
-          if (mutantoperator_holder_->apply_VLTR_)
-            GenerateVltrMutant(&start_loc, &end_loc, reference_name, 
-                               me->getType(), "VLTR");
-        }
-        else if (ExprIsPointer(cast<Expr>(me)))
-        {
-          if (mutantoperator_holder_->apply_VGPR_)
-            GenerateVgprMutant(&start_loc, &end_loc, reference_name, 
-                               me->getType(), "VGPR");
-
-          if (mutantoperator_holder_->apply_VLPR_)
-            GenerateVlprMutant(&start_loc, &end_loc, reference_name, 
-                               me->getType(), "VLPR");
-        }
-      }
-    }
-
     return true;
   }
 
@@ -5005,10 +2457,14 @@ public:
     SourceLocation start_loc = s->getLocStart();
     SourceLocation end_loc = s->getLocEnd();
 
+    // if (TargetRangeIsInMutationRange(&start_loc, &end_loc))
+    //   cout << rewriter_.ConvertToString(s) << endl;
+
     // set up Proteum-style line number
     if (getLineNumber(&start_loc) > proteumstyle_stmt_end_line_num_)
     {
       proteumstyle_stmt_start_line_num_ = getLineNumber(&start_loc);
+      context_.proteumstyle_stmt_start_line_num = proteumstyle_stmt_start_line_num_;
       
       if (isa<IfStmt>(s) || isa<WhileStmt>(s) || isa<SwitchStmt>(s)) 
       {
@@ -5054,7 +2510,12 @@ public:
         !LocationIsInRange(start_loc, *array_decl_range_))
     {
       is_inside_array_decl_size_ = false;
+      context_.is_inside_array_decl_size = false;
     }
+
+    for (auto mutant_operator: mutant_operator_list_)
+      if (mutant_operator->CanMutate(s, &context_))
+        mutant_operator->Mutate(s, &context_);
 
     return true;
   }
@@ -5086,6 +2547,7 @@ public:
       local_pointer_vardecl_list_.push_back(VarDeclList());
 
       is_inside_enumdecl_ = false;
+      context_.is_inside_enumdecl = false;
       // isInsideFunctionDecl = true;
 
       if (currently_parsed_function_range_ != nullptr)
@@ -5093,6 +2555,8 @@ public:
 
       currently_parsed_function_range_ = new SourceRange(f->getLocStart(), 
                                                          f->getLocEnd());
+      context_.currently_parsed_function_range = \
+          currently_parsed_function_range_;
 
       // remove local constants appearing before currently parsed function
       auto constant_iter = local_scalarconstant_list_->begin();
@@ -5126,17 +2590,18 @@ class MyASTConsumer : public ASTConsumer
 {
 public:
   MyASTConsumer(SourceManager &source_mgr, LangOptions &lang_option, 
-                UserInput *user_input, MutantOperatorHolder *holder, 
+                Configuration *user_input, MutantOperatorHolder *holder, 
                 CompilerInstance *CI, vector<SourceLocation> *labels, 
                 LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
                 GlobalScalarConstantList *global_scalar_constant_list,
                 LocalScalarConstantList *local_scalar_constant_list, 
                 GlobalStringLiteralList *global_string_literal_list,
-                LocalStringLiteralList *local_string_literal_list) 
+                LocalStringLiteralList *local_string_literal_list,
+                vector<MutantOperatorTemplate*> &mutant_list)
     : Visitor(source_mgr, lang_option, user_input, holder, CI, labels, 
               label_to_gotolist_map, global_scalar_constant_list, 
               local_scalar_constant_list, global_string_literal_list, 
-              local_string_literal_list) 
+              local_string_literal_list, mutant_list) 
   { 
   }
 
@@ -5444,56 +2909,6 @@ private:
   InformationVisitor Visitor;
 };
 
-/** 
-  Check if this directory exists
-
-  @param  directory the directory to be checked
-  @return True if the directory exists
-      False otherwise
-*/
-bool DirectoryExists( const std::string &directory )
-{
-  if( !directory.empty() )
-  {
-    if( access(directory.c_str(), 0) == 0 )
-    {
-      struct stat status;
-      stat( directory.c_str(), &status );
-      if( status.st_mode & S_IFDIR )
-        return true;
-    }
-  }
-  // if any condition fails
-  return false;
-}
-
-void PrintUsageErrorMsg()
-{
-  cout << "Invalid command.\n";
-  cout << "Usage: tool <filename> [-m <mutant_name> [-A \"<domain>\"] ";
-  cout << "[-B \"<range>\"]] [-rs <line #> <col #>] [-re <line #> <col #>]";
-  cout << " [-l <max>] [-o <dir>]" << endl;
-}
-
-void PrintLineColNumberErrorMsg()
-{
-  cout << "Invalid line/column number\n";
-  cout << "Usage: [-rs <line #> <col #>] [-re <line #> <col #>]\n";
-}
-
-// Called when incrementing iterator variable i in a loop
-// When incrementing i in a loop, I expected that i will not exceed max.
-// However if user made mistake in input command, it can happen.
-void increment_i(int *i, int max)
-{
-  ++(*i);
-  if ((*i) >= max)
-  {
-    PrintUsageErrorMsg();
-    exit(1);
-  }
-}
-
 InformationGatherer* GetNecessaryDataFromInputFile(
     char *filename, MutantOperatorHolder *holder)
 {
@@ -5584,11 +2999,115 @@ InformationGatherer* GetNecessaryDataFromInputFile(
   return TheGatherer;
 }
 
+void AddMutantOperator(string mutant_name, 
+                       set<string> &domain, set<string> &range, 
+                       vector<MutantOperatorTemplate*> &mutant_list)
+{
+  // Make appropriate MutantOperator based on name
+  // Verifiy and set domain and range accordingly
+
+  MutantOperatorTemplate *new_operator;
+
+  if (mutant_name.compare("SSDL") == 0)
+    new_operator = new SSDL();
+  else if (mutant_name.compare("ORRN") == 0)
+    new_operator = new ORRN();
+  else if (mutant_name.compare("VTWF") == 0)
+    new_operator = new VTWF();
+  else if (mutant_name.compare("CRCR") == 0)
+    new_operator = new CRCR();
+  else if (mutant_name.compare("SANL") == 0)
+    new_operator = new SANL();
+  else if (mutant_name.compare("SRWS") == 0)
+    new_operator = new SRWS();
+  else if (mutant_name.compare("SCSR") == 0)
+    new_operator = new SCSR();
+  else if (mutant_name.compare("VLSF") == 0)
+    new_operator = new VLSF();
+  else if (mutant_name.compare("VGSF") == 0)
+    new_operator = new VGSF();
+  else if (mutant_name.compare("VLTF") == 0)
+    new_operator = new VLTF();
+  else if (mutant_name.compare("VGTF") == 0)
+    new_operator = new VGTF();
+  else if (mutant_name.compare("VLPF") == 0)
+    new_operator = new VLPF();
+  else if (mutant_name.compare("VGPF") == 0)
+    new_operator = new VGPF();
+  else if (mutant_name.compare("VGSR") == 0)
+    new_operator = new VGSR();
+  else if (mutant_name.compare("VLSR") == 0)
+    new_operator = new VLSR();
+  else if (mutant_name.compare("VGAR") == 0)
+    new_operator = new VGAR();
+  else if (mutant_name.compare("VLAR") == 0)
+    new_operator = new VLAR();
+  else if (mutant_name.compare("VGTR") == 0)
+    new_operator = new VGTR();
+  else if (mutant_name.compare("VLTR") == 0)
+    new_operator = new VLTR();
+  else if (mutant_name.compare("VGPR") == 0)
+    new_operator = new VGPR();
+  else if (mutant_name.compare("VLPR") == 0)
+    new_operator = new VLPR();
+  else if (mutant_name.compare("VTWD") == 0)
+    new_operator = new VTWD();
+  else if (mutant_name.compare("VSCR") == 0)
+    new_operator = new VSCR();
+  else if (mutant_name.compare("CGCR") == 0)
+    new_operator = new CGCR();
+  else if (mutant_name.compare("CLCR") == 0)
+    new_operator = new CLCR();
+  else if (mutant_name.compare("CGSR") == 0)
+    new_operator = new CGSR();
+  else if (mutant_name.compare("CLSR") == 0)
+    new_operator = new CLSR();
+  else if (mutant_name.compare("OPPO") == 0)
+    new_operator = new OPPO();
+  else if (mutant_name.compare("OMMO") == 0)
+    new_operator = new OMMO();
+  else if (mutant_name.compare("OLNG") == 0)
+    new_operator = new OLNG();
+  else if (mutant_name.compare("OBNG") == 0)
+    new_operator = new OBNG();
+  else if (mutant_name.compare("OCNG") == 0)
+    new_operator = new OCNG();
+  else if (mutant_name.compare("OIPM") == 0)
+    new_operator = new OIPM();
+  else
+  {
+    cout << "Unknown mutant operator: " << mutant_name << endl;
+    // exit(1);
+    return;
+  }
+
+  // Set domain for mutant operator if domain is valid
+  if (!new_operator->ValidateDomain(domain))
+  {
+    cout << "invalid domain\n";
+    exit(1);
+  }
+  else
+    new_operator->setDomain(domain);
+
+  // Set range for mutant operator if range is valid
+  if (!new_operator->ValidateRange(range))
+  {
+    cout << "invalid range\n";
+    exit(1);
+  }
+  else
+    new_operator->setRange(range);
+
+  mutant_list.push_back(new_operator);
+}
+
 // Wrap up currently-entering mutant operator (if can)
 // before change the state to kNonAOrBOption.
 void clearState(UserInputAnalyzingState &state, string mutant_name, 
                 set<string> &domain, set<string> &range, 
-                MutantOperatorHolder *holder)
+                MutantOperatorHolder *holder,
+                vector<MutantOperatorTemplate*> &mutant_list)
 {
   switch (state)
   {
@@ -5606,6 +3125,8 @@ void clearState(UserInputAnalyzingState &state, string mutant_name,
         cout << "Error adding operator " << mutant_name << endl;
         exit(1);
       }
+
+      AddMutantOperator(mutant_name, domain, range, mutant_list);
 
       domain.clear();
       range.clear();
@@ -5627,7 +3148,8 @@ void HandleInput(string input, UserInputAnalyzingState &state,
                  set<string> &range, MutantOperatorHolder *holder, 
                  string &output_dir, int &limit, SourceLocation *start_loc, 
                  SourceLocation *end_loc, int &line_num, int &col_num, 
-                 SourceManager &src_mgr)
+                 SourceManager &src_mgr, 
+                 vector<MutantOperatorTemplate*> &mutant_list)
 {
   switch (state)
   {
@@ -5670,8 +3192,10 @@ void HandleInput(string input, UserInputAnalyzingState &state,
 
       if (line_num <= 0)
       {
-        cout << "Input line number is not positive. Default to 1.\n";
-        line_num = 1;
+        // cout << "Input line number is not positive. Default to 1.\n";
+        // line_num = 1;
+        PrintLineColNumberErrorMsg();
+        exit(1);
       }
 
       state = UserInputAnalyzingState::kRsColumn;
@@ -5686,8 +3210,10 @@ void HandleInput(string input, UserInputAnalyzingState &state,
 
       if (col_num <= 0)
       {
-        cout << "Input col number is not positive. Default to 1.\n";
-        col_num = 1;
+        // cout << "Input col number is not positive. Default to 1.\n";
+        // col_num = 1;
+        PrintLineColNumberErrorMsg();
+        exit(1);
       }
 
       *start_loc = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
@@ -5704,8 +3230,10 @@ void HandleInput(string input, UserInputAnalyzingState &state,
 
       if (line_num <= 0)
       {
-        cout << "Input line number is not positive. Default to 1.\n";
-        line_num = 1;
+        // cout << "Input line number is not positive. Default to 1.\n";
+        // line_num = 1;
+        PrintLineColNumberErrorMsg();
+        exit(1);
       }
 
       state = UserInputAnalyzingState::kReColumn;
@@ -5720,8 +3248,10 @@ void HandleInput(string input, UserInputAnalyzingState &state,
 
       if (col_num <= 0)
       {
-        cout << "Input col number is not positive. Default to 1.\n";
-        col_num = 1;
+        // cout << "Input col number is not positive. Default to 1.\n";
+        // col_num = 1;
+        PrintLineColNumberErrorMsg();
+        exit(1);
       }
 
       *end_loc = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
@@ -5759,13 +3289,15 @@ void HandleInput(string input, UserInputAnalyzingState &state,
         exit(1);
       }
 
+      AddMutantOperator(mutant_name, domain, range, mutant_list);
+
       state = UserInputAnalyzingState::kMutantName;
       domain.clear();
       range.clear();
 
       HandleInput(input, state, mutant_name, domain, range, holder, 
                   output_dir, limit, start_loc, end_loc, line_num, 
-                  col_num, src_mgr);
+                  col_num, src_mgr, mutant_list);
       break;
     }
 
@@ -5902,6 +3434,8 @@ int main(int argc, char *argv[])
   int line_num{0};
   int col_num{0};
 
+  vector<MutantOperatorTemplate*> mutant_operator_list;
+
   for (int i = 2; i < argc; ++i)
   {
     string option = argv[i];
@@ -5910,7 +3444,8 @@ int main(int argc, char *argv[])
     if (option.compare("-m") == 0)
     {
       apply_all_mutant_operators = false;
-      clearState(state, mutantOpName, domain, range, holder);
+      clearState(state, mutantOpName, domain, range, 
+                 holder, mutant_operator_list);
       
       mutantOpName.clear();
       domain.clear();
@@ -5920,22 +3455,26 @@ int main(int argc, char *argv[])
     }
     else if (option.compare("-l") == 0)
     {
-      clearState(state, mutantOpName, domain, range, holder);
+      clearState(state, mutantOpName, domain, range, 
+                 holder, mutant_operator_list);
       state = UserInputAnalyzingState::kLimitNumOfMutant;
     }
     else if (option.compare("-rs") == 0)
     {
-      clearState(state, mutantOpName, domain, range, holder);
+      clearState(state, mutantOpName, domain, range, 
+                 holder, mutant_operator_list);
       state = UserInputAnalyzingState::kRsLine;
     }
     else if (option.compare("-re") == 0)
     {
-      clearState(state, mutantOpName, domain, range, holder);
+      clearState(state, mutantOpName, domain, range, 
+                 holder, mutant_operator_list);
       state = UserInputAnalyzingState::kReLine;
     }
     else if (option.compare("-o") == 0)
     {
-      clearState(state, mutantOpName, domain, range, holder);
+      clearState(state, mutantOpName, domain, range, 
+                 holder, mutant_operator_list);
       state = UserInputAnalyzingState::kOutputDir;
     }
     else if (option.compare("-A") == 0)
@@ -5965,7 +3504,8 @@ int main(int argc, char *argv[])
     {
       HandleInput(option, state, mutantOpName, domain, range, holder,
                   output_dir, limit, &start_of_mutation_range, 
-                  &end_of_mutation_range, line_num, col_num, SourceMgr);
+                  &end_of_mutation_range, line_num, col_num, SourceMgr,
+                  mutant_operator_list);
       // cout << "mutant mutant_name name: " << mutantOpName << endl;
       // cout << "domain: "; PrintStringSet(domain);
       // cout << "range "; PrintStringSet(range);
@@ -5978,11 +3518,13 @@ int main(int argc, char *argv[])
     }
   }
 
-  clearState(state, mutantOpName, domain, range, holder);
+  clearState(state, mutantOpName, domain, range, holder, mutant_operator_list);
+
+  cout << mutant_operator_list.size() << endl;
 
   if (apply_all_mutant_operators) 
   {
-    // holder->useAll();
+    holder->ApplyAllMutantOperators();
   }
 
   // Make mutation database file named <inputfilename>_mut_db.out
@@ -6002,8 +3544,8 @@ int main(int argc, char *argv[])
   ofstream out_mutDb(mutDbFilename.data(), ios::trunc);   
   out_mutDb.close();
 
-  // Create UserInput object pointer to pass as attribute for MyASTConsumer
-  UserInput *userInput = new UserInput(inputFilename, mutDbFilename, 
+  // Create Configuration object pointer to pass as attribute for MyASTConsumer
+  Configuration *userInput = new Configuration(inputFilename, mutDbFilename, 
                                        start_of_mutation_range, 
                                        end_of_mutation_range, output_dir, 
                                        limit);
@@ -6021,7 +3563,8 @@ int main(int argc, char *argv[])
                             TheGatherer->getAllGlobalScalarConstants(), 
                             TheGatherer->getAllLocalScalarConstants(), 
                             TheGatherer->getAllGlobalStringLiterals(),
-                            TheGatherer->getAllLocalStringLiterals());
+                            TheGatherer->getAllLocalStringLiterals(),
+                            mutant_operator_list);
 
   Sema sema(TheCompInst.getPreprocessor(), TheCompInst.getASTContext(), 
             TheConsumer);
@@ -6030,11 +3573,13 @@ int main(int argc, char *argv[])
   // Parse the file to AST, registering our consumer as the AST consumer.
   ParseAST(sema);
 
-  // if (TheGatherer != nullptr)
-  //   delete TheGatherer;
-  
-  // if (userInput != nullptr)
-  //   delete userInput;
+  // ====================================================
+  // =============== TEST NEW DESIGN ====================
+  // ====================================================
+
+  // NewASTConsumer new_consumer(&TheCompInst);
+  // ParseAST(TheCompInst.getPreprocessor(), &new_consumer, 
+  //          TheCompInst.getASTContext());
 
   return 0;
 }

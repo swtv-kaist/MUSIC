@@ -75,7 +75,7 @@ public:
     @return true if it is floating type
             false otherwise
   */
-  bool NumIsFloat(std::string num);
+  // bool NumIsFloat(std::string num);
 
   /**
     Put a new mutant operator into the correct MutantOperator vector
@@ -97,7 +97,7 @@ public:
     same as in Agrawal's Design of Mutation Operators for C.    
     Called when user does not specify any specific operator(s) to use.
   */
-  void useAll();
+  void ApplyAllMutantOperators();
 };
 
 #endif  //COMUT_MUTANT_OPERATOR_HOLDER_H_
