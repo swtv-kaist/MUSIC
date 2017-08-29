@@ -5,8 +5,9 @@ LLVM_BUILD_DIRECTORY_NAME=llvm_build
 LLVM_BUILD_MODE=Debug+Asserts
 #LLVM_BUILD_MODE=Release+Asserts
 
-SRCS=tool.cpp configuration.cpp mutant_operator.cpp comut_utility.cpp \
-		 mutant_operator_holder.cpp mutation_operators/mutant_operator_template.cpp \
+SRCS=tool.cpp configuration.cpp comut_utility.cpp \
+		 mutation_operators/mutant_operator_template.cpp \
+		 information_visitor.cpp information_gatherer.cpp comut_context.cpp \
 		 mutation_operators/ssdl.cpp mutation_operators/orrn.cpp \
 		 mutation_operators/vtwf.cpp mutation_operators/crcr.cpp \
 		 mutation_operators/sanl.cpp mutation_operators/srws.cpp \
@@ -23,14 +24,40 @@ SRCS=tool.cpp configuration.cpp mutant_operator.cpp comut_utility.cpp \
 		 mutation_operators/clsr.cpp mutation_operators/oppo.cpp \
 		 mutation_operators/ommo.cpp mutation_operators/olng.cpp \
 		 mutation_operators/obng.cpp mutation_operators/ocng.cpp \
-		 mutation_operators/oipm.cpp
-
-OBJS=tool.o configuration.o mutant_operator.o comut_utility.o \
-		 mutant_operator_holder.o mutant_operator_template.o ssdl.o \
+		 mutation_operators/oipm.cpp mutation_operators/ocor.cpp \
+		 mutation_operators/olln.cpp mutation_operators/ossn.cpp \
+		 mutation_operators/obbn.cpp mutation_operators/olrn.cpp \
+		 mutation_operators/orln.cpp mutation_operators/obln.cpp \
+		 mutation_operators/obrn.cpp mutation_operators/osln.cpp \
+		 mutation_operators/osrn.cpp mutation_operators/oban.cpp \
+		 mutation_operators/obsn.cpp mutation_operators/osan.cpp \
+		 mutation_operators/osbn.cpp mutation_operators/oaea.cpp \
+		 mutation_operators/obaa.cpp mutation_operators/obba.cpp \
+		 mutation_operators/obea.cpp mutation_operators/obsa.cpp \
+		 mutation_operators/osaa.cpp mutation_operators/osba.cpp \
+		 mutation_operators/osea.cpp mutation_operators/ossa.cpp \
+		 mutation_operators/oeaa.cpp mutation_operators/oeba.cpp \
+		 mutation_operators/oesa.cpp mutation_operators/oaaa.cpp \
+		 mutation_operators/oaba.cpp mutation_operators/oasa.cpp \
+		 mutation_operators/oaln.cpp mutation_operators/oaan.cpp \
+		 mutation_operators/oarn.cpp mutation_operators/oabn.cpp \
+		 mutation_operators/oasn.cpp mutation_operators/olan.cpp \
+		 mutation_operators/oran.cpp mutation_operators/olbn.cpp \
+		 mutation_operators/olsn.cpp mutation_operators/orsn.cpp \
+		 mutation_operators/orbn.cpp
+  
+OBJS=tool.o configuration.o comut_utility.o \
+		 mutant_operator_template.o  information_visitor.o \
+		 information_gatherer.o comut_context.o ssdl.o \
 		 orrn.o vtwf.o crcr.o sanl.o srws.o scsr.o vlsf.o vgsf.o \
 		 vltf.o vgtf.o vlpf.o vgpf.o vgsr.o vlsr.o vgar.o vlar.o \
 		 vgtr.o vltr.o vgpr.o vlpr.o vtwd.o vscr.o cgcr.o clcr.o \
-		 cgsr.o clsr.o oppo.o ommo.o olng.o obng.o ocng.o oipm.o
+		 cgsr.o clsr.o oppo.o ommo.o olng.o obng.o ocng.o oipm.o \
+		 ocor.o olln.o ossn.o obbn.o olrn.o orln.o obln.o obrn.o \
+		 osln.o osrn.o oban.o obsn.o osan.o osbn.o oaea.o obaa.o \
+		 obba.o obea.o obsa.o osaa.o osba.o osea.o ossa.o oeaa.o \
+		 oeba.o oesa.o oaaa.o oaba.o oasa.o oaln.o oaan.o oarn.o \
+		 oabn.o oasn.o olan.o oran.o olbn.o olsn.o orbn.o orsn.o
 
 TARGET=	tool
 
@@ -62,8 +89,9 @@ all: $(TARGET)
 $(TARGET) : $(OBJS)
 	$(CXX) $(OBJS) $(CXXFLAGS) -o $@
 
-tool.o : tool.cpp comut_utility.h configuration.h mutant_operator.h comut_context.h\
-	mutant_operator_holder.h mutation_operators/mutant_operator_template.h \
+tool.o : tool.cpp comut_utility.h configuration.h comut_context.h\
+	information_visitor.h information_gatherer.h \
+	comut_context.h mutation_operators/mutant_operator_template.h \
 	mutation_operators/ssdl.h mutation_operators/orrn.h mutation_operators/vtwf.h \
 	mutation_operators/crcr.h mutation_operators/sanl.h mutation_operators/srws.h \
 	mutation_operators/scsr.h mutation_operators/vlsf.h mutation_operators/vgsf.h \
@@ -74,21 +102,39 @@ tool.o : tool.cpp comut_utility.h configuration.h mutant_operator.h comut_contex
 	mutation_operators/vtwd.h mutation_operators/vscr.h mutation_operators/cgcr.h \
 	mutation_operators/clcr.h mutation_operators/cgsr.h mutation_operators/clsr.h \
 	mutation_operators/oppo.h mutation_operators/ommo.h mutation_operators/olng.h \
-	mutation_operators/obng.h mutation_operators/ocng.h mutation_operators/oipm.h
+	mutation_operators/obng.h mutation_operators/ocng.h mutation_operators/oipm.h \
+	mutation_operators/ocor.h mutation_operators/olln.h mutation_operators/ossn.h \
+	mutation_operators/obbn.h mutation_operators/olrn.h mutation_operators/orln.h \
+	mutation_operators/obln.h mutation_operators/obrn.h mutation_operators/osln.h \
+	mutation_operators/osrn.h mutation_operators/oban.h mutation_operators/obsn.h \
+	mutation_operators/osan.h mutation_operators/osbn.h mutation_operators/oaea.h \
+	mutation_operators/obaa.h mutation_operators/obba.h mutation_operators/obea.h \
+	mutation_operators/obsa.h mutation_operators/osaa.h mutation_operators/osba.h \
+	mutation_operators/osea.h mutation_operators/ossa.h mutation_operators/ossa.h \
+	mutation_operators/oeba.h mutation_operators/oesa.h mutation_operators/oaaa.h \
+	mutation_operators/oaba.h mutation_operators/oasa.h mutation_operators/oaln.h \
+	mutation_operators/oaan.h mutation_operators/oarn.h mutation_operators/oabn.h \
+	mutation_operators/oasn.h mutation_operators/olan.h mutation_operators/oran.h \
+	mutation_operators/olbn.h mutation_operators/olsn.h mutation_operators/orsn.h \
+	mutation_operators/orbn.h
 	$(CXX) $(CXXFLAGS) -c tool.cpp
 
 configuration.o : configuration.h configuration.cpp
 	$(CXX) $(CXXFLAGS) -c configuration.cpp
 
-mutant_operator.o : mutant_operator.h mutant_operator.cpp
-	$(CXX) $(CXXFLAGS) -c mutant_operator.cpp
-
 comut_utility.o : comut_utility.h comut_utility.cpp
 	$(CXX) $(CXXFLAGS) -c comut_utility.cpp
 
-mutant_operator_holder.o : mutant_operator_holder.h mutant_operator_holder.cpp \
-	mutant_operator.h comut_utility.h
-	$(CXX) $(CXXFLAGS) -c mutant_operator_holder.cpp
+information_visitor.o : information_visitor.h information_visitor.cpp \
+	comut_context.h mutant_operator_holder.h comut_utility.h
+	$(CXX) $(CXXFLAGS) -c information_visitor.cpp
+
+information_gatherer.o : information_gatherer.h information_gatherer.cpp \
+	mutant_operator_holder.h comut_context.h information_visitor.h
+	$(CXX) $(CXXFLAGS) -c information_gatherer.cpp
+
+comut_context.o : comut_context.h comut_context.cpp configuration.h
+	$(CXX) $(CXXFLAGS) -c comut_context.cpp
 
 mutant_operator_template.o : mutation_operators/mutant_operator_template.h mutation_operators/mutant_operator_template.cpp comut_utility.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/mutant_operator_template.cpp
@@ -257,6 +303,207 @@ oipm.o : mutation_operators/oipm.h mutation_operators/oipm.cpp \
 	mutation_operators/mutant_operator_template.h comut_utility.h \
 	comut_context.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/oipm.cpp
+
+ocor.o : mutation_operators/ocor.h mutation_operators/ocor.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/ocor.cpp
+
+olln.o : mutation_operators/olln.h mutation_operators/olln.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/olln.cpp
+
+
+ossn.o : mutation_operators/ossn.h mutation_operators/ossn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/ossn.cpp
+
+obbn.o : mutation_operators/obbn.h mutation_operators/obbn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obbn.cpp
+
+olrn.o : mutation_operators/olrn.h mutation_operators/olrn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/olrn.cpp
+
+orln.o : mutation_operators/orln.h mutation_operators/orln.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/orln.cpp
+
+obln.o : mutation_operators/obln.h mutation_operators/obln.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obln.cpp
+
+obrn.o : mutation_operators/obrn.h mutation_operators/obrn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obrn.cpp
+
+osln.o : mutation_operators/osln.h mutation_operators/osln.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/osln.cpp
+
+osrn.o : mutation_operators/osrn.h mutation_operators/osrn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/osrn.cpp
+
+oban.o : mutation_operators/oban.h mutation_operators/oban.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oban.cpp
+
+obsn.o : mutation_operators/obsn.h mutation_operators/obsn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obsn.cpp
+
+osan.o : mutation_operators/osan.h mutation_operators/osan.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/osan.cpp
+
+osbn.o : mutation_operators/osbn.h mutation_operators/osbn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/osbn.cpp
+
+oaea.o : mutation_operators/oaea.h mutation_operators/oaea.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oaea.cpp
+
+obaa.o : mutation_operators/obaa.h mutation_operators/obaa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obaa.cpp
+
+obba.o : mutation_operators/obba.h mutation_operators/obba.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obba.cpp
+
+obea.o : mutation_operators/obea.h mutation_operators/obea.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obea.cpp
+
+obsa.o : mutation_operators/obsa.h mutation_operators/obsa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/obsa.cpp
+
+osaa.o : mutation_operators/osaa.h mutation_operators/osaa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/osaa.cpp
+
+osba.o : mutation_operators/osba.h mutation_operators/osba.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/osba.cpp
+
+osea.o : mutation_operators/osea.h mutation_operators/osea.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/osea.cpp
+
+ossa.o : mutation_operators/ossa.h mutation_operators/ossa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/ossa.cpp
+
+oeaa.o : mutation_operators/oeaa.h mutation_operators/oeaa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oeaa.cpp
+
+oeba.o : mutation_operators/oeba.h mutation_operators/oeba.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oeba.cpp
+
+oesa.o : mutation_operators/oesa.h mutation_operators/oesa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oesa.cpp
+
+oaaa.o : mutation_operators/oaaa.h mutation_operators/oaaa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oaaa.cpp
+
+oaba.o : mutation_operators/oaba.h mutation_operators/oaba.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oaba.cpp
+
+oasa.o : mutation_operators/oasa.h mutation_operators/oasa.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oasa.cpp
+
+oaln.o : mutation_operators/oaln.h mutation_operators/oaln.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oaln.cpp
+
+oaan.o : mutation_operators/oaan.h mutation_operators/oaan.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oaan.cpp
+
+oarn.o : mutation_operators/oarn.h mutation_operators/oarn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oarn.cpp
+
+oabn.o : mutation_operators/oabn.h mutation_operators/oabn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oabn.cpp
+
+oasn.o : mutation_operators/oasn.h mutation_operators/oasn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oasn.cpp
+
+olan.o : mutation_operators/olan.h mutation_operators/olan.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/olan.cpp
+
+oran.o : mutation_operators/oran.h mutation_operators/oran.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/oran.cpp
+
+olbn.o : mutation_operators/olbn.h mutation_operators/olbn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/olbn.cpp
+
+olsn.o : mutation_operators/olsn.h mutation_operators/olsn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/olsn.cpp
+
+orsn.o : mutation_operators/orsn.h mutation_operators/orsn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/orsn.cpp
+
+orbn.o : mutation_operators/orbn.h mutation_operators/orbn.cpp \
+	mutation_operators/mutant_operator_template.h comut_utility.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/orbn.cpp
 
 clean:
 	rm -rf $(OBJS)

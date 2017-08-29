@@ -45,8 +45,7 @@ bool CRCR::CanMutate(clang::Expr *e, ComutContext *context)
 				 !context->is_inside_array_decl_size &&
 				 !LocationIsInRange(start_loc, *(context->lhs_of_assignment_range)) &&
 				 !LocationIsInRange(start_loc, *(context->addressop_range)) &&
-				 !LocationIsInRange(start_loc, *(context->unary_increment_range)) &&
-				 !LocationIsInRange(start_loc, *(context->unary_decrement_range));
+				 !LocationIsInRange(start_loc, *(context->unary_inc_dec_range));
 }
 
 // Return True if the mutant operator can mutate this statement
