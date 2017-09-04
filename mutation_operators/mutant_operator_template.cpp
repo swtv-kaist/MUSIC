@@ -60,6 +60,7 @@ void MutantOperatorTemplate::WriteMutantInfoToMutantDbFile(
   	(context->userinput->getMutationDbFilename()).data(), 
     ios::app);
 
+  // write input file name
  	mutant_db_file << context->userinput->getInputFilename() << "\t";
 
  	// write output file name

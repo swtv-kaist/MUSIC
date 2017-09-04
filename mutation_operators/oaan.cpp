@@ -100,16 +100,10 @@ void OAAN::Mutate(clang::Expr *e, ComutContext *context)
 		if (!CanMutate(bo, mutated_token, context))
 			continue;
 
-		if (only_plus_minus_ && mutated_token.compare("+") != 0 &&
-				mutated_token.compare("-") != 0)
-			continue;
-
 		GenerateMutantFile(context, start_loc, end_loc, mutated_token);
 		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
 																		token, mutated_token);
 	}
-
-	only_plus_minus_ = false;
 }
 
 void OAAN::Mutate(clang::Stmt *s, ComutContext *context)
@@ -155,9 +149,9 @@ bool OAAN::CanMutate(BinaryOperator *bo, string mutated_token,
 	if (ExprIsPointer(rhs)) return false;
 
 	// If lhs is pointer and rhs is not pointer, then only (ptr+-int) is allowed
-	if (ExprIsPointer(lhs))
-	{
-		only_plus_minus_ = true;
-	}
+	if (ExprIsPointer(lhs) && mutated_token.compare("+") != 0 &&
+			mutated_token.compare("-") != 0)
+		return false;
+
 	return true;
 }

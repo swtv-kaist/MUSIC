@@ -68,23 +68,15 @@ void CLCR::Mutate(clang::Expr *e, ComutContext *context)
                             LocationIsInRange(
       start_loc, *(context->switchcase_range));
 
-	for (auto it: *(context->local_scalarconstant_list))
+	for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->function_id_])
 	{
-		// ignore constant literal that appear before current function range
-		if (LocationBeforeRangeStart(
-				it.second.first, *(context->currently_parsed_function_range)))
-			continue;
-
-		// all the consts after this are outside this function
-		// because local_scalarconstant_list is ordered in increasing position
-    if (!LocationIsInRange(
-    		it.second.first, *(context->currently_parsed_function_range)))
-    	break;
-
-    if (skip_float_literal && it.second.second)
+    if (skip_float_literal && ExprIsFloat(it))
     	continue;
 
-    string mutated_token = it.first;
+    string mutated_token{rewriter.ConvertToString(it)};
+
+    if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
+    	mutated_token = ConvertCharStringToIntString(mutated_token);
 
     if (int_string.compare(mutated_token) == 0)
     	continue;

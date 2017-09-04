@@ -63,17 +63,16 @@ void CLSR::Mutate(clang::Expr *e, ComutContext *context)
                             LocationIsInRange(
       start_loc, *(context->switchcase_range));
 
-  for (auto it: *(context->local_scalarconstant_list))
+  for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->function_id_])
   {
-  	// all the consts after this are outside the current function
-    if (!LocationIsInRange(it.second.first, 
-                           *(context->currently_parsed_function_range)))
-      break;
-
-  	if (skip_float_literal && it.second.second)
+  	if (skip_float_literal && ExprIsFloat(it))
               continue;
 
-    string mutated_token{it.first};
+    string mutated_token{rewriter.ConvertToString(it)};
+
+    if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
+    	mutated_token = ConvertCharStringToIntString(mutated_token);
+
 
     GenerateMutantFile(context, start_loc, end_loc, mutated_token);
 		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 

@@ -13,12 +13,17 @@ public:
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context);
 
-  std::vector<clang::SourceLocation>* getLabels();
+  // std::vector<clang::SourceLocation>* getLabels();
   LabelStmtToGotoStmtListMap* getLabelToGotoListMap();
   GlobalScalarConstantList* getAllGlobalScalarConstants();
   LocalScalarConstantList* getAllLocalScalarConstants();
   GlobalStringLiteralList* getAllGlobalStringLiterals();
   LocalStringLiteralList* getAllLocalStringLiterals();
+
+  VarDeclList* getGlobalScalarVardeclList();
+  std::vector<VarDeclList>* getLocalScalarVardeclList();
+
+  SymbolTable* getSymbolTable();
   
 private:
   InformationVisitor Visitor;

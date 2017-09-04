@@ -21,9 +21,16 @@ public:
   bool VisitLabelStmt(clang::LabelStmt *ls);
   bool VisitGotoStmt(clang::GotoStmt * gs);
   bool VisitExpr(clang::Expr *e);
+  bool VisitTypedefDecl(clang::TypedefDecl *td);
+  bool VisitVarDecl(clang::VarDecl *vd);
   bool VisitFunctionDecl(clang::FunctionDecl *fd);
 
-public:
+  VarDeclList* getGlobalScalarVardeclList();
+  std::vector<VarDeclList>* getLocalScalarVardeclList();
+
+  SymbolTable* getSymbolTable();
+
+private:
 	clang::CompilerInstance *comp_inst_;
 
   clang::SourceManager &src_mgr_;
@@ -31,6 +38,43 @@ public:
 
   clang::Rewriter rewriter_;
 
+  // Last (or current) range of the function COMUT is traversing
+  clang::SourceRange *currently_parsed_function_range_;
+
+  clang::SourceRange *typedefdecl_range_;
+  clang::SourceRange *function_prototype_range_;
+
+  // A set holding all distinguished consts in currently/last parsed fuction.
+  std::set<std::string> local_scalar_constant_cache_;
+
+  // A set holding all distinguished consts with global scope
+  std::set<std::string> global_scalar_constant_cache_;
+
+  // global/local scalar variables (char, int, double, float)
+  // local_scalar_vardecl_list_ follows the same nesting rule as ScopeRangeList
+  VarDeclList global_scalar_vardecl_list_;
+  std::vector<VarDeclList> local_scalar_vardecl_list_;
+
+  // global/local array variables
+  // local_array_vardecl_list_ follows the same nesting rule as ScopeRangeList
+  VarDeclList global_array_vardecl_list_;
+  std::vector<VarDeclList> local_array_vardecl_list_;
+
+  // global/local struct variables
+  // local_struct_vardecl_list_ follows the same nesting rule as ScopeRangeList
+  VarDeclList global_struct_vardecl_list_;
+  std::vector<VarDeclList> local_struct_vardecl_list_;
+
+  // global/local pointers
+  // local_pointer_vardecl_list_ follows the same nesting rule as ScopeRangeList
+  VarDeclList global_pointer_vardecl_list_;
+  std::vector<VarDeclList> local_pointer_vardecl_list_;
+
+  void CollectVarDecl(clang::VarDecl *vd);
+  void CollectScalarConstant(clang::Expr *e);
+  void CollectStringLiteral(clang::Expr *e);
+
+public:
   // List of locations of label declarations
   std::vector<clang::SourceLocation> *label_srclocation_list_; 
 
@@ -41,15 +85,6 @@ public:
   // Global/Local numbers, chars
   GlobalScalarConstantList global_scalarconstant_list_;
   LocalScalarConstantList local_scalarconstant_list_;
-
-  // Last (or current) range of the function COMUT is traversing
-  clang::SourceRange *currently_parsed_function_range_;
-
-  // A set holding all distinguished consts in currently/last parsed fuction.
-  std::set<std::string> local_scalar_constant_cache_;
-
-  // A set holding all distinguished consts with global scope
-  std::set<std::string> global_scalar_constant_cache_;
 
   // A vector holding string literals used outside a function (global scope)
   GlobalStringLiteralList global_stringliteral_list_;

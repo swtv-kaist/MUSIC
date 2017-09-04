@@ -8,6 +8,7 @@ LLVM_BUILD_MODE=Debug+Asserts
 SRCS=tool.cpp configuration.cpp comut_utility.cpp \
 		 mutation_operators/mutant_operator_template.cpp \
 		 information_visitor.cpp information_gatherer.cpp comut_context.cpp \
+		 symbol_table.cpp \
 		 mutation_operators/ssdl.cpp mutation_operators/orrn.cpp \
 		 mutation_operators/vtwf.cpp mutation_operators/crcr.cpp \
 		 mutation_operators/sanl.cpp mutation_operators/srws.cpp \
@@ -46,7 +47,7 @@ SRCS=tool.cpp configuration.cpp comut_utility.cpp \
 		 mutation_operators/olsn.cpp mutation_operators/orsn.cpp \
 		 mutation_operators/orbn.cpp
   
-OBJS=tool.o configuration.o comut_utility.o \
+OBJS=tool.o configuration.o comut_utility.o symbol_table.o\
 		 mutant_operator_template.o  information_visitor.o \
 		 information_gatherer.o comut_context.o ssdl.o \
 		 orrn.o vtwf.o crcr.o sanl.o srws.o scsr.o vlsf.o vgsf.o \
@@ -90,7 +91,7 @@ $(TARGET) : $(OBJS)
 	$(CXX) $(OBJS) $(CXXFLAGS) -o $@
 
 tool.o : tool.cpp comut_utility.h configuration.h comut_context.h\
-	information_visitor.h information_gatherer.h \
+	information_visitor.h information_gatherer.h symbol_table.h\
 	comut_context.h mutation_operators/mutant_operator_template.h \
 	mutation_operators/ssdl.h mutation_operators/orrn.h mutation_operators/vtwf.h \
 	mutation_operators/crcr.h mutation_operators/sanl.h mutation_operators/srws.h \
@@ -133,7 +134,10 @@ information_gatherer.o : information_gatherer.h information_gatherer.cpp \
 	mutant_operator_holder.h comut_context.h information_visitor.h
 	$(CXX) $(CXXFLAGS) -c information_gatherer.cpp
 
-comut_context.o : comut_context.h comut_context.cpp configuration.h
+symbol_table.o: symbol_table.h symbol_table.cpp 
+	$(CXX) $(CXXFLAGS) -c symbol_table.cpp
+
+comut_context.o : comut_context.h comut_context.cpp configuration.h symbol_table.h
 	$(CXX) $(CXXFLAGS) -c comut_context.cpp
 
 mutant_operator_template.o : mutation_operators/mutant_operator_template.h mutation_operators/mutant_operator_template.cpp comut_utility.h

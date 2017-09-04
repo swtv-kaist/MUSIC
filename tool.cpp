@@ -118,18 +118,6 @@
 #include "mutation_operators/orsn.h"
 #include "mutation_operators/orbn.h"
 
-// Block scope are bounded by curly braces {}.
-// The closer the scope is to the end_loc of vector, the smaller it is.
-// ScopeRangeList = {scope1, scope2, scope3, ...}
-// {...scope1
-//   {...scope2
-//     {...scope3
-//     }
-//   }
-// }
-typedef vector<SourceRange> ScopeRangeList;  
-
-
 enum class UserInputAnalyzingState
 {
   // expecting any not-A-B option
@@ -192,28 +180,6 @@ private:
 
   ScopeRangeList scope_list_;
 
-  // global/local scalar variables (char, int, double, float)
-  // local_scalar_vardecl_list_ follows the same nesting rule as ScopeRangeList
-  vector<VarDecl *> global_scalar_vardecl_list_;
-  vector<VarDeclList> local_scalar_vardecl_list_;
-
-  // global/local array variables
-  // local_array_vardecl_list_ follows the same nesting rule as ScopeRangeList
-  vector<VarDecl *> global_array_vardecl_list_;
-  vector<VarDeclList> local_array_vardecl_list_;
-
-  // global/local struct variables
-  // local_struct_vardecl_list_ follows the same nesting rule as ScopeRangeList
-  vector<VarDecl *> global_struct_vardecl_list_;
-  vector<VarDeclList> local_struct_vardecl_list_;
-
-  // global/local pointers
-  // local_pointer_vardecl_list_ follows the same nesting rule as ScopeRangeList
-  vector<VarDecl *> global_pointer_vardecl_list_;
-  vector<VarDeclList> local_pointer_vardecl_list_;
-
-  // bool isInsideFunctionDecl;
-
   // Range of the latest parsed array declaration statement
   SourceRange *array_decl_range_;
 
@@ -226,39 +192,6 @@ private:
 
   ComutContext &context_;
   vector<MutantOperatorTemplate *> &mutant_operator_list_;
-
-public:
-  MyASTVisitor(CompilerInstance *CI, vector<SourceLocation> *labels, 
-               LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
-               vector<MutantOperatorTemplate*> &mutant_list,
-               ComutContext &context) 
-    : src_mgr_(CI->getSourceManager()),
-      comp_inst_(CI), context_(context), mutant_operator_list_(mutant_list)
-  {
-    proteumstyle_stmt_end_line_num_ = 0;
-
-    // setup for rewriter
-    rewriter_.setSourceMgr(src_mgr_, CI->getLangOpts());
-
-    // set range variables to a 0 range, start_loc and end_loc at the same point
-    SourceLocation start_of_file;
-    start_of_file = src_mgr_.getLocForStartOfFile(src_mgr_.getMainFileID());
-
-    functionprototype_range_ = new SourceRange(start_of_file, start_of_file);
-
-    array_decl_range_ = new SourceRange(start_of_file, start_of_file);
-
-    context_.switchstmt_info_list = &switchstmt_info_list_;
-    context_.global_scalar_vardecl_list = &global_scalar_vardecl_list_;
-    context_.local_scalar_vardecl_list = &local_scalar_vardecl_list_;
-    context_.global_array_vardecl_list = &global_array_vardecl_list_;
-    context_.local_array_vardecl_list = &local_array_vardecl_list_;
-    context_.global_struct_vardecl_list = &global_struct_vardecl_list_;
-    context_.local_struct_vardecl_list = &local_struct_vardecl_list_;
-    context_.global_pointer_vardecl_list = &global_pointer_vardecl_list_;
-    context_.local_pointer_vardecl_list = &local_pointer_vardecl_list_;
-    context_.non_VTWD_mutatable_scalarref_list = &non_VTWD_mutatable_scalarref_list_;
-  }
 
   void UpdateAddressOfRange(UnaryOperator *uo, SourceLocation *start_loc, SourceLocation *end_loc)
   {
@@ -286,7 +219,7 @@ public:
     @return True if reference name is not in the prohibited list
         False otherwise
   */
-  bool ScalarRefCanBeMutatedByVtwd(string scalarref_name)
+  bool IsScalarRefMutatableByVtwd(string scalarref_name)
   {
     // if reference name is in the nonMutatableList then it is not mutatable
     for (auto it = non_VTWD_mutatable_scalarref_list_.begin(); 
@@ -330,7 +263,7 @@ public:
             string reference_name{rewriter_.ConvertToString(rhs)};
 
             // if this scalar reference is mutatable then block it
-            if (ScalarRefCanBeMutatedByVtwd(reference_name))
+            if (IsScalarRefMutatableByVtwd(reference_name))
               non_VTWD_mutatable_scalarref_list_.push_back(reference_name);
           }
           else if (ParenExpr *pe = dyn_cast<ParenExpr>(rhs))
@@ -343,7 +276,7 @@ public:
             string reference_name{rewriter_.ConvertToString(lhs)};
 
             // if this scalar reference is mutatable then block it
-            if (ScalarRefCanBeMutatedByVtwd(reference_name))
+            if (IsScalarRefMutatableByVtwd(reference_name))
               non_VTWD_mutatable_scalarref_list_.push_back(reference_name);
           }
           else if (ParenExpr *pe = dyn_cast<ParenExpr>(lhs))
@@ -372,7 +305,7 @@ public:
               string reference_name{rewriter_.ConvertToString(lhs)};
 
               // if this scalar reference is mutatable then block it
-              if (ScalarRefCanBeMutatedByVtwd(reference_name))
+              if (IsScalarRefMutatableByVtwd(reference_name))
                 non_VTWD_mutatable_scalarref_list_.push_back(reference_name);
             }
             else
@@ -461,6 +394,33 @@ public:
     }
   }
 
+public:
+  MyASTVisitor(CompilerInstance *CI, 
+               LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
+               vector<MutantOperatorTemplate*> &mutant_list,
+               ComutContext &context) 
+    : src_mgr_(CI->getSourceManager()),
+      comp_inst_(CI), context_(context), mutant_operator_list_(mutant_list)
+  {
+    proteumstyle_stmt_end_line_num_ = 0;
+
+    // setup for rewriter
+    rewriter_.setSourceMgr(src_mgr_, CI->getLangOpts());
+
+    // set range variables to a 0 range, start_loc and end_loc at the same point
+    SourceLocation start_of_file;
+    start_of_file = src_mgr_.getLocForStartOfFile(src_mgr_.getMainFileID());
+
+    functionprototype_range_ = new SourceRange(start_of_file, start_of_file);
+
+    array_decl_range_ = new SourceRange(start_of_file, start_of_file);
+
+    context_.switchstmt_info_list = &switchstmt_info_list_;
+    context_.non_VTWD_mutatable_scalarref_list = &non_VTWD_mutatable_scalarref_list_;
+
+    context_.scope_list_ = &scope_list_;
+  }
+
   bool VisitEnumDecl(EnumDecl *ed)
   {
     context_.is_inside_enumdecl = true;
@@ -507,10 +467,6 @@ public:
   {
     // entering a new scope
     scope_list_.push_back(SourceRange(c->getLocStart(), c->getLocEnd()));
-    local_scalar_vardecl_list_.push_back(VarDeclList());
-    local_array_vardecl_list_.push_back(VarDeclList());
-    local_struct_vardecl_list_.push_back(VarDeclList());
-    local_pointer_vardecl_list_.push_back(VarDeclList());
 
     return true;
   }
@@ -544,26 +500,7 @@ public:
     if (LocationIsInRange(start_loc, *functionprototype_range_))
       return true;
 
-    if (IsVarDeclScalar(vd))
-    {
-      if (vd->isFileVarDecl())  
-      {
-        // store global scalar variable
-        global_scalar_vardecl_list_.push_back(vd);
-      }
-      else
-      {
-        // This is a local variable. scope_list_ vector CANNOT be empty.
-        if (local_scalar_vardecl_list_.empty())
-        {
-          cout << "local_scalar_vardecl_list_ is empty when meeting a local variable declaration at "; 
-          PrintLocation(src_mgr_, start_loc);
-          exit(1);
-        }
-        local_scalar_vardecl_list_.back().push_back(vd);
-      }
-    }
-    else if (IsVarDeclArray(vd))
+    if (IsVarDeclArray(vd))
     {
       auto type = vd->getType().getCanonicalType().getTypePtr();
 
@@ -572,61 +509,6 @@ public:
         context_.is_inside_array_decl_size = true;
 
         array_decl_range_ = new SourceRange(start_loc, end_loc);
-      }
-
-      if (vd->isFileVarDecl())  // global variable
-      {
-        global_array_vardecl_list_.push_back(vd);
-      }
-      else
-      {
-        // This is a local variable. scope_list_ vector CANNOT be empty.
-        if (local_array_vardecl_list_.empty())
-        {
-          cout << "local_array_vardecl_list_ is empty when meeting a local variable declaration at "; 
-          PrintLocation(src_mgr_, start_loc);
-          exit(1);
-        }
-
-        local_array_vardecl_list_.back().push_back(vd);
-      }
-    }
-    else if (IsVarDeclStruct(vd))
-    {
-      if (vd->isFileVarDecl())  // global variable
-      {
-        global_struct_vardecl_list_.push_back(vd);
-      }
-      else
-      {
-        // This is a local variable. scope_list_ vector CANNOT be empty.
-        if (local_struct_vardecl_list_.empty())
-        {
-          cout << "local_array_vardecl_list_ is empty when meeting a local variable declaration at "; 
-          PrintLocation(src_mgr_, start_loc);
-          exit(1);
-        }
-
-        local_struct_vardecl_list_.back().push_back(vd);
-      }
-    }
-    else if (IsVarDeclPointer(vd))
-    {
-      if (vd->isFileVarDecl())  // global variable
-      {
-        global_pointer_vardecl_list_.push_back(vd);
-      }
-      else
-      {
-        // This is a local variable. scope_list_ vector CANNOT be empty.
-        if (local_pointer_vardecl_list_.empty())
-        {
-          cout << "local_pointer_vardecl_list_ is empty when meeting a local variable declaration at "; 
-          PrintLocation(src_mgr_, start_loc);
-          exit(1);
-        }
-
-        local_pointer_vardecl_list_.back().push_back(vd);
       }
     }
 
@@ -739,20 +621,6 @@ public:
         proteumstyle_stmt_end_line_num_ = GetLineNumber(src_mgr_, end_loc);
     }
 
-    while (!scope_list_.empty())
-    {
-      if (!LocationIsInRange(start_loc, scope_list_.back()))
-      {
-        scope_list_.pop_back();
-        local_scalar_vardecl_list_.pop_back();
-        local_array_vardecl_list_.pop_back();
-        local_struct_vardecl_list_.pop_back();
-        local_pointer_vardecl_list_.pop_back();
-      }
-      else
-        break;
-    }
-
     if (context_.is_inside_array_decl_size && 
         !LocationIsInRange(start_loc, *array_decl_range_))
     {
@@ -780,28 +648,15 @@ public:
     else
     {
       // entering a new local scope
-      local_scalar_vardecl_list_.clear();
-      local_array_vardecl_list_.clear();
-      local_pointer_vardecl_list_.clear();
-      local_struct_vardecl_list_.clear();
       scope_list_.clear();
-
       scope_list_.push_back(SourceRange(f->getLocStart(), f->getLocEnd()));
-      local_scalar_vardecl_list_.push_back(VarDeclList());
-      local_array_vardecl_list_.push_back(VarDeclList());
-      local_struct_vardecl_list_.push_back(VarDeclList());
-      local_pointer_vardecl_list_.push_back(VarDeclList());
+
+      context_.function_id_++;
 
       context_.is_inside_enumdecl = false;
 
       context_.setCurrentlyParsedFunctionRange(
           new SourceRange(f->getLocStart(), f->getLocEnd()));
-
-      // remove local constants appearing before currently parsed function
-      context_.UpdateLocalScalarConstantList();
-
-      // remove local stirngs appearing before currently parsed function
-      context_.UpdateLocalStringLiteralList();
     }
 
     return true;
@@ -811,11 +666,11 @@ public:
 class MyASTConsumer : public ASTConsumer
 {
 public:
-  MyASTConsumer(CompilerInstance *CI, vector<SourceLocation> *labels, 
+  MyASTConsumer(CompilerInstance *CI, 
                 LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
                 vector<MutantOperatorTemplate*> &mutant_list,
                 ComutContext &context)
-    : Visitor(CI, labels, label_to_gotolist_map, 
+    : Visitor(CI, label_to_gotolist_map, 
               mutant_list, context) 
   { 
   }
@@ -835,42 +690,42 @@ InformationGatherer* GetNecessaryDataFromInputFile(char *filename)
 {
   // CompilerInstance will hold the instance of the Clang compiler for us,
   // managing the various objects needed to run the compiler.
-  CompilerInstance TheCompInst;
+  CompilerInstance TheCompInst2;
   
   // Diagnostics manage problems and issues in compile 
-  TheCompInst.createDiagnostics(NULL, false);
+  TheCompInst2.createDiagnostics(NULL, false);
 
   // Set target platform options 
   // Initialize target info with the default triple for our platform.
-  TargetOptions *TO = new TargetOptions();
-  TO->Triple = llvm::sys::getDefaultTargetTriple();
-  TargetInfo *TI = TargetInfo::CreateTargetInfo(TheCompInst.getDiagnostics(), 
-                                                TO);
-  TheCompInst.setTarget(TI);
+  TargetOptions *TO2 = new TargetOptions();
+  TO2->Triple = llvm::sys::getDefaultTargetTriple();
+  TargetInfo *TI2 = TargetInfo::CreateTargetInfo(TheCompInst2.getDiagnostics(), 
+                                                TO2);
+  TheCompInst2.setTarget(TI2);
 
   // FileManager supports for file system lookup, file system caching, 
   // and directory search management.
-  TheCompInst.createFileManager();
-  FileManager &FileMgr = TheCompInst.getFileManager();
+  TheCompInst2.createFileManager();
+  FileManager &FileMgr2 = TheCompInst2.getFileManager();
   
   // SourceManager handles loading and caching of source files into memory.
-  TheCompInst.createSourceManager(FileMgr);
-  SourceManager &SourceMgr = TheCompInst.getSourceManager();
+  TheCompInst2.createSourceManager(FileMgr2);
+  SourceManager &SourceMgr2 = TheCompInst2.getSourceManager();
   
   // Prreprocessor runs within a single source file
-  TheCompInst.createPreprocessor();
+  TheCompInst2.createPreprocessor();
   
   // ASTContext holds long-lived AST nodes (such as types and decls) .
-  TheCompInst.createASTContext();
+  TheCompInst2.createASTContext();
 
   // Enable HeaderSearch option
-  llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> hso(
+  llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> hso2(
       new HeaderSearchOptions());
-  HeaderSearch headerSearch(hso,
-                            TheCompInst.getFileManager(),
-                            TheCompInst.getDiagnostics(),
-                            TheCompInst.getLangOpts(),
-                            TI);
+  HeaderSearch headerSearch2(hso2,
+                            TheCompInst2.getFileManager(),
+                            TheCompInst2.getDiagnostics(),
+                            TheCompInst2.getLangOpts(),
+                            TI2);
 
   // <Warning!!> -- Platform Specific Code lives here
   // This depends on A) that you're running linux and
@@ -884,37 +739,37 @@ InformationGatherer* GetNecessaryDataFromInputFile(char *filename)
    /usr/include
   End of search list.
   */
-  const char *include_paths[] = {"/usr/local/include",
+  const char *include_paths2[] = {"/usr/local/include",
         "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include",
         "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include-fixed",
         "/usr/include"};
 
   for (int i=0; i<4; i++) 
-    hso->AddPath(include_paths[i], 
+    hso2->AddPath(include_paths2[i], 
           clang::frontend::Angled, 
           false, 
           false);
   // </Warning!!> -- End of Platform Specific Code
 
-  InitializePreprocessor(TheCompInst.getPreprocessor(), 
-                         TheCompInst.getPreprocessorOpts(),
-                         *hso,
-                         TheCompInst.getFrontendOpts());
+  InitializePreprocessor(TheCompInst2.getPreprocessor(), 
+                         TheCompInst2.getPreprocessorOpts(),
+                         *hso2,
+                         TheCompInst2.getFrontendOpts());
 
   // Set the main file handled by the source manager to the input file.
-  const FileEntry *FileIn = FileMgr.getFile(filename);
-  SourceMgr.createMainFileID(FileIn);
+  const FileEntry *FileIn2 = FileMgr2.getFile(filename);
+  SourceMgr2.createMainFileID(FileIn2);
   
   // Inform Diagnostics that processing of a source file is beginning. 
-  TheCompInst.getDiagnosticClient().BeginSourceFile(
-      TheCompInst.getLangOpts(),&TheCompInst.getPreprocessor());
+  TheCompInst2.getDiagnosticClient().BeginSourceFile(
+      TheCompInst2.getLangOpts(),&TheCompInst2.getPreprocessor());
 
   // Parse the file to AST, gather labelstmts, goto stmts, 
   // scalar constants, string literals. 
-  InformationGatherer *TheGatherer = new InformationGatherer(&TheCompInst);
+  InformationGatherer *TheGatherer = new InformationGatherer(&TheCompInst2);
 
-  ParseAST(TheCompInst.getPreprocessor(), TheGatherer, 
-           TheCompInst.getASTContext());
+  ParseAST(TheCompInst2.getPreprocessor(), TheGatherer, 
+           TheCompInst2.getASTContext());
 
   return TheGatherer;
 }
@@ -1356,15 +1211,13 @@ int main(int argc, char *argv[])
   End of search list.
   */
   const char *include_paths[] = {"/usr/local/include",
-        "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include",
-        "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include-fixed",
-        "/usr/include"};
+      "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include",
+      "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include-fixed",
+      "/usr/include"};
 
   for (int i=0; i<4; i++) 
-    hso->AddPath(include_paths[i], 
-          clang::frontend::Angled, 
-          false, 
-          false);
+    hso->AddPath(include_paths[i], clang::frontend::Angled, 
+                 false, false);
   // </Warning!!> -- End of Platform Specific Code
 
   InitializePreprocessor(TheCompInst.getPreprocessor(), 
@@ -1519,18 +1372,95 @@ int main(int argc, char *argv[])
   //=======================================================
   //====================== PARSING ========================
   //=======================================================
-  InformationGatherer *TheGatherer = GetNecessaryDataFromInputFile(
-      argv[1]);
+  // CompilerInstance will hold the instance of the Clang compiler for us,
+  // managing the various objects needed to run the compiler.
+  CompilerInstance TheCompInst2;
+  
+  // Diagnostics manage problems and issues in compile 
+  TheCompInst2.createDiagnostics(NULL, false);
+
+  // Set target platform options 
+  // Initialize target info with the default triple for our platform.
+  TargetOptions *TO2 = new TargetOptions();
+  TO2->Triple = llvm::sys::getDefaultTargetTriple();
+  TargetInfo *TI2 = TargetInfo::CreateTargetInfo(TheCompInst2.getDiagnostics(), 
+                                                TO2);
+  TheCompInst2.setTarget(TI2);
+
+  // FileManager supports for file system lookup, file system caching, 
+  // and directory search management.
+  TheCompInst2.createFileManager();
+  FileManager &FileMgr2 = TheCompInst2.getFileManager();
+  
+  // SourceManager handles loading and caching of source files into memory.
+  TheCompInst2.createSourceManager(FileMgr2);
+  SourceManager &SourceMgr2 = TheCompInst2.getSourceManager();
+  
+  // Prreprocessor runs within a single source file
+  TheCompInst2.createPreprocessor();
+  
+  // ASTContext holds long-lived AST nodes (such as types and decls) .
+  TheCompInst2.createASTContext();
+
+  // Enable HeaderSearch option
+  llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> hso2(
+      new HeaderSearchOptions());
+  HeaderSearch headerSearch2(hso2,
+                            TheCompInst2.getFileManager(),
+                            TheCompInst2.getDiagnostics(),
+                            TheCompInst2.getLangOpts(),
+                            TI2);
+
+  // <Warning!!> -- Platform Specific Code lives here
+  // This depends on A) that you're running linux and
+  // B) that you have the same GCC LIBs installed that I do. 
+  /*
+  $ gcc -xc -E -v -
+  ..
+   /usr/local/include
+   /usr/lib/gcc/x86_64-linux-gnu/4.4.5/include
+   /usr/lib/gcc/x86_64-linux-gnu/4.4.5/include-fixed
+   /usr/include
+  End of search list.
+  */
+  const char *include_paths2[] = {"/usr/local/include",
+        "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include",
+        "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include-fixed",
+        "/usr/include"};
+
+  for (int i=0; i<4; i++) 
+    hso2->AddPath(include_paths2[i], 
+          clang::frontend::Angled, 
+          false, 
+          false);
+  // </Warning!!> -- End of Platform Specific Code
+
+  InitializePreprocessor(TheCompInst2.getPreprocessor(), 
+                         TheCompInst2.getPreprocessorOpts(),
+                         *hso2,
+                         TheCompInst2.getFrontendOpts());
+
+  // Set the main file handled by the source manager to the input file.
+  const FileEntry *FileIn2 = FileMgr2.getFile(argv[1]);
+  SourceMgr2.createMainFileID(FileIn2);
+  
+  // Inform Diagnostics that processing of a source file is beginning. 
+  TheCompInst2.getDiagnosticClient().BeginSourceFile(
+      TheCompInst2.getLangOpts(),&TheCompInst2.getPreprocessor());
+
+  // Parse the file to AST, gather labelstmts, goto stmts, 
+  // scalar constants, string literals. 
+  InformationGatherer *TheGatherer = new InformationGatherer(&TheCompInst2);
+
+  ParseAST(TheCompInst2.getPreprocessor(), TheGatherer, 
+           TheCompInst2.getASTContext());
 
   ComutContext context(
       &TheCompInst, config, TheGatherer->getLabelToGotoListMap(),
-      TheGatherer->getAllGlobalScalarConstants(),
-      TheGatherer->getAllLocalScalarConstants(),
-      TheGatherer->getAllGlobalStringLiterals(),
-      TheGatherer->getAllLocalStringLiterals());
+      TheGatherer->getSymbolTable());
 
   // Create an AST consumer instance which is going to get called by ParseAST.
-  MyASTConsumer TheConsumer(&TheCompInst, TheGatherer->getLabels(), 
+  MyASTConsumer TheConsumer(&TheCompInst, 
                             TheGatherer->getLabelToGotoListMap(), 
                             mutant_operator_list, context);
 

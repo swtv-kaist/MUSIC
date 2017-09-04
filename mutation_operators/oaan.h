@@ -7,7 +7,7 @@ class OAAN : public MutantOperatorTemplate
 {
 public:
 	OAAN(const std::string name = "OAAN")
-		: MutantOperatorTemplate(name), only_plus_minus_(false)
+		: MutantOperatorTemplate(name)
 	{}
 
 	virtual bool ValidateDomain(const std::set<std::string> &domain);
@@ -26,8 +26,6 @@ public:
 	virtual void Mutate(clang::Stmt *s, ComutContext *context);
 
 private:
-	bool only_plus_minus_;
-
 	bool CanMutate(BinaryOperator *bo, string mutated_token,
 								 ComutContext *context);
 };

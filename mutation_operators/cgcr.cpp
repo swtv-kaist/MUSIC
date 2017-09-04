@@ -67,12 +67,16 @@ void CGCR::Mutate(clang::Expr *e, ComutContext *context)
                             LocationIsInRange(
       start_loc, *(context->switchcase_range));
 
-	for (auto it: *(context->global_scalarconstant_list))
+	for (auto it: *(context->getSymbolTable()->getGlobalScalarConstantList()))
 	{
-		if (skip_float_literal && it.second)
+		if (skip_float_literal && ExprIsFloat(it))
       continue;
 
-    string mutated_token{it.first};
+    string mutated_token{rewriter.ConvertToString(it)};
+
+    // convert to int value if it is a char literal
+	  if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
+	    mutated_token = ConvertCharStringToIntString(mutated_token);
 
     // Avoid mutating to the same scalar constant
     // If token is char, then convert it to int string for comparison
