@@ -68,10 +68,7 @@ bool OBSA::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OBSA::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OBSA::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -97,5 +94,3 @@ void OBSA::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OBSA::Mutate(clang::Stmt *s, ComutContext *context)
-{}

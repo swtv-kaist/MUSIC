@@ -34,12 +34,6 @@ bool CLCR::CanMutate(clang::Expr *e, ComutContext *context)
 				 LocationIsInRange(start_loc, *(context->currently_parsed_function_range));
 }
 
-// Return True if the mutant operator can mutate this statement
-bool CLCR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
-
 void CLCR::Mutate(clang::Expr *e, ComutContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
@@ -93,9 +87,6 @@ void CLCR::Mutate(clang::Expr *e, ComutContext *context)
 																	token, mutated_token);
 	}
 }
-
-void CLCR::Mutate(clang::Stmt *s, ComutContext *context)
-{}
 
 bool CLCR::IsDuplicateCaseLabel(
 		string new_label, SwitchStmtInfoList *switchstmt_list)

@@ -44,6 +44,8 @@
 #include "information_gatherer.h"
 
 #include "mutation_operators/mutant_operator_template.h"
+#include "mutation_operators/expr_mutant_operator.h"
+#include "mutation_operators/stmt_mutant_operator.h"
 #include "mutation_operators/ssdl.h"
 #include "mutation_operators/orrn.h"
 #include "mutation_operators/vtwf.h"
@@ -191,7 +193,9 @@ private:
   ScalarReferenceNameList non_VTWD_mutatable_scalarref_list_;
 
   ComutContext &context_;
-  vector<MutantOperatorTemplate *> &mutant_operator_list_;
+  StmtContext &stmt_context_;
+  vector<StmtMutantOperator*> &stmt_mutant_operator_list_;
+  vector<ExprMutantOperator*> &expr_mutant_operator_list_;
 
   void UpdateAddressOfRange(UnaryOperator *uo, SourceLocation *start_loc, SourceLocation *end_loc)
   {
@@ -211,6 +215,7 @@ private:
       isa<ArraySubscriptExpr>(sub_expr_of_unaryop))
     {
       context_.setAddressOpRange(new SourceRange(*start_loc, *end_loc));
+      stmt_context_.setAddressOpRange(new SourceRange(*start_loc, *end_loc));
     }
   }
 
@@ -346,6 +351,8 @@ private:
     {
       context_.setUnaryIncrementDecrementRange(
           new SourceRange(start_loc, end_loc));
+      stmt_context_.setUnaryIncrementDecrementRange(
+          new SourceRange(start_loc, end_loc));
     }
   }
 
@@ -367,6 +374,8 @@ private:
     if (bo->isAssignmentOp())
     {
       context_.setLhsOfAssignmentRange(
+          new SourceRange(bo->getLHS()->getLocStart(), start_loc));
+      stmt_context_.setLhsOfAssignmentRange(
           new SourceRange(bo->getLHS()->getLocStart(), start_loc));
     }
 
@@ -390,6 +399,8 @@ private:
       {
         context_.setNonOcorMutatableRange(new SourceRange(
             bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_)));
+        stmt_context_.setNonFloatingExprRange(new SourceRange(
+            bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_)));
       }        
     }
   }
@@ -397,10 +408,13 @@ private:
 public:
   MyASTVisitor(CompilerInstance *CI, 
                LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
-               vector<MutantOperatorTemplate*> &mutant_list,
+               vector<StmtMutantOperator*> &stmt_operator_list,
+               vector<ExprMutantOperator*> &expr_operator_list,
                ComutContext &context) 
     : src_mgr_(CI->getSourceManager()),
-      comp_inst_(CI), context_(context), mutant_operator_list_(mutant_list)
+      comp_inst_(CI), context_(context), stmt_context_(context.getStmtContext()),
+      stmt_mutant_operator_list_(stmt_operator_list),
+      expr_mutant_operator_list_(expr_operator_list)
   {
     proteumstyle_stmt_end_line_num_ = 0;
 
@@ -424,12 +438,15 @@ public:
   bool VisitEnumDecl(EnumDecl *ed)
   {
     context_.is_inside_enumdecl = true;
+    stmt_context_.setIsInEnumDecl(true);
     return true;
   }
 
   bool VisitTypedefDecl(TypedefDecl *td)
   {
     context_.setTypedefDeclRange(
+        new SourceRange(td->getLocStart(), td->getLocEnd()));
+    stmt_context_.setTypedefDeclRange(
         new SourceRange(td->getLocStart(), td->getLocEnd()));
 
     return true;
@@ -441,19 +458,22 @@ public:
     if (LocationIsInRange(e->getLocStart(), *(context_.typedef_range)))
       return true;
 
-    for (auto mutant_operator: mutant_operator_list_)
+    for (auto mutant_operator: expr_mutant_operator_list_)
       if (mutant_operator->CanMutate(e, &context_))
         mutant_operator->Mutate(e, &context_);
 
     if (StmtExpr *se = dyn_cast<StmtExpr>(e))  
+    {
       // set boolean variable signals following stmt are inside stmt expr
-      context_.is_inside_stmtexpr = true;
+      stmt_context_.setIsInStmtExpr(true);
+    }
     else if (ArraySubscriptExpr *ase = dyn_cast<ArraySubscriptExpr>(e))
     {
       SourceLocation start_loc = ase->getLocStart();
       SourceLocation end_loc = GetEndLocOfStmt(ase->getLocEnd(), comp_inst_);
 
       context_.setArraySubscriptRange(new SourceRange(start_loc, end_loc));
+      stmt_context_.setArraySubscriptRange(new SourceRange(start_loc, end_loc));
     }
     else if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
       HandleUnaryOperatorExpr(uo);
@@ -477,10 +497,12 @@ public:
     SourceLocation end_loc = fd->getLocEnd();
 
     context_.setFieldDeclRange(new SourceRange(start_loc, end_loc));
+    stmt_context_.setFieldDeclRange(new SourceRange(start_loc, end_loc));
     
     if (fd->getType().getTypePtr()->isArrayType())
     {
       context_.is_inside_array_decl_size = true;
+      stmt_context_.setIsInArrayDeclSize(true);
 
       array_decl_range_ = new SourceRange(fd->getLocStart(), fd->getLocEnd());
     }
@@ -493,6 +515,7 @@ public:
     SourceLocation end_loc = vd->getLocEnd();
 
     context_.is_inside_enumdecl = false;
+    stmt_context_.setIsInEnumDecl(false);
 
     if (LocationIsInRange(start_loc, *(context_.typedef_range)))
       return true;
@@ -507,6 +530,7 @@ public:
       if (auto array_type =  dyn_cast_or_null<ConstantArrayType>(type)) 
       {  
         context_.is_inside_array_decl_size = true;
+        stmt_context_.setIsInArrayDeclSize(true);
 
         array_decl_range_ = new SourceRange(start_loc, end_loc);
       }
@@ -519,6 +543,8 @@ public:
   {
     context_.setSwitchStmtConditionRange(new SourceRange(
         ss->getSwitchLoc(), ss->getBody()->getLocStart()));
+    stmt_context_.setSwitchStmtConditionRange(
+        new SourceRange(ss->getSwitchLoc(), ss->getBody()->getLocStart()));
 
     // remove switch statements that are already passed
     while (!switchstmt_info_list_.empty() && 
@@ -576,6 +602,8 @@ public:
   {
     context_.setSwitchCaseRange(
         new SourceRange(sc->getLocStart(), sc->getColonLoc()));
+    stmt_context_.setSwitchCaseRange(
+        new SourceRange(sc->getLocStart(), sc->getColonLoc()));
     
     // remove switch statements that are already passed
     while (!switchstmt_info_list_.empty() && 
@@ -596,6 +624,8 @@ public:
     {
       context_.proteumstyle_stmt_start_line_num = GetLineNumber(
           src_mgr_, start_loc);
+      stmt_context_.setProteumStyleLineNum(GetLineNumber(
+          src_mgr_, start_loc));
       
       if (isa<IfStmt>(s) || isa<WhileStmt>(s) || isa<SwitchStmt>(s)) 
       {
@@ -616,18 +646,19 @@ public:
       }
       else if (isa<CompoundStmt>(s) || isa<LabelStmt>(s) || isa<DoStmt>(s) || 
                isa<SwitchCase>(s) || isa<ForStmt>(s))
-        proteumstyle_stmt_end_line_num_ = context_.proteumstyle_stmt_start_line_num;
+        proteumstyle_stmt_end_line_num_ = stmt_context_.getProteumStyleLineNum();
       else
         proteumstyle_stmt_end_line_num_ = GetLineNumber(src_mgr_, end_loc);
     }
 
-    if (context_.is_inside_array_decl_size && 
+    if (stmt_context_.IsInArrayDeclSize() && 
         !LocationIsInRange(start_loc, *array_decl_range_))
     {
       context_.is_inside_array_decl_size = false;
+      stmt_context_.setIsInArrayDeclSize(false);
     }
 
-    for (auto mutant_operator: mutant_operator_list_)
+    for (auto mutant_operator: stmt_mutant_operator_list_)
       if (mutant_operator->CanMutate(s, &context_))
         mutant_operator->Mutate(s, &context_);
 
@@ -654,8 +685,11 @@ public:
       context_.function_id_++;
 
       context_.is_inside_enumdecl = false;
+      stmt_context_.setIsInEnumDecl(false);
 
       context_.setCurrentlyParsedFunctionRange(
+          new SourceRange(f->getLocStart(), f->getLocEnd()));
+      stmt_context_.setCurrentlyParsedFunctionRange(
           new SourceRange(f->getLocStart(), f->getLocEnd()));
     }
 
@@ -668,10 +702,11 @@ class MyASTConsumer : public ASTConsumer
 public:
   MyASTConsumer(CompilerInstance *CI, 
                 LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
-                vector<MutantOperatorTemplate*> &mutant_list,
+                vector<StmtMutantOperator*> &stmt_operator_list,
+                vector<ExprMutantOperator*> &expr_operator_list,
                 ComutContext &context)
-    : Visitor(CI, label_to_gotolist_map, 
-              mutant_list, context) 
+    : Visitor(CI, label_to_gotolist_map,
+              stmt_operator_list, expr_operator_list, context) 
   { 
   }
 
@@ -776,159 +811,187 @@ InformationGatherer* GetNecessaryDataFromInputFile(char *filename)
 
 void AddMutantOperator(string mutant_name, 
                        set<string> &domain, set<string> &range, 
-                       vector<MutantOperatorTemplate*> &mutant_list)
+                       vector<StmtMutantOperator*> &stmt_operator_list,
+                       vector<ExprMutantOperator*> &expr_operator_list)
 {
   // Make appropriate MutantOperator based on name
   // Verifiy and set domain and range accordingly
 
-  MutantOperatorTemplate *new_operator;
+  StmtMutantOperator *new_stmt_operator = nullptr;
 
   if (mutant_name.compare("SSDL") == 0)
-    new_operator = new SSDL();
-  else if (mutant_name.compare("ORRN") == 0)
-    new_operator = new ORRN();
-  else if (mutant_name.compare("VTWF") == 0)
-    new_operator = new VTWF();
-  else if (mutant_name.compare("CRCR") == 0)
-    new_operator = new CRCR();
-  else if (mutant_name.compare("SANL") == 0)
-    new_operator = new SANL();
-  else if (mutant_name.compare("SRWS") == 0)
-    new_operator = new SRWS();
-  else if (mutant_name.compare("SCSR") == 0)
-    new_operator = new SCSR();
-  else if (mutant_name.compare("VLSF") == 0)
-    new_operator = new VLSF();
-  else if (mutant_name.compare("VGSF") == 0)
-    new_operator = new VGSF();
-  else if (mutant_name.compare("VLTF") == 0)
-    new_operator = new VLTF();
-  else if (mutant_name.compare("VGTF") == 0)
-    new_operator = new VGTF();
-  else if (mutant_name.compare("VLPF") == 0)
-    new_operator = new VLPF();
-  else if (mutant_name.compare("VGPF") == 0)
-    new_operator = new VGPF();
-  else if (mutant_name.compare("VGSR") == 0)
-    new_operator = new VGSR();
-  else if (mutant_name.compare("VLSR") == 0)
-    new_operator = new VLSR();
-  else if (mutant_name.compare("VGAR") == 0)
-    new_operator = new VGAR();
-  else if (mutant_name.compare("VLAR") == 0)
-    new_operator = new VLAR();
-  else if (mutant_name.compare("VGTR") == 0)
-    new_operator = new VGTR();
-  else if (mutant_name.compare("VLTR") == 0)
-    new_operator = new VLTR();
-  else if (mutant_name.compare("VGPR") == 0)
-    new_operator = new VGPR();
-  else if (mutant_name.compare("VLPR") == 0)
-    new_operator = new VLPR();
-  else if (mutant_name.compare("VTWD") == 0)
-    new_operator = new VTWD();
-  else if (mutant_name.compare("VSCR") == 0)
-    new_operator = new VSCR();
-  else if (mutant_name.compare("CGCR") == 0)
-    new_operator = new CGCR();
-  else if (mutant_name.compare("CLCR") == 0)
-    new_operator = new CLCR();
-  else if (mutant_name.compare("CGSR") == 0)
-    new_operator = new CGSR();
-  else if (mutant_name.compare("CLSR") == 0)
-    new_operator = new CLSR();
-  else if (mutant_name.compare("OPPO") == 0)
-    new_operator = new OPPO();
-  else if (mutant_name.compare("OMMO") == 0)
-    new_operator = new OMMO();
-  else if (mutant_name.compare("OLNG") == 0)
-    new_operator = new OLNG();
-  else if (mutant_name.compare("OBNG") == 0)
-    new_operator = new OBNG();
+    new_stmt_operator = new SSDL();
   else if (mutant_name.compare("OCNG") == 0)
-    new_operator = new OCNG();
+    new_stmt_operator = new OCNG();
+
+  if (new_stmt_operator != nullptr)
+  {
+    // Set domain for mutant operator if domain is valid
+    if (!new_stmt_operator->ValidateDomain(domain))
+    {
+      cout << "invalid domain\n";
+      exit(1);
+    }
+    else
+      new_stmt_operator->setDomain(domain);
+
+    // Set range for mutant operator if range is valid
+    if (!new_stmt_operator->ValidateRange(range))
+    {
+      cout << "invalid range\n";
+      exit(1);
+    }
+    else
+      new_stmt_operator->setRange(range);
+
+    stmt_operator_list.push_back(new_stmt_operator);
+    return;
+  }
+
+  ExprMutantOperator *new_expr_operator = nullptr;
+
+  if (mutant_name.compare("ORRN") == 0)
+    new_expr_operator = new ORRN();
+  else if (mutant_name.compare("VTWF") == 0)
+    new_expr_operator = new VTWF();
+  else if (mutant_name.compare("CRCR") == 0)
+    new_expr_operator = new CRCR();
+  else if (mutant_name.compare("SANL") == 0)
+    new_expr_operator = new SANL();
+  else if (mutant_name.compare("SRWS") == 0)
+    new_expr_operator = new SRWS();
+  else if (mutant_name.compare("SCSR") == 0)
+    new_expr_operator = new SCSR();
+  else if (mutant_name.compare("VLSF") == 0)
+    new_expr_operator = new VLSF();
+  else if (mutant_name.compare("VGSF") == 0)
+    new_expr_operator = new VGSF();
+  else if (mutant_name.compare("VLTF") == 0)
+    new_expr_operator = new VLTF();
+  else if (mutant_name.compare("VGTF") == 0)
+    new_expr_operator = new VGTF();
+  else if (mutant_name.compare("VLPF") == 0)
+    new_expr_operator = new VLPF();
+  else if (mutant_name.compare("VGPF") == 0)
+    new_expr_operator = new VGPF();
+  else if (mutant_name.compare("VGSR") == 0)
+    new_expr_operator = new VGSR();
+  else if (mutant_name.compare("VLSR") == 0)
+    new_expr_operator = new VLSR();
+  else if (mutant_name.compare("VGAR") == 0)
+    new_expr_operator = new VGAR();
+  else if (mutant_name.compare("VLAR") == 0)
+    new_expr_operator = new VLAR();
+  else if (mutant_name.compare("VGTR") == 0)
+    new_expr_operator = new VGTR();
+  else if (mutant_name.compare("VLTR") == 0)
+    new_expr_operator = new VLTR();
+  else if (mutant_name.compare("VGPR") == 0)
+    new_expr_operator = new VGPR();
+  else if (mutant_name.compare("VLPR") == 0)
+    new_expr_operator = new VLPR();
+  else if (mutant_name.compare("VTWD") == 0)
+    new_expr_operator = new VTWD();
+  else if (mutant_name.compare("VSCR") == 0)
+    new_expr_operator = new VSCR();
+  else if (mutant_name.compare("CGCR") == 0)
+    new_expr_operator = new CGCR();
+  else if (mutant_name.compare("CLCR") == 0)
+    new_expr_operator = new CLCR();
+  else if (mutant_name.compare("CGSR") == 0)
+    new_expr_operator = new CGSR();
+  else if (mutant_name.compare("CLSR") == 0)
+    new_expr_operator = new CLSR();
+  else if (mutant_name.compare("OPPO") == 0)
+    new_expr_operator = new OPPO();
+  else if (mutant_name.compare("OMMO") == 0)
+    new_expr_operator = new OMMO();
+  else if (mutant_name.compare("OLNG") == 0)
+    new_expr_operator = new OLNG();
+  else if (mutant_name.compare("OBNG") == 0)
+    new_expr_operator = new OBNG();
   else if (mutant_name.compare("OIPM") == 0)
-    new_operator = new OIPM();
+    new_expr_operator = new OIPM();
   else if (mutant_name.compare("OCOR") == 0)
-    new_operator = new OCOR();
+    new_expr_operator = new OCOR();
   else if (mutant_name.compare("OLLN") == 0)
-    new_operator = new OLLN();
+    new_expr_operator = new OLLN();
   else if (mutant_name.compare("OSSN") == 0)
-    new_operator = new OSSN();
+    new_expr_operator = new OSSN();
   else if (mutant_name.compare("OBBN") == 0)
-    new_operator = new OBBN();
+    new_expr_operator = new OBBN();
   else if (mutant_name.compare("OLRN") == 0)
-    new_operator = new OLRN();
+    new_expr_operator = new OLRN();
   else if (mutant_name.compare("ORLN") == 0)
-    new_operator = new ORLN();
+    new_expr_operator = new ORLN();
   else if (mutant_name.compare("OBLN") == 0)
-    new_operator = new OBLN();
+    new_expr_operator = new OBLN();
   else if (mutant_name.compare("OBRN") == 0)
-    new_operator = new OBRN();
+    new_expr_operator = new OBRN();
   else if (mutant_name.compare("OSLN") == 0)
-    new_operator = new OSLN();
+    new_expr_operator = new OSLN();
   else if (mutant_name.compare("OSRN") == 0)
-    new_operator = new OSRN();
+    new_expr_operator = new OSRN();
   else if (mutant_name.compare("OBAN") == 0)
-    new_operator = new OBAN();
+    new_expr_operator = new OBAN();
   else if (mutant_name.compare("OBSN") == 0)
-    new_operator = new OBSN();
+    new_expr_operator = new OBSN();
   else if (mutant_name.compare("OSAN") == 0)
-    new_operator = new OSAN();
+    new_expr_operator = new OSAN();
   else if (mutant_name.compare("OSBN") == 0)
-    new_operator = new OSBN();
+    new_expr_operator = new OSBN();
   else if (mutant_name.compare("OAEA") == 0)
-    new_operator = new OAEA();
+    new_expr_operator = new OAEA();
   else if (mutant_name.compare("OBAA") == 0)
-    new_operator = new OBAA();
+    new_expr_operator = new OBAA();
   else if (mutant_name.compare("OBBA") == 0)
-    new_operator = new OBBA();
+    new_expr_operator = new OBBA();
   else if (mutant_name.compare("OBEA") == 0)
-    new_operator = new OBEA();
+    new_expr_operator = new OBEA();
   else if (mutant_name.compare("OBSA") == 0)
-    new_operator = new OBSA();
+    new_expr_operator = new OBSA();
   else if (mutant_name.compare("OSAA") == 0)
-    new_operator = new OSAA();
+    new_expr_operator = new OSAA();
   else if (mutant_name.compare("OSBA") == 0)
-    new_operator = new OSBA();
+    new_expr_operator = new OSBA();
   else if (mutant_name.compare("OSEA") == 0)
-    new_operator = new OSEA();
+    new_expr_operator = new OSEA();
   else if (mutant_name.compare("OSSA") == 0)
-    new_operator = new OSSA();
+    new_expr_operator = new OSSA();
   else if (mutant_name.compare("OEAA") == 0)
-    new_operator = new OEAA();
+    new_expr_operator = new OEAA();
   else if (mutant_name.compare("OEBA") == 0)
-    new_operator = new OEBA();
+    new_expr_operator = new OEBA();
   else if (mutant_name.compare("OESA") == 0)
-    new_operator = new OESA();
+    new_expr_operator = new OESA();
   else if (mutant_name.compare("OAAA") == 0)
-    new_operator = new OAAA();
+    new_expr_operator = new OAAA();
   else if (mutant_name.compare("OABA") == 0)
-    new_operator = new OABA();
+    new_expr_operator = new OABA();
   else if (mutant_name.compare("OASA") == 0)
-    new_operator = new OASA();
+    new_expr_operator = new OASA();
   else if (mutant_name.compare("OALN") == 0)
-    new_operator = new OALN();
+    new_expr_operator = new OALN();
   else if (mutant_name.compare("OAAN") == 0)
-    new_operator = new OAAN();
+    new_expr_operator = new OAAN();
   else if (mutant_name.compare("OARN") == 0)
-    new_operator = new OARN();
+    new_expr_operator = new OARN();
   else if (mutant_name.compare("OABN") == 0)
-    new_operator = new OABN();
+    new_expr_operator = new OABN();
   else if (mutant_name.compare("OASN") == 0)
-    new_operator = new OASN();
+    new_expr_operator = new OASN();
   else if (mutant_name.compare("OLAN") == 0)
-    new_operator = new OLAN();
+    new_expr_operator = new OLAN();
   else if (mutant_name.compare("ORAN") == 0)
-    new_operator = new ORAN();
+    new_expr_operator = new ORAN();
   else if (mutant_name.compare("OLBN") == 0)
-    new_operator = new OLBN();
+    new_expr_operator = new OLBN();
   else if (mutant_name.compare("OLSN") == 0)
-    new_operator = new OLSN();
+    new_expr_operator = new OLSN();
   else if (mutant_name.compare("ORSN") == 0)
-    new_operator = new ORSN();
+    new_expr_operator = new ORSN();
   else if (mutant_name.compare("ORBN") == 0)
-    new_operator = new ORBN();
+    new_expr_operator = new ORBN();
   else
   {
     cout << "Unknown mutant operator: " << mutant_name << endl;
@@ -936,32 +999,36 @@ void AddMutantOperator(string mutant_name,
     return;
   }
 
-  // Set domain for mutant operator if domain is valid
-  if (!new_operator->ValidateDomain(domain))
+  if (new_expr_operator != nullptr)
   {
-    cout << "invalid domain\n";
-    exit(1);
-  }
-  else
-    new_operator->setDomain(domain);
+    // Set domain for mutant operator if domain is valid
+    if (!new_expr_operator->ValidateDomain(domain))
+    {
+      cout << "invalid domain\n";
+      exit(1);
+    }
+    else
+      new_expr_operator->setDomain(domain);
 
-  // Set range for mutant operator if range is valid
-  if (!new_operator->ValidateRange(range))
-  {
-    cout << "invalid range\n";
-    exit(1);
-  }
-  else
-    new_operator->setRange(range);
+    // Set range for mutant operator if range is valid
+    if (!new_expr_operator->ValidateRange(range))
+    {
+      cout << "invalid range\n";
+      exit(1);
+    }
+    else
+      new_expr_operator->setRange(range);
 
-  mutant_list.push_back(new_operator);
+    expr_operator_list.push_back(new_expr_operator);
+  }
 }
 
 // Wrap up currently-entering mutant operator (if can)
 // before change the state to kNonAOrBOption.
 void clearState(UserInputAnalyzingState &state, string mutant_name, 
                 set<string> &domain, set<string> &range,
-                vector<MutantOperatorTemplate*> &mutant_list)
+                vector<StmtMutantOperator*> &stmt_operator_list,
+                vector<ExprMutantOperator*> &expr_operator_list)
 {
   switch (state)
   {
@@ -969,7 +1036,8 @@ void clearState(UserInputAnalyzingState &state, string mutant_name,
     case UserInputAnalyzingState::kNonAOptionAndMutantName:
     case UserInputAnalyzingState::kNonAOrBOptionAndMutantName:
     {
-      AddMutantOperator(mutant_name, domain, range, mutant_list);
+      AddMutantOperator(mutant_name, domain, range, 
+                        stmt_operator_list, expr_operator_list);
 
       domain.clear();
       range.clear();
@@ -991,7 +1059,8 @@ void HandleInput(string input, UserInputAnalyzingState &state,
                  set<string> &range, string &output_dir, int &limit, 
                  SourceLocation *start_loc, SourceLocation *end_loc, 
                  int &line_num, int &col_num, SourceManager &src_mgr, 
-                 vector<MutantOperatorTemplate*> &mutant_list)
+                 vector<StmtMutantOperator*> &stmt_operator_list,
+                 vector<ExprMutantOperator*> &expr_operator_list)
 {
   switch (state)
   {
@@ -1121,7 +1190,8 @@ void HandleInput(string input, UserInputAnalyzingState &state,
     case UserInputAnalyzingState::kNonAOptionAndMutantName:
     case UserInputAnalyzingState::kNonAOrBOptionAndMutantName:
     {
-      AddMutantOperator(mutant_name, domain, range, mutant_list);
+      AddMutantOperator(mutant_name, domain, range, 
+                        stmt_operator_list, expr_operator_list);
 
       state = UserInputAnalyzingState::kMutantName;
       domain.clear();
@@ -1129,7 +1199,8 @@ void HandleInput(string input, UserInputAnalyzingState &state,
 
       HandleInput(input, state, mutant_name, domain, range, 
                   output_dir, limit, start_loc, end_loc, line_num, 
-                  col_num, src_mgr, mutant_list);
+                  col_num, src_mgr, stmt_operator_list,
+                  expr_operator_list);
       break;
     }
 
@@ -1264,6 +1335,9 @@ int main(int argc, char *argv[])
 
   vector<MutantOperatorTemplate*> mutant_operator_list;
 
+  vector<ExprMutantOperator*> expr_mutant_operator_list;
+  vector<StmtMutantOperator*> stmt_mutant_operator_list;
+
   for (int i = 2; i < argc; ++i)
   {
     string option = argv[i];
@@ -1273,7 +1347,7 @@ int main(int argc, char *argv[])
     {
       apply_all_mutant_operators = false;
       clearState(state, mutantOpName, domain, range, 
-                 mutant_operator_list);
+                 stmt_mutant_operator_list, expr_mutant_operator_list);
       
       mutantOpName.clear();
       domain.clear();
@@ -1284,25 +1358,25 @@ int main(int argc, char *argv[])
     else if (option.compare("-l") == 0)
     {
       clearState(state, mutantOpName, domain, range, 
-                 mutant_operator_list);
+                 stmt_mutant_operator_list, expr_mutant_operator_list);
       state = UserInputAnalyzingState::kLimitNumOfMutant;
     }
     else if (option.compare("-rs") == 0)
     {
       clearState(state, mutantOpName, domain, range, 
-                 mutant_operator_list);
+                 stmt_mutant_operator_list, expr_mutant_operator_list);
       state = UserInputAnalyzingState::kRsLine;
     }
     else if (option.compare("-re") == 0)
     {
       clearState(state, mutantOpName, domain, range, 
-                 mutant_operator_list);
+                 stmt_mutant_operator_list, expr_mutant_operator_list);
       state = UserInputAnalyzingState::kReLine;
     }
     else if (option.compare("-o") == 0)
     {
       clearState(state, mutantOpName, domain, range, 
-                 mutant_operator_list);
+                 stmt_mutant_operator_list, expr_mutant_operator_list);
       state = UserInputAnalyzingState::kOutputDir;
     }
     else if (option.compare("-A") == 0)
@@ -1333,11 +1407,12 @@ int main(int argc, char *argv[])
       HandleInput(option, state, mutantOpName, domain, range,
                   output_dir, limit, &start_of_mutation_range, 
                   &end_of_mutation_range, line_num, col_num, SourceMgr,
-                  mutant_operator_list);
+                  stmt_mutant_operator_list, expr_mutant_operator_list);
     }
   }
 
-  clearState(state, mutantOpName, domain, range, mutant_operator_list);
+  clearState(state, mutantOpName, domain, range, 
+             stmt_mutant_operator_list, expr_mutant_operator_list);
 
   cout << mutant_operator_list.size() << endl;
 
@@ -1460,9 +1535,9 @@ int main(int argc, char *argv[])
       TheGatherer->getSymbolTable());
 
   // Create an AST consumer instance which is going to get called by ParseAST.
-  MyASTConsumer TheConsumer(&TheCompInst, 
-                            TheGatherer->getLabelToGotoListMap(), 
-                            mutant_operator_list, context);
+  MyASTConsumer TheConsumer(
+      &TheCompInst, TheGatherer->getLabelToGotoListMap(), 
+      stmt_mutant_operator_list, expr_mutant_operator_list, context);
 
   Sema sema(TheCompInst.getPreprocessor(), TheCompInst.getASTContext(), 
             TheConsumer);

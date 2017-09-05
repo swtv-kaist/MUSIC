@@ -33,11 +33,7 @@ bool OBNG::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool OBNG::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OBNG::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -55,8 +51,7 @@ void OBNG::Mutate(clang::Expr *e, ComutContext *context)
 	GenerateMutantByNegation(bo->getLHS()->IgnoreImpCasts(), context);
 }
 
-void OBNG::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 void OBNG::GenerateMutantByNegation(Expr *e, ComutContext *context)
 {

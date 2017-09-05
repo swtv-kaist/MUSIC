@@ -11,12 +11,6 @@ bool OCNG::ValidateRange(const std::set<std::string> &range)
 	return range.empty();
 }
 
-// Return True if the mutant operator can mutate this expression
-bool OCNG::CanMutate(clang::Expr *e, ComutContext *context)
-{
-	return false;
-}
-
 // Return True if the mutant operator can mutate this statement
 bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 {
@@ -82,9 +76,6 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 			SourceRange(*(context->userinput->getStartOfMutationRange()),
 									*(context->userinput->getEndOfMutationRange())));
 }
-
-void OCNG::Mutate(clang::Expr *e, ComutContext *context)
-{}
 
 void OCNG::Mutate(clang::Stmt *s, ComutContext *context)
 {

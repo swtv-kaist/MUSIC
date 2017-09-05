@@ -71,10 +71,7 @@ bool ORAN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool ORAN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void ORAN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -106,8 +103,7 @@ void ORAN::Mutate(clang::Expr *e, ComutContext *context)
 	}
 }
 
-void ORAN::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 bool ORAN::CanMutate(BinaryOperator *bo, string mutated_token,
 										 ComutContext *context)

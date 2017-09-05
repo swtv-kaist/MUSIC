@@ -2,7 +2,7 @@
 #include "ocor.h"
 
 OCOR::OCOR(const string name)
-	: MutantOperatorTemplate(name)
+	: ExprMutantOperator(name)
 {
 	integral_type_list_ = {"int", "unsigned", "short", "long", 
                          "unsigned long", "char", "unsigned char", 
@@ -45,11 +45,7 @@ bool OCOR::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool OCOR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OCOR::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -96,8 +92,7 @@ void OCOR::Mutate(clang::Expr *e, ComutContext *context)
   MutateToFloatingType(type_str, token, start_loc, end_loc, context);
 }
 
-void OCOR::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 void OCOR::MutateToIntegralType(
 		const string &type_str, const string &token,

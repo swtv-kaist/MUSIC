@@ -79,11 +79,7 @@ bool OIPM::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool OIPM::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OIPM::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -131,8 +127,7 @@ void OIPM::Mutate(clang::Expr *e, ComutContext *context)
 	}
 }
 
-void OIPM::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 SourceLocation OIPM::GetLeftBracketOfArraySubscript(
 		const ArraySubscriptExpr *ase, SourceManager &src_mgr)

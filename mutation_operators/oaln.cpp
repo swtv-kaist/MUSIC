@@ -72,10 +72,7 @@ bool OALN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OALN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OALN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -109,5 +106,3 @@ void OALN::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OALN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

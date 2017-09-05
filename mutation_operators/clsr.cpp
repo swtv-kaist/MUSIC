@@ -37,12 +37,6 @@ bool CLSR::CanMutate(clang::Expr *e, ComutContext *context)
 				 LocationIsInRange(start_loc, *(context->currently_parsed_function_range));
 }
 
-// Return True if the mutant operator can mutate this statement
-bool CLSR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
-
 void CLSR::Mutate(clang::Expr *e, ComutContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
@@ -79,6 +73,3 @@ void CLSR::Mutate(clang::Expr *e, ComutContext *context)
 																	token, mutated_token);
   }
 }
-
-void CLSR::Mutate(clang::Stmt *s, ComutContext *context)
-{}

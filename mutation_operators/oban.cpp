@@ -68,10 +68,7 @@ bool OBAN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OBAN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OBAN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -97,5 +94,3 @@ void OBAN::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OBAN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

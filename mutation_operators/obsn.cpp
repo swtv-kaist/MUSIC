@@ -68,10 +68,7 @@ bool OBSN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OBSN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OBSN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -97,5 +94,3 @@ void OBSN::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OBSN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

@@ -68,11 +68,6 @@ bool OBRN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OBRN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
-
 void OBRN::Mutate(clang::Expr *e, ComutContext *context)
 {
 	BinaryOperator *bo;
@@ -97,5 +92,3 @@ void OBRN::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OBRN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

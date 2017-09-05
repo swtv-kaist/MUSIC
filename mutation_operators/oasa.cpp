@@ -76,10 +76,7 @@ bool OASA::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OASA::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OASA::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -104,5 +101,3 @@ void OASA::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OASA::Mutate(clang::Stmt *s, ComutContext *context)
-{}

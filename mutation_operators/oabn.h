@@ -1,13 +1,13 @@
 #ifndef COMUT_OABN_H_
 #define COMUT_OABN_H_
 
-#include "mutant_operator_template.h"
+#include "expr_mutant_operator.h"
 
-class OABN : public MutantOperatorTemplate
+class OABN : public ExprMutantOperator
 {
 public:
 	OABN(const std::string name = "OABN")
-		: MutantOperatorTemplate(name)
+		: ExprMutantOperator(name)
 	{}
 
 	virtual bool ValidateDomain(const std::set<std::string> &domain);
@@ -19,11 +19,7 @@ public:
 	// Return True if the mutant operator can mutate this expression
 	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
 
-	// Return True if the mutant operator can mutate this statement
-	virtual bool CanMutate(clang::Stmt *s, ComutContext *context);
-
 	virtual void Mutate(clang::Expr *e, ComutContext *context);
-	virtual void Mutate(clang::Stmt *s, ComutContext *context);
 };
 
 #endif	// COMUT_OABN_H_

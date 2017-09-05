@@ -1,13 +1,13 @@
 #ifndef COMUT_OIPM_H_
 #define COMUT_OIPM_H_
 
-#include "mutant_operator_template.h"
+#include "expr_mutant_operator.h"
 
-class OIPM : public MutantOperatorTemplate
+class OIPM : public ExprMutantOperator
 {
 public:
 	OIPM(const std::string name = "OIPM")
-		: MutantOperatorTemplate(name), is_subexpr_arraysubscript(false),
+		: ExprMutantOperator(name), is_subexpr_arraysubscript(false),
 		  is_subexpr_pointer(false)
 	{}
 
@@ -17,11 +17,7 @@ public:
 	// Return True if the mutant operator can mutate this expression
 	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
 
-	// Return True if the mutant operator can mutate this statement
-	virtual bool CanMutate(clang::Stmt *s, ComutContext *context);
-
 	virtual void Mutate(clang::Expr *e, ComutContext *context);
-	virtual void Mutate(clang::Stmt *s, ComutContext *context);
 
 private:
 	bool is_subexpr_arraysubscript;

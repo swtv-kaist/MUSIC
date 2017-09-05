@@ -1,13 +1,13 @@
 #ifndef COMUT_OAAN_H_
 #define COMUT_OAAN_H_
 
-#include "mutant_operator_template.h"
+#include "expr_mutant_operator.h"
 
-class OAAN : public MutantOperatorTemplate
+class OAAN : public ExprMutantOperator
 {
 public:
 	OAAN(const std::string name = "OAAN")
-		: MutantOperatorTemplate(name)
+		: ExprMutantOperator(name)
 	{}
 
 	virtual bool ValidateDomain(const std::set<std::string> &domain);
@@ -19,12 +19,8 @@ public:
 	// Return True if the mutant operator can mutate this expression
 	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
 
-	// Return True if the mutant operator can mutate this statement
-	virtual bool CanMutate(clang::Stmt *s, ComutContext *context);
-
 	virtual void Mutate(clang::Expr *e, ComutContext *context);
-	virtual void Mutate(clang::Stmt *s, ComutContext *context);
-
+	
 private:
 	bool CanMutate(BinaryOperator *bo, string mutated_token,
 								 ComutContext *context);

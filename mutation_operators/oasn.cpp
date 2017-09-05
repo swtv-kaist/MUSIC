@@ -74,10 +74,7 @@ bool OASN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OASN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OASN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -103,5 +100,3 @@ void OASN::Mutate(clang::Expr *e, ComutContext *context)
 	}
 }
 
-void OASN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

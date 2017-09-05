@@ -1,13 +1,13 @@
 #ifndef COMUT_OPPO_H_
 #define COMUT_OPPO_H_	
 
-#include "mutant_operator_template.h"
+#include "expr_mutant_operator.h"
 
-class OPPO : public MutantOperatorTemplate
+class OPPO : public ExprMutantOperator
 {
 public:
 	OPPO(const std::string name = "OPPO")
-		: MutantOperatorTemplate(name)
+		: ExprMutantOperator(name)
 	{}
 
 	virtual bool ValidateDomain(const std::set<std::string> &domain);
@@ -16,11 +16,7 @@ public:
 	// Return True if the mutant operator can mutate this expression
 	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
 
-	// Return True if the mutant operator can mutate this statement
-	virtual bool CanMutate(clang::Stmt *s, ComutContext *context);
-
 	virtual void Mutate(clang::Expr *e, ComutContext *context);
-	virtual void Mutate(clang::Stmt *s, ComutContext *context);
 
 private:
 	void GenerateMutantForPostInc(UnaryOperator *uo, ComutContext *context);

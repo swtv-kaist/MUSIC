@@ -76,10 +76,7 @@ bool OESA::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OESA::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OESA::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -105,5 +102,3 @@ void OESA::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OESA::Mutate(clang::Stmt *s, ComutContext *context)
-{}

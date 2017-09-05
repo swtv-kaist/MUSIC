@@ -29,11 +29,7 @@ bool OMMO::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool OMMO::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OMMO::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -47,8 +43,7 @@ void OMMO::Mutate(clang::Expr *e, ComutContext *context)
 		GenerateMutantForPreDec(uo, context);
 }
 
-void OMMO::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, ComutContext *context)
 {

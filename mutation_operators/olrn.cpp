@@ -68,10 +68,7 @@ bool OLRN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OLRN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OLRN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -97,5 +94,3 @@ void OLRN::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OLRN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

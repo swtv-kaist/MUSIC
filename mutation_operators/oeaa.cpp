@@ -75,10 +75,7 @@ bool OEAA::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OEAA::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OEAA::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -133,8 +130,7 @@ void OEAA::Mutate(clang::Expr *e, ComutContext *context)
 	only_plus_minus_ = false;
 }
 
-void OEAA::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 bool OEAA::CanMutate(clang::BinaryOperator * const bo, 
 										 CompilerInstance *comp_inst)

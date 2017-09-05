@@ -68,10 +68,7 @@ bool OBEA::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OBEA::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OBEA::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -97,5 +94,3 @@ void OBEA::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OBEA::Mutate(clang::Stmt *s, ComutContext *context)
-{}

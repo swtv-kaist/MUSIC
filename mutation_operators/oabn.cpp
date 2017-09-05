@@ -74,11 +74,6 @@ bool OABN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OABN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
-
 void OABN::Mutate(clang::Expr *e, ComutContext *context)
 {
 	BinaryOperator *bo;
@@ -102,6 +97,3 @@ void OABN::Mutate(clang::Expr *e, ComutContext *context)
 																		token, mutated_token);
 	}
 }
-
-void OABN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

@@ -43,15 +43,6 @@ public:
 
 	virtual void setDomain(std::set<std::string> &domain);
   virtual void setRange(std::set<std::string> &range);
-
-	// Return True if the mutant operator can mutate this expression
-	virtual bool CanMutate(clang::Expr *e, ComutContext *context) = 0;
-
-	// Return True if the mutant operator can mutate this statement
-	virtual bool CanMutate(clang::Stmt *s, ComutContext *context) = 0;
-
-	virtual void Mutate(clang::Expr *e, ComutContext *context) = 0;
-	virtual void Mutate(clang::Stmt *s, ComutContext *context) = 0;
 	
 protected:
 	void GenerateMutantFile(ComutContext *context, 

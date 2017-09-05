@@ -1,13 +1,13 @@
 #ifndef COMUT_OEBA_H_
 #define COMUT_OEBA_H_
 
-#include "mutant_operator_template.h"
+#include "expr_mutant_operator.h"
 
-class OEBA : public MutantOperatorTemplate
+class OEBA : public ExprMutantOperator
 {
 public:
 	OEBA(const std::string name = "OEBA")
-		: MutantOperatorTemplate(name)
+		: ExprMutantOperator(name)
 	{}
 
 	virtual bool ValidateDomain(const std::set<std::string> &domain);
@@ -19,11 +19,7 @@ public:
 	// Return True if the mutant operator can mutate this expression
 	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
 
-	// Return True if the mutant operator can mutate this statement
-	virtual bool CanMutate(clang::Stmt *s, ComutContext *context);
-
 	virtual void Mutate(clang::Expr *e, ComutContext *context);
-	virtual void Mutate(clang::Stmt *s, ComutContext *context);
 };
 
 #endif	// COMUT_OEBA_H_

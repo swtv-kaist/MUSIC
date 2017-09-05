@@ -29,11 +29,7 @@ bool OPPO::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool OPPO::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OPPO::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -47,8 +43,7 @@ void OPPO::Mutate(clang::Expr *e, ComutContext *context)
 		GenerateMutantForPreInc(uo, context);
 }
 
-void OPPO::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, ComutContext *context)
 {

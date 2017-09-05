@@ -36,12 +36,6 @@ bool CGSR::CanMutate(clang::Expr *e, ComutContext *context)
 				 !LocationIsInRange(start_loc, *(context->addressop_range));
 }
 
-// Return True if the mutant operator can mutate this statement
-bool CGSR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
-
 void CGSR::Mutate(clang::Expr *e, ComutContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
@@ -79,5 +73,3 @@ void CGSR::Mutate(clang::Expr *e, ComutContext *context)
   }
 }
 
-void CGSR::Mutate(clang::Stmt *s, ComutContext *context)
-{}

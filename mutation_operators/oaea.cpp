@@ -68,10 +68,7 @@ bool OAEA::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OAEA::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OAEA::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -97,5 +94,3 @@ void OAEA::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OAEA::Mutate(clang::Stmt *s, ComutContext *context)
-{}

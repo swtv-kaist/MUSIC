@@ -74,10 +74,7 @@ bool OARN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OARN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OARN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -111,5 +108,3 @@ void OARN::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void OARN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

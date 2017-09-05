@@ -71,10 +71,7 @@ bool ORBN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool ORBN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void ORBN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -106,8 +103,7 @@ void ORBN::Mutate(clang::Expr *e, ComutContext *context)
 	}
 }
 
-void ORBN::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 bool ORBN::CanMutate(BinaryOperator *bo, string mutated_token,
 										 ComutContext *context)

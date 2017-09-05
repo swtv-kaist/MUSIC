@@ -71,10 +71,7 @@ bool OLSN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool OLSN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void OLSN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -106,8 +103,7 @@ void OLSN::Mutate(clang::Expr *e, ComutContext *context)
 	}
 }
 
-void OLSN::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 bool OLSN::CanMutate(BinaryOperator *bo, string mutated_token,
 										 ComutContext *context)

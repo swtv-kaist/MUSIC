@@ -68,10 +68,7 @@ bool ORLN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-bool ORLN::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void ORLN::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -97,5 +94,3 @@ void ORLN::Mutate(clang::Expr *e, ComutContext *context)
 		}
 }
 
-void ORLN::Mutate(clang::Stmt *s, ComutContext *context)
-{}

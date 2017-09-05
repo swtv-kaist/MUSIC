@@ -37,23 +37,15 @@ bool CRCR::CanMutate(clang::Expr *e, ComutContext *context)
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
 
-	return Range1IsPartOfRange2(
-			SourceRange(start_loc, end_loc), 
-			SourceRange(*(context->userinput->getStartOfMutationRange()),
-									*(context->userinput->getEndOfMutationRange()))) &&
-				 !context->is_inside_enumdecl &&
-				 !context->is_inside_array_decl_size &&
-				 !LocationIsInRange(start_loc, *(context->lhs_of_assignment_range)) &&
-				 !LocationIsInRange(start_loc, *(context->addressop_range)) &&
-				 !LocationIsInRange(start_loc, *(context->unary_inc_dec_range));
-}
+	StmtContext &stmt_context = context->getStmtContext();
 
-// Return True if the mutant operator can mutate this statement
-bool CRCR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
+	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+				 !stmt_context.IsInEnumDecl() &&
+				 !stmt_context.IsInArrayDeclSize() &&
+				 !stmt_context.IsInLhsOfAssignmentRange(e) &&
+				 !stmt_context.IsInAddressOpRange(e) &&
+				 !stmt_context.IsInUnaryIncrementDecrementRange(e);
 }
-
 
 void CRCR::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -93,6 +85,3 @@ void CRCR::Mutate(clang::Expr *e, ComutContext *context)
 		return;
 	}
 }
-
-void CRCR::Mutate(clang::Stmt *s, ComutContext *context)
-{}

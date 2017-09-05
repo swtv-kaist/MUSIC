@@ -8,7 +8,7 @@ LLVM_BUILD_MODE=Debug+Asserts
 SRCS=tool.cpp configuration.cpp comut_utility.cpp \
 		 mutation_operators/mutant_operator_template.cpp \
 		 information_visitor.cpp information_gatherer.cpp comut_context.cpp \
-		 symbol_table.cpp \
+		 symbol_table.cpp stmt_context.cpp \
 		 mutation_operators/ssdl.cpp mutation_operators/orrn.cpp \
 		 mutation_operators/vtwf.cpp mutation_operators/crcr.cpp \
 		 mutation_operators/sanl.cpp mutation_operators/srws.cpp \
@@ -48,8 +48,8 @@ SRCS=tool.cpp configuration.cpp comut_utility.cpp \
 		 mutation_operators/orbn.cpp
   
 OBJS=tool.o configuration.o comut_utility.o symbol_table.o\
-		 mutant_operator_template.o  information_visitor.o \
-		 information_gatherer.o comut_context.o ssdl.o \
+		 stmt_context.o comut_context.o mutant_operator_template.o \
+		 information_visitor.o information_gatherer.o ssdl.o \
 		 orrn.o vtwf.o crcr.o sanl.o srws.o scsr.o vlsf.o vgsf.o \
 		 vltf.o vgtf.o vlpf.o vgpf.o vgsr.o vlsr.o vgar.o vlar.o \
 		 vgtr.o vltr.o vgpr.o vlpr.o vtwd.o vscr.o cgcr.o clcr.o \
@@ -90,9 +90,10 @@ all: $(TARGET)
 $(TARGET) : $(OBJS)
 	$(CXX) $(OBJS) $(CXXFLAGS) -o $@
 
-tool.o : tool.cpp comut_utility.h configuration.h comut_context.h\
-	information_visitor.h information_gatherer.h symbol_table.h\
+tool.o : tool.cpp comut_utility.h configuration.h comut_context.h \
+	information_visitor.h information_gatherer.h symbol_table.h stmt_context.h \
 	comut_context.h mutation_operators/mutant_operator_template.h \
+	mutation_operators/expr_mutant_operator.h mutation_operators/stmt_mutant_operator.h \
 	mutation_operators/ssdl.h mutation_operators/orrn.h mutation_operators/vtwf.h \
 	mutation_operators/crcr.h mutation_operators/sanl.h mutation_operators/srws.h \
 	mutation_operators/scsr.h mutation_operators/vlsf.h mutation_operators/vgsf.h \
@@ -137,15 +138,19 @@ information_gatherer.o : information_gatherer.h information_gatherer.cpp \
 symbol_table.o: symbol_table.h symbol_table.cpp 
 	$(CXX) $(CXXFLAGS) -c symbol_table.cpp
 
-comut_context.o : comut_context.h comut_context.cpp configuration.h symbol_table.h
+stmt_context.o: stmt_context.h stmt_context.cpp comut_utility.h
+	$(CXX) $(CXXFLAGS) -c stmt_context.cpp
+
+comut_context.o : comut_context.h comut_context.cpp configuration.h \
+	symbol_table.h stmt_context.h
 	$(CXX) $(CXXFLAGS) -c comut_context.cpp
 
 mutant_operator_template.o : mutation_operators/mutant_operator_template.h mutation_operators/mutant_operator_template.cpp comut_utility.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/mutant_operator_template.cpp
 
 ssdl.o : mutation_operators/ssdl.h mutation_operators/ssdl.cpp \
-	mutation_operators/mutant_operator_template.h comut_utility.h \
-	comut_context.h
+	mutation_operators/stmt_mutant_operator.h comut_utility.h \
+	comut_context.h mutation_operators/mutant_operator_template.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/ssdl.cpp
 
 orrn.o : mutation_operators/orrn.h mutation_operators/orrn.cpp \
@@ -300,7 +305,7 @@ obng.o : mutation_operators/obng.h mutation_operators/obng.cpp \
 
 ocng.o : mutation_operators/ocng.h mutation_operators/ocng.cpp \
 	mutation_operators/mutant_operator_template.h comut_utility.h \
-	comut_context.h
+	comut_context.h mutation_operators/stmt_mutant_operator.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/ocng.cpp
 
 oipm.o : mutation_operators/oipm.h mutation_operators/oipm.cpp \
