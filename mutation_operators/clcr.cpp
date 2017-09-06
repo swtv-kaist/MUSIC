@@ -20,18 +20,16 @@ bool CLCR::CanMutate(clang::Expr *e, ComutContext *context)
 
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	StmtContext &stmt_context = context->getStmtContext();
 
 	// CLCR can mutate this constant literal if it is in mutation range,
 	// outside array decl range, outside enum decl range, outside
 	// field decl range and inside a function (local range)
-	return Range1IsPartOfRange2(
-			SourceRange(start_loc, end_loc), 
-			SourceRange(*(context->userinput->getStartOfMutationRange()),
-									*(context->userinput->getEndOfMutationRange()))) &&
-				 !context->is_inside_enumdecl &&
-				 !context->is_inside_array_decl_size &&
-				 !LocationIsInRange(start_loc, *(context->fielddecl_range)) &&
-				 LocationIsInRange(start_loc, *(context->currently_parsed_function_range));
+	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+				 !stmt_context.IsInEnumDecl() &&
+				 !stmt_context.IsInArrayDeclSize() &&
+				 !stmt_context.IsInFieldDeclRange(e) &&
+				 stmt_context.IsInCurrentlyParsedFunctionRange(e);
 }
 
 void CLCR::Mutate(clang::Expr *e, ComutContext *context)
@@ -55,14 +53,12 @@ void CLCR::Mutate(clang::Expr *e, ComutContext *context)
 	// cannot mutate the variable in switch condition, case value, 
   // array subscript to a floating-type variable because
   // these location requires integral value.
-  bool skip_float_literal = LocationIsInRange(
-  		start_loc, *(context->arraysubscript_range)) ||
-                            LocationIsInRange(
-      start_loc, *(context->switchstmt_condition_range)) ||
-                            LocationIsInRange(
-      start_loc, *(context->switchcase_range));
+  StmtContext &stmt_context = context->getStmtContext();
+  bool skip_float_literal = stmt_context.IsInArraySubscriptRange(e) ||
+                            stmt_context.IsInSwitchStmtConditionRange(e) ||
+                            stmt_context.IsInSwitchCaseRange(e);
 
-	for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->function_id_])
+	for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->getFunctionId()])
 	{
     if (skip_float_literal && ExprIsFloat(it))
     	continue;
@@ -78,7 +74,7 @@ void CLCR::Mutate(clang::Expr *e, ComutContext *context)
     // Mitigate mutation from causing duplicate-case-label error.
     // If this constant is in range of a case label
     // then check if the replacing token is same with any other label.
-    if (LocationIsInRange(start_loc, *(context->switchcase_range)) &&
+    if (stmt_context.IsInSwitchCaseRange(e) &&
     		IsDuplicateCaseLabel(mutated_token, context->switchstmt_info_list))
     	continue;
 

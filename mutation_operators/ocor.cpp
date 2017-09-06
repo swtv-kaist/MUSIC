@@ -29,15 +29,13 @@ bool OCOR::CanMutate(clang::Expr *e, ComutContext *context)
 		SourceLocation start_loc = csce->getLocStart();
     SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
     const Type *type{csce->getTypeAsWritten().getCanonicalType().getTypePtr()};
+    StmtContext &stmt_context = context->getStmtContext();
 
     // OCOR mutates expression with C-style cast (Ex. (int) x)
     // These expr should be in mutation range, outside field decl
     // and the type of cast should be integral (int, char, float)
-    return Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-					 !LocationIsInRange(start_loc, *(context->fielddecl_range)) &&
+    return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+					 !stmt_context.IsInFieldDeclRange(e) &&
 					 (type->isIntegerType() || type->isCharType() || 
             type->isFloatingType());
 	}
@@ -78,15 +76,16 @@ void OCOR::Mutate(clang::Expr *e, ComutContext *context)
 
   bool is_subexpr_ptr{
   		ExprIsPointer(csce->getSubExpr()->IgnoreImpCasts())};
+  StmtContext &stmt_context = context->getStmtContext();
 
   // Prevent mutating expr in array subscript, switch condition and case,
   // binary modulo, shift, bitwise epxr to floating-type.
   // all of pre-mentioned expr demands integral subexpr
-  if (is_subexpr_ptr &&
-  		LocationIsInRange(start_loc, *(context->arraysubscript_range)) &&
-      LocationIsInRange(start_loc, *(context->switchcase_range)) &&
-      LocationIsInRange(start_loc, *(context->switchstmt_condition_range)) &&
-      LocationIsInRange(start_loc, *(context->non_OCOR_mutatable_expr_range)))
+  if (is_subexpr_ptr ||
+  		stmt_context.IsInArraySubscriptRange(e) ||
+      stmt_context.IsInSwitchCaseRange(e) ||
+      stmt_context.IsInSwitchStmtConditionRange(e) ||
+      stmt_context.IsInNonFloatingExprRange(e))
   	return;
 
   MutateToFloatingType(type_str, token, start_loc, end_loc, context);

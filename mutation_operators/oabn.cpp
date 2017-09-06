@@ -52,16 +52,14 @@ bool OABN::CanMutate(clang::Expr *e, ComutContext *context)
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
 				GetColumnNumber(src_mgr, start_loc) + binary_operator.length());
+		StmtContext &stmt_context = context->getStmtContext();
 
 		// Return True if expr is in mutation range, NOT inside array decl size
 		// and NOT inside enum declaration.
-		if (!Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) ||
-				context->is_inside_array_decl_size ||
-				context->is_inside_enumdecl ||
-				LocationIsInRange(start_loc, *(context->typedef_range)) ||
+		if (!context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) ||
+				stmt_context.IsInArrayDeclSize() ||
+				stmt_context.IsInEnumDecl() ||
+				stmt_context.IsInTypedefRange(e) ||
 				domain_.find(binary_operator) == domain_.end())
 			return false;
 

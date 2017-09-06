@@ -43,7 +43,7 @@ void MutantOperatorTemplate::GenerateMutantFile(
 string MutantOperatorTemplate::GetNextMutantFilename(
     const ComutContext *context)
 {
-  string ret{context->userinput->getOutputDir()};
+  string ret{context->getConfiguration()->getOutputDir()};
   ret += context->mutant_filename;
   ret += to_string(context->next_mutantfile_id);
   ret += ".c";
@@ -57,11 +57,11 @@ void MutantOperatorTemplate::WriteMutantInfoToMutantDbFile(
 {
 	// Open mutattion database file in APPEND mode (write to the end_loc of file)
   ofstream mutant_db_file(
-  	(context->userinput->getMutationDbFilename()).data(), 
+  	(context->getConfiguration()->getMutationDbFilename()).data(), 
     ios::app);
 
   // write input file name
- 	mutant_db_file << context->userinput->getInputFilename() << "\t";
+ 	mutant_db_file << context->getConfiguration()->getInputFilename() << "\t";
 
  	// write output file name
   mutant_db_file << context->mutant_filename << context->next_mutantfile_id << "\t"; 
@@ -69,7 +69,7 @@ void MutantOperatorTemplate::WriteMutantInfoToMutantDbFile(
   // write name of operator  
   mutant_db_file << name_ << "\t"; 
 
-  mutant_db_file << context->proteumstyle_stmt_start_line_num << "\t";
+  mutant_db_file << context->getStmtContext().getProteumStyleLineNum() << "\t";
 
   SourceManager &src_mgr = context->comp_inst->getSourceManager();
   SourceLocation new_end_loc = src_mgr.translateLineCol(

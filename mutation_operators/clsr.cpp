@@ -19,22 +19,20 @@ bool CLSR::CanMutate(clang::Expr *e, ComutContext *context)
 
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	StmtContext &stmt_context = context->getStmtContext();
 
 	// CLSR can mutate scalar-type Declaration Reference Expression
 	// inside mutation range, outside enum declaration, array decl size
 	// (vulnerable to different uncompilable cases) and outside 
 	// lhs of assignment, unary increment/decrement/addressop (these
 	// cannot take constant literal as their target)
-	return Range1IsPartOfRange2(
-			SourceRange(start_loc, end_loc), 
-			SourceRange(*(context->userinput->getStartOfMutationRange()),
-									*(context->userinput->getEndOfMutationRange()))) &&
-				 !context->is_inside_enumdecl &&
-				 !context->is_inside_array_decl_size &&
-				 !LocationIsInRange(start_loc, *(context->lhs_of_assignment_range)) &&
-				 !LocationIsInRange(start_loc, *(context->unary_inc_dec_range)) &&
-				 !LocationIsInRange(start_loc, *(context->addressop_range)) &&
-				 LocationIsInRange(start_loc, *(context->currently_parsed_function_range));
+	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+				 !stmt_context.IsInEnumDecl() &&
+				 !stmt_context.IsInArrayDeclSize() &&
+				 !stmt_context.IsInLhsOfAssignmentRange(e) &&
+				 !stmt_context.IsInUnaryIncrementDecrementRange(e) &&
+				 !stmt_context.IsInAddressOpRange(e) &&
+				 stmt_context.IsInCurrentlyParsedFunctionRange(e);
 }
 
 void CLSR::Mutate(clang::Expr *e, ComutContext *context)
@@ -50,14 +48,12 @@ void CLSR::Mutate(clang::Expr *e, ComutContext *context)
 
 	// cannot mutate the variable in switch condition or 
   // array subscript to a floating-type variable
-  bool skip_float_literal = LocationIsInRange(
-  		start_loc, *(context->arraysubscript_range)) ||
-                            LocationIsInRange(
-      start_loc, *(context->switchstmt_condition_range)) ||
-                            LocationIsInRange(
-      start_loc, *(context->switchcase_range));
+  StmtContext &stmt_context = context->getStmtContext();
+  bool skip_float_literal = stmt_context.IsInArraySubscriptRange(e) ||
+                            stmt_context.IsInSwitchStmtConditionRange(e) ||
+                            stmt_context.IsInSwitchCaseRange(e);
 
-  for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->function_id_])
+  for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->getFunctionId()])
   {
   	if (skip_float_literal && ExprIsFloat(it))
               continue;

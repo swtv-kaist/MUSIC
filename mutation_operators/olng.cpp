@@ -18,16 +18,14 @@ bool OLNG::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		SourceLocation start_loc = e->getLocStart();
     SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+    StmtContext &stmt_context = context->getStmtContext();
 
     // OPPO can mutate binary logical expression in mutation range,
     // outside array decl size and enum declaration.
-    return Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
+    return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
     		bo->isLogicalOp() &&
-    		!context->is_inside_array_decl_size &&
-    		!context->is_inside_enumdecl;
+    		!stmt_context.IsInArrayDeclSize() &&
+				!stmt_context.IsInEnumDecl();
 	}
 
 	return false;

@@ -18,16 +18,14 @@ bool OBNG::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		SourceLocation start_loc = e->getLocStart();
     SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+    StmtContext &stmt_context = context->getStmtContext();
 
     // OPPO can mutate binary bitwise expression in mutation range,
     // outside array decl size and enum declaration.
-    return Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-    		bo->isBitwiseOp() &&
-    		!context->is_inside_array_decl_size &&
-    		!context->is_inside_enumdecl;
+    return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+	    		 bo->isBitwiseOp() &&
+	    		 !stmt_context.IsInArrayDeclSize() &&
+					 !stmt_context.IsInEnumDecl();
 	}
 
 	return false;

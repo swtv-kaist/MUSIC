@@ -47,11 +47,9 @@ bool OIPM::CanMutate(clang::Expr *e, ComutContext *context)
     {
     	is_subexpr_arraysubscript = true;
 
-    	return Range1IsPartOfRange2(
-					SourceRange(start_loc, end_loc), 
-					SourceRange(*(context->userinput->getStartOfMutationRange()),
-											*(context->userinput->getEndOfMutationRange()))) &&
-    				!context->is_inside_enumdecl;
+    	return context->IsRangeInMutationRange(
+          SourceRange(start_loc, end_loc)) &&
+    				 !context->getStmtContext().IsInEnumDecl();
     }
 
     // if subexpr has pointer form (pointer++ or pointer--)
@@ -64,15 +62,14 @@ bool OIPM::CanMutate(clang::Expr *e, ComutContext *context)
     {
     	is_subexpr_pointer = true;
 
-    	return Range1IsPartOfRange2(
-					SourceRange(start_loc, end_loc), 
-					SourceRange(*(context->userinput->getStartOfMutationRange()),
-											*(context->userinput->getEndOfMutationRange()))) &&
-    				 !context->is_inside_enumdecl &&
+      StmtContext &stmt_context = context->getStmtContext();
+
+    	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+    				 !stmt_context.IsInEnumDecl() &&
     				 (uo_subexpr->getOpcode() == UO_PostDec || 
   					 uo_subexpr->getOpcode() == UO_PostInc) &&
   					 !uo->getType().getCanonicalType().isConstQualified() &&
-  					 start_loc != context->lhs_of_assignment_range->getBegin();
+  					 start_loc != stmt_context.getLhsOfAssignmentRange()->getBegin();
   	}
 	}
 

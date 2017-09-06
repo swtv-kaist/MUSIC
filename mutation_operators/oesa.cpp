@@ -52,15 +52,13 @@ bool OESA::CanMutate(clang::Expr *e, ComutContext *context)
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
 				GetColumnNumber(src_mgr, start_loc) + binary_operator.length());
+		StmtContext &stmt_context = context->getStmtContext();
 
 		// Return False if expr is NOT in mutation range, inside array decl size
 		// and inside enum declaration.
-		if (!Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) ||
-				context->is_inside_array_decl_size ||
-				context->is_inside_enumdecl ||
+		if (!context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) ||
+				stmt_context.IsInArrayDeclSize() ||
+				stmt_context.IsInEnumDecl() ||
 				domain_.find(binary_operator) == domain_.end())
 			return false;
 

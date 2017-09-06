@@ -71,10 +71,7 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 	else
 		return false;
 
-	return Range1IsPartOfRange2(
-			SourceRange(start_loc, end_loc), 
-			SourceRange(*(context->userinput->getStartOfMutationRange()),
-									*(context->userinput->getEndOfMutationRange())));
+	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
 }
 
 void OCNG::Mutate(clang::Stmt *s, ComutContext *context)
