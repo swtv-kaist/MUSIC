@@ -25,24 +25,13 @@ bool VTWF::CanMutate(clang::Expr *e, ComutContext *context)
 
     // Return True if expr is in mutation range, NOT inside enum decl
     // and is scalar type.
-		return (Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-						!context->is_inside_enumdecl &&
+		return (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+            !context->getStmtContext().IsInEnumDecl() &&
 						ExprIsScalar(e));
 	}
 
 	return false;
 }
-
-
-// Return True if the mutant operator can mutate this statement
-bool VTWF::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
-
 
 void VTWF::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -73,5 +62,3 @@ void VTWF::Mutate(clang::Expr *e, ComutContext *context)
 																mutated_token);
 }
 
-void VTWF::Mutate(clang::Stmt *s, ComutContext *context)
-{}

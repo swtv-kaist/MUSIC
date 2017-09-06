@@ -1,19 +1,15 @@
 #ifndef COMUT_SSDL_H_
 #define COMUT_SSDL_H_ 
 
-#include "mutant_operator_template.h"
+#include "stmt_mutant_operator.h"
 #include <iostream>
 
-class SSDL : public MutantOperatorTemplate
+class SSDL : public StmtMutantOperator
 {
 public:
 	SSDL(const std::string name = "SSDL")
-		: MutantOperatorTemplate(name)
+		: StmtMutantOperator(name)
 	{}
-
-	// SSDL only mutates Stmt
-	virtual bool CanMutate(clang::Expr *e, ComutContext* context); 
-	virtual void Mutate(clang::Expr *e, ComutContext *context);
 
 	// option -A and -B are not available for SSDL
 	// using them for SSDL terminates COMUT

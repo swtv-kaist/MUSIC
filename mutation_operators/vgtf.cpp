@@ -24,22 +24,15 @@ bool VGTF::CanMutate(clang::Expr *e, ComutContext *context)
 
     // Return True if expr is in mutation range, NOT inside enum decl
     // and is structure type.
-		return (Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-						!context->is_inside_enumdecl &&
+		return (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+            !context->getStmtContext().IsInEnumDecl() &&
 						ExprIsStruct(e));
 	}
 
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool VGTF::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void VGTF::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -60,14 +53,17 @@ void VGTF::Mutate(clang::Expr *e, ComutContext *context)
 	string token{rewriter.ConvertToString(e)};
 
 	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = LocationIsInRange(
-  		start_loc, *(context->switchstmt_condition_range));
+  bool skip_float_vardecl = \
+      context->getStmtContext().IsInSwitchStmtConditionRange(e);
 
   string struct_type{
   		getStructureType(e->getType().getCanonicalType())};
 
-  for (auto vardecl: *(context->global_struct_vardecl_list))
+  for (auto vardecl: *(context->getSymbolTable()->getGlobalStructVarDeclList()))
   {
+    if (!(vardecl->getLocStart() < start_loc))
+      break;
+    
     if (skip_float_vardecl && IsVarDeclFloating(vardecl))
         continue;
 
@@ -83,5 +79,4 @@ void VGTF::Mutate(clang::Expr *e, ComutContext *context)
   }
 }
 
-void VGTF::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+

@@ -1,14 +1,6 @@
 #include "../comut_utility.h"
 #include "ssdl.h"
 
-bool SSDL::CanMutate(Expr *e, ComutContext *context)
-{
-  return false;
-}
-
-void SSDL::Mutate(clang::Expr *e, ComutContext *context) 
-{}
-
 bool SSDL::ValidateDomain(const set<string> &domain)
 {
   if (domain.empty())
@@ -27,44 +19,50 @@ bool SSDL::ValidateRange(const set<string> &range)
 
 bool SSDL::CanMutate(Stmt *s, ComutContext *context)
 {
-	// If s is a CompoundStmt, then apply mutant to each stmt inside
-	// I did not check if the compound stmt is in mutation range here because
-	// SSDL is actually applied to each stmt inside not the whole CompoundStmt.
-	// Hence it is better to check in SSDL::Mutate function.
+  // Do NOT delete declaration statement.
+  // Deleting null statement causes equivalent mutants.
+  if (isa<DeclStmt>(s) || isa<NullStmt>(s))
+    return false;
 
-	if (dyn_cast<CompoundStmt>(s))
-		return true;
+  // Only delete COMPLETE statements whose parent is a CompoundStmt.
+  const Stmt* parent = GetParentOfStmt(s, context->comp_inst);
 
-	return false;
+  if (!parent)
+    return false;
+
+  if (!isa<CompoundStmt>(parent))
+    return false;
+
+  auto c = cast<CompoundStmt>(parent);
+
+  // Do NOT delete last stmt of a StmtExpr
+  if (context->getStmtContext().IsInStmtExpr())
+  {
+    // find the a child stmt of parent that match 
+    // the parameter stmt s's start and end locations
+    auto it = c->body_begin();
+    for (; it != c->body_end(); it++)
+    {
+      if (!((*it)->getLocStart() != s->getLocStart() ||
+            (*it)->getLocEnd() != s->getLocEnd()))
+        break;
+    }
+
+    // Return false if this is the last stmt
+    ++it;
+    if (it == c->body_end())
+    {
+      context->getStmtContext().setIsInStmtExpr(false);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void SSDL::Mutate(Stmt *s, ComutContext *context)
 {
-	CompoundStmt *c;
-	if (!(c = dyn_cast<CompoundStmt>(s)))
-		return;
-
-  for (CompoundStmt::body_iterator it = c->body_begin(); 
-       it != c->body_end(); ++it)
-  {
-    // Do not apply SSDL to the last statement of statement expression
-    if (context->is_inside_stmtexpr)
-    {
-      CompoundStmt::body_iterator next_stmt = it;
-      ++next_stmt;
-
-      if (next_stmt == c->body_end())  
-      {
-        // this is the last statement of a statement expression
-        context->is_inside_stmtexpr = false;
-
-        // no SDL mutants generated for this statement
-        continue;   
-      }
-    }
-
-    DeleteStatement(*it, context);
-  }
+  DeleteStatement(s, context);
 }
 
 void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
@@ -102,10 +100,7 @@ void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
 		cout << "DeleteStatement: cannot get end loc of stmt at";
 		PrintLocation(src_mgr, start_loc);
 	}
-	else if (Range1IsPartOfRange2(
-  		SourceRange(start_loc, end_loc), 
-  		SourceRange(*(context->userinput->getStartOfMutationRange()),
-								  *(context->userinput->getEndOfMutationRange()))) &&
+	else if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
 					 NoUnremovableLabelInsideRange(src_mgr,
 					 															 SourceRange(start_loc, end_loc),
 					 															 context->label_to_gotolist_map))
@@ -231,10 +226,7 @@ void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, ComutContext *context)
   mutated_token.append(1, '}');
 
 
-  if (Range1IsPartOfRange2(
-		SourceRange(start_loc, end_loc), 
-		SourceRange(*(context->userinput->getStartOfMutationRange()),
-								*(context->userinput->getEndOfMutationRange()))))
+  if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)))
   {
   	GenerateMutantFile(context, start_loc, end_loc, mutated_token);
 

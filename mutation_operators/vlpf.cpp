@@ -24,22 +24,15 @@ bool VLPF::CanMutate(clang::Expr *e, ComutContext *context)
 
     // Return True if expr is in mutation range, NOT inside enum decl
     // and is pointer type.
-		return (Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-						!context->is_inside_enumdecl &&
+		return (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+            !context->getStmtContext().IsInEnumDecl() &&
 						ExprIsPointer(e));
 	}
 
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool VLPF::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void VLPF::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -59,31 +52,82 @@ void VLPF::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{rewriter.ConvertToString(e)};
 
-	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = LocationIsInRange(
-  		start_loc, *(context->switchstmt_condition_range));
+	// get all variable declaration that VLSR can mutate this expr to.
+  VarDeclList range(
+      (*(context->getSymbolTable()->getLocalPointerVarDeclList()))[context->getFunctionId()]);
+
+  GetRange(e, context, &range);
 
   // type of the entity pointed to by pointer variable
   string pointee_type{
   		getPointerType(e->getType().getCanonicalType())};
 
-  for (auto scope: *(context->local_pointer_vardecl_list))
-    for (auto vardecl: scope)
+  for (auto vardecl: range)
+  {
+    string mutated_token{GetVarDeclName(vardecl)};
+
+    if (pointee_type.compare(getPointerType(vardecl->getType())) == 0)
     {
-      if (skip_float_vardecl && IsVarDeclFloating(vardecl))
-        continue;
-
-      string mutated_token{GetVarDeclName(vardecl)};
-
-      if (token.compare(mutated_token) != 0 &&
-          pointee_type.compare(getPointerType(vardecl->getType())) == 0)
-      {
-        GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-        WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, token, 
-                                      mutated_token);
-      }
+      GenerateMutantFile(context, start_loc, end_loc, mutated_token);
+      WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, token, 
+                                    mutated_token);
     }
+  }
 }
 
-void VLPF::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
+
+void VLPF::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
+{
+  SourceLocation start_loc = e->getLocStart();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(context->comp_inst->getSourceManager(), 
+                        context->comp_inst->getLangOpts());
+
+  string token{rewriter.ConvertToString(e)};
+  
+  // cannot mutate variable in switch condition to a floating-type variable
+  bool skip_float_vardecl = \
+      context->getStmtContext().IsInSwitchStmtConditionRange(e);
+
+  // remove all vardecl appear after expr
+  for (auto it = range->begin(); it != range->end(); )
+  {
+    if (!((*it)->getLocStart() < start_loc))
+    {
+      range->erase(it, range->end());
+      break;
+    }
+
+    if (skip_float_vardecl && IsVarDeclFloating(*it))
+    {
+      it = range->erase(it);
+      continue;
+    }
+
+    ++it;
+  }
+
+  for (auto scope: *(context->scope_list_))
+  {
+    // all vardecl after expr are removed.
+    // Hence no need to consider scopes after expr as well.
+    if (LocationBeforeRangeStart(start_loc, scope))
+      break;
+
+    if (!LocationIsInRange(start_loc, scope))
+      for (auto it = range->begin(); it != range->end();)
+      {
+        if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+          break;
+
+        if (LocationIsInRange((*it)->getLocStart(), scope))
+        {
+          it = range->erase(it);
+          continue;
+        }
+
+        ++it;
+      }
+  }
+}

@@ -24,22 +24,15 @@ bool VLTF::CanMutate(clang::Expr *e, ComutContext *context)
 
     // Return True if expr is in mutation range, NOT inside enum decl
     // and is structure type.
-		return (Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-						!context->is_inside_enumdecl &&
+		return (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+            !context->getStmtContext().IsInEnumDecl() &&
 						ExprIsStruct(e));
 	}
 
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool VLTF::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void VLTF::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -59,31 +52,82 @@ void VLTF::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{rewriter.ConvertToString(e)};
 
-	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = LocationIsInRange(
-  		start_loc, *(context->switchstmt_condition_range));
+	// get all variable declaration that VLSR can mutate this expr to.
+  VarDeclList range(
+      (*(context->getSymbolTable()->getLocalStructVarDeclList()))[context->getFunctionId()]);
+
+  GetRange(e, context, &range);
 
   string struct_type{
   		getStructureType(e->getType().getCanonicalType())};
 
-  for (auto scope: *(context->local_struct_vardecl_list))
-  	for (auto vardecl: scope)
-  	{
-  		if (skip_float_vardecl && IsVarDeclFloating(vardecl))
-        continue;
+  for (auto vardecl: range)
+  {
+    string mutated_token{GetVarDeclName(vardecl)};
 
-      string mutated_token{GetVarDeclName(vardecl)};
-
-      // Mutateif 2 variable have exactly same structure type
-      if (token.compare(mutated_token) != 0 &&
-          struct_type.compare(getStructureType(vardecl->getType())) == 0)
-      {
-      	GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-				WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, token, 
-																			mutated_token);
-      }
-  	}
+    // Mutate if 2 variable have exactly same structure type
+    if (struct_type.compare(getStructureType(vardecl->getType())) == 0)
+    {
+      GenerateMutantFile(context, start_loc, end_loc, mutated_token);
+      WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, token, 
+                                    mutated_token);
+    }
+  }
 }
 
-void VLTF::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
+
+void VLTF::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
+{
+  SourceLocation start_loc = e->getLocStart();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(context->comp_inst->getSourceManager(), 
+                        context->comp_inst->getLangOpts());
+
+  string token{rewriter.ConvertToString(e)};
+  
+  // cannot mutate variable in switch condition to a floating-type variable
+  bool skip_float_vardecl = \
+      context->getStmtContext().IsInSwitchStmtConditionRange(e);
+
+  // remove all vardecl appear after expr
+  for (auto it = range->begin(); it != range->end(); )
+  {
+    if (!((*it)->getLocStart() < start_loc))
+    {
+      range->erase(it, range->end());
+      break;
+    }
+
+    if (skip_float_vardecl && IsVarDeclFloating(*it))
+    {
+      it = range->erase(it);
+      continue;
+    }
+
+    ++it;
+  }
+
+  for (auto scope: *(context->scope_list_))
+  {
+    // all vardecl after expr are removed.
+    // Hence no need to consider scopes after expr as well.
+    if (LocationBeforeRangeStart(start_loc, scope))
+      break;
+
+    if (!LocationIsInRange(start_loc, scope))
+      for (auto it = range->begin(); it != range->end();)
+      {
+        if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+          break;
+
+        if (LocationIsInRange((*it)->getLocStart(), scope))
+        {
+          it = range->erase(it);
+          continue;
+        }
+
+        ++it;
+      }
+  }
+}

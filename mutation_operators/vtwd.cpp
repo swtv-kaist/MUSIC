@@ -24,29 +24,22 @@ bool VTWD::CanMutate(clang::Expr *e, ComutContext *context)
 	rewriter.setSourceMgr(
 			context->comp_inst->getSourceManager(),
 			context->comp_inst->getLangOpts());
+	StmtContext &stmt_context = context->getStmtContext();
 
 	// VTWD can mutate expr that are
 	// 		- inside mutation range
 	// 		- not inside enum decl
 	// 		- not on lhs of assignment (a+1=a -> uncompilable)
 	// 		- not inside unary increment/decrement/addressop
-	return Range1IsPartOfRange2(
-			SourceRange(start_loc, end_loc), 
-			SourceRange(*(context->userinput->getStartOfMutationRange()),
-									*(context->userinput->getEndOfMutationRange()))) &&
-				 !context->is_inside_enumdecl &&
-				 !LocationIsInRange(start_loc, *(context->lhs_of_assignment_range)) &&
-				 !LocationIsInRange(start_loc, *(context->addressop_range)) &&
-				 !LocationIsInRange(start_loc, *(context->unary_increment_range)) &&
-				 !LocationIsInRange(start_loc, *(context->unary_decrement_range)) &&
+	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+         !stmt_context.IsInEnumDecl() &&
+				 !stmt_context.IsInLhsOfAssignmentRange(e) &&
+				 !stmt_context.IsInAddressOpRange(e) &&
+				 !stmt_context.IsInUnaryIncrementDecrementRange(e) &&
 				 CanMutate(rewriter.ConvertToString(e), context);
 }
 
-// Return True if the mutant operator can mutate this statement
-bool VTWD::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void VTWD::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -71,8 +64,7 @@ void VTWD::Mutate(clang::Expr *e, ComutContext *context)
 																token, mutated_token);
 }
 
-void VTWD::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
 
 bool VTWD::CanMutate(std::string scalarref_name, ComutContext *context)
 {

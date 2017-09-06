@@ -19,26 +19,20 @@ bool SRWS::CanMutate(clang::Expr *e, ComutContext *context)
 		SourceLocation start_loc = sl->getLocStart();
     SourceLocation end_loc = GetEndLocOfStringLiteral(
     		context->comp_inst->getSourceManager(), start_loc);
-
+    StmtContext &stmt_context = context->getStmtContext();
+    
     // Mutation is applicable if this expression is in mutation range,
     // not inside an enum declaration and not inside field decl range.
     // FieldDecl is a member of a struct or union.
-    return Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-    			 !context->is_inside_enumdecl &&
-    			 !LocationIsInRange(start_loc, *(context->fielddecl_range));
+    return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+           !stmt_context.IsInEnumDecl() &&
+           !stmt_context.IsInFieldDeclRange(e);
 	}
 
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool SRWS::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void SRWS::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -89,5 +83,4 @@ void SRWS::Mutate(clang::Expr *e, ComutContext *context)
   }
 }
 
-void SRWS::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+

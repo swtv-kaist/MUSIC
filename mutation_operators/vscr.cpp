@@ -19,20 +19,11 @@ bool VSCR::CanMutate(clang::Expr *e, ComutContext *context)
 		SourceLocation start_loc = e->getLocStart();
 		SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
 
-		return Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-				 !context->is_inside_enumdecl &&
-				 !context->is_inside_array_decl_size;
+		return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+           !context->getStmtContext().IsInEnumDecl() &&
+				   !context->getStmtContext().IsInArrayDeclSize();
 	}
 
-	return false;
-}
-
-// Return True if the mutant operator can mutate this statement
-bool VSCR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
 	return false;
 }
 
@@ -80,9 +71,6 @@ void VSCR::Mutate(clang::Expr *e, ComutContext *context)
     PrintLocation(context->comp_inst->getSourceManager(), start_loc);
   }
 }
-
-void VSCR::Mutate(clang::Stmt *s, ComutContext *context)
-{}
 
 // assuming both parameters are Canonical types
 bool VSCR::IsSameType(const QualType type1, const QualType type2)

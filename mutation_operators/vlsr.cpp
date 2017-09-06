@@ -19,22 +19,17 @@ bool VLSR::CanMutate(clang::Expr *e, ComutContext *context)
 
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+  StmtContext &stmt_context = context->getStmtContext();
 
 	// VLSR can mutate this expression only if it is a scalar expression
 	// inside mutation range and NOT inside array decl size or enum declaration
-	return Range1IsPartOfRange2(
-			SourceRange(start_loc, end_loc), 
-			SourceRange(*(context->userinput->getStartOfMutationRange()),
-									*(context->userinput->getEndOfMutationRange()))) &&
-				 !context->is_inside_array_decl_size &&
-				 !context->is_inside_enumdecl;
+	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+         !stmt_context.IsInArrayDeclSize() &&
+         !stmt_context.IsInEnumDecl() &&
+         stmt_context.IsInCurrentlyParsedFunctionRange(e);
 }
 
-// Return True if the mutant operator can mutate this statement
-bool VLSR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void VLSR::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -47,40 +42,84 @@ void VLSR::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{rewriter.ConvertToString(e)};
 
-	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = LocationIsInRange(
-      start_loc, *(context->switchstmt_condition_range));
+  // get all variable declaration that VLSR can mutate this expr to.
+  VarDeclList range(
+  		(*(context->getSymbolTable()->getLocalScalarVarDeclList()))[context->getFunctionId()]);
 
-  // cannot mutate a variable in lhs of assignment to a const variable
-  bool skip_const_vardecl = LocationIsInRange(
-      start_loc, *(context->lhs_of_assignment_range));
+  GetRange(e, context, &range);
 
-  bool skip_register_vardecl = LocationIsInRange(
-  		start_loc, *(context->addressop_range));
+  for (auto vardecl: range)
+  {
+  	string mutated_token{GetVarDeclName(vardecl)};
 
-  for (auto scope: *(context->local_scalar_vardecl_list))
-  	for (auto vardecl: scope)
-  	{
-  		if (skip_const_vardecl && IsVarDeclConst(vardecl)) 
-        continue;   
-
-      if (skip_float_vardecl && IsVarDeclFloating(vardecl))
-        continue;
-
-      if (skip_register_vardecl && 
-          vardecl->getStorageClass() == SC_Register)
-        continue;
-
-      string mutated_token{GetVarDeclName(vardecl)};
-
-      if (token.compare(mutated_token) != 0)
-      {
-      	GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-				WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
+  	GenerateMutantFile(context, start_loc, end_loc, mutated_token);
+		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
 																		token, mutated_token);
-      }
-  	}
+  }
 }
 
-void VLSR::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+
+
+void VLSR::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
+{
+  SourceLocation start_loc = e->getLocStart();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(context->comp_inst->getSourceManager(), 
+                        context->comp_inst->getLangOpts());
+
+  string token{rewriter.ConvertToString(e)};
+  StmtContext &stmt_context = context->getStmtContext();
+
+	// cannot mutate variable in switch condition to a floating-type variable
+  bool skip_float_vardecl = stmt_context.IsInSwitchStmtConditionRange(e);
+
+  // cannot mutate a variable in lhs of assignment to a const variable
+  bool skip_const_vardecl = stmt_context.IsInLhsOfAssignmentRange(e);
+
+  bool skip_register_vardecl = stmt_context.IsInAddressOpRange(e);
+
+	// remove all vardecl appear after expr
+	for (auto it = range->begin(); it != range->end(); )
+	{
+		if (!((*it)->getLocStart() < start_loc))
+		{
+			range->erase(it, range->end());
+			break;
+		}
+
+		if ((skip_const_vardecl && IsVarDeclConst((*it))) ||
+				(skip_float_vardecl && IsVarDeclFloating((*it))) ||
+				(skip_register_vardecl && 
+          (*it)->getStorageClass() == SC_Register) ||
+				(token.compare(GetVarDeclName(*it)) == 0))
+		{
+			it = range->erase(it);
+			continue;
+		}
+
+		++it;
+	}
+
+	for (auto scope: *(context->scope_list_))
+	{
+		// all vardecl after expr are removed.
+		// Hence no need to consider scopes after expr as well.
+		if (LocationBeforeRangeStart(start_loc, scope))
+			break;
+
+		if (!LocationIsInRange(start_loc, scope))
+			for (auto it = range->begin(); it != range->end();)
+			{
+				if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+					break;
+
+				if (LocationIsInRange((*it)->getLocStart(), scope))
+				{
+					it = range->erase(it);
+					continue;
+				}
+
+				++it;
+			}
+	}
+}

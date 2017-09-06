@@ -19,21 +19,13 @@ bool VGAR::CanMutate(clang::Expr *e, ComutContext *context)
 
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	StmtContext &stmt_context = context->getStmtContext();
 
 	// VGAR can mutate this expression only if it is array type
 	// inside mutation range and NOT inside array decl size or enum declaration
-	return Range1IsPartOfRange2(
-			SourceRange(start_loc, end_loc), 
-			SourceRange(*(context->userinput->getStartOfMutationRange()),
-									*(context->userinput->getEndOfMutationRange()))) &&
-				 !context->is_inside_array_decl_size &&
-				 !context->is_inside_enumdecl;
-}
-
-// Return True if the mutant operator can mutate this statement
-bool VGAR::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
+	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+				 !stmt_context.IsInArrayDeclSize() &&
+				 !stmt_context.IsInEnumDecl();
 }
 
 string newGetArrayTypeFunction(QualType type)
@@ -52,17 +44,19 @@ void VGAR::Mutate(clang::Expr *e, ComutContext *context)
 	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
 
 	string token{rewriter.ConvertToString(e)};
+	StmtContext &stmt_context = context->getStmtContext();
 
 	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = LocationIsInRange(
-      start_loc, *(context->switchstmt_condition_range));
+  bool skip_float_vardecl = stmt_context.IsInSwitchStmtConditionRange(e);
 
   // cannot mutate a variable in lhs of assignment to a const variable
-  bool skip_const_vardecl = LocationIsInRange(
-      start_loc, *(context->lhs_of_assignment_range));
+  bool skip_const_vardecl = stmt_context.IsInLhsOfAssignmentRange(e);
 
-  for (auto vardecl: *(context->global_array_vardecl_list))
+  for (auto vardecl: *(context->getSymbolTable()->getGlobalArrayVarDeclList()))
   {
+  	if (!(vardecl->getLocStart() < start_loc))
+  		break; 
+
   	if (skip_const_vardecl && IsVarDeclConst(vardecl)) 
       continue;   
 
@@ -81,5 +75,4 @@ void VGAR::Mutate(clang::Expr *e, ComutContext *context)
   }
 }
 
-void VGAR::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+

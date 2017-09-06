@@ -24,22 +24,15 @@ bool VGSF::CanMutate(clang::Expr *e, ComutContext *context)
 
     // Return True if expr is in mutation range, NOT inside enum decl
     // and is scalar type.
-		return (Range1IsPartOfRange2(
-				SourceRange(start_loc, end_loc), 
-				SourceRange(*(context->userinput->getStartOfMutationRange()),
-										*(context->userinput->getEndOfMutationRange()))) &&
-						!context->is_inside_enumdecl &&
+		return (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+						!context->getStmtContext().IsInEnumDecl() &&
 						ExprIsScalar(e));
 	}
 
 	return false;
 }
 
-// Return True if the mutant operator can mutate this statement
-bool VGSF::CanMutate(clang::Stmt *s, ComutContext *context)
-{
-	return false;
-}
+
 
 void VGSF::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -60,11 +53,14 @@ void VGSF::Mutate(clang::Expr *e, ComutContext *context)
 	string token{rewriter.ConvertToString(e)};
 
 	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = LocationIsInRange(
-  		start_loc, *(context->switchstmt_condition_range));
+  bool skip_float_vardecl = \
+      context->getStmtContext().IsInSwitchStmtConditionRange(e);
 
-  for (auto vardecl: *(context->global_scalar_vardecl_list))
+  for (auto vardecl: *(context->getSymbolTable()->getGlobalScalarVarDeclList()))
   {
+  	if (!(vardecl->getLocStart() < start_loc))
+  		break;
+  	
   	if (skip_float_vardecl && IsVarDeclFloating(vardecl))
       continue;
 
@@ -79,5 +75,4 @@ void VGSF::Mutate(clang::Expr *e, ComutContext *context)
   }
 }
 
-void VGSF::Mutate(clang::Stmt *s, ComutContext *context)
-{}
+

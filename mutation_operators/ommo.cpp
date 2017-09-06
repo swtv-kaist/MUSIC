@@ -20,10 +20,7 @@ bool OMMO::CanMutate(clang::Expr *e, ComutContext *context)
 			SourceLocation start_loc = uo->getLocStart();
     	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst);
 
-    	return Range1IsPartOfRange2(
-					SourceRange(start_loc, end_loc), 
-					SourceRange(*(context->userinput->getStartOfMutationRange()),
-											*(context->userinput->getEndOfMutationRange())));
+    	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
 		}
 
 	return false;

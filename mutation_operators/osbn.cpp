@@ -1,9 +1,9 @@
 #include "../comut_utility.h"
-#include "orrn.h"
+#include "osbn.h"
 
-bool ORRN::ValidateDomain(const std::set<std::string> &domain)
+bool OSBN::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{">", "<", "<=", ">=", "==", "!="};
+	set<string> valid_domain{"<<", ">>"};
 
 	for (auto it: domain)
   	if (valid_domain.find(it) == valid_domain.end())
@@ -13,9 +13,9 @@ bool ORRN::ValidateDomain(const std::set<std::string> &domain)
   return true;
 }
 
-bool ORRN::ValidateRange(const std::set<std::string> &range)
+bool OSBN::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{">", "<", "<=", ">=", "==", "!="};
+	set<string> valid_range{"&", "|", "^"};
 
 	for (auto it: range)
   	if (valid_range.find(it) == valid_range.end())
@@ -25,23 +25,23 @@ bool ORRN::ValidateRange(const std::set<std::string> &range)
   return true;
 }
 
-void ORRN::setDomain(std::set<std::string> &domain)
+void OSBN::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {">", "<", "<=", ">=", "==", "!="};
+		domain_ = {"<<", ">>"};
 	else
 		domain_ = domain;
 }
 
-void ORRN::setRange(std::set<std::string> &range)
+void OSBN::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {">", "<", "<=", ">=", "==", "!="};
+		range_ = {"&", "|", "^"};
 	else
 		range_ = range;
 }
 
-bool ORRN::CanMutate(clang::Expr *e, ComutContext *context)
+bool OSBN::CanMutate(clang::Expr *e, ComutContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -53,7 +53,7 @@ bool ORRN::CanMutate(clang::Expr *e, ComutContext *context)
 				GetLineNumber(src_mgr, start_loc),
 				GetColumnNumber(src_mgr, start_loc) + binary_operator.length());
 		StmtContext &stmt_context = context->getStmtContext();
-		
+
 		// Return True if expr is in mutation range, NOT inside array decl size
 		// and NOT inside enum declaration.
 		if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
@@ -66,7 +66,9 @@ bool ORRN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-void ORRN::Mutate(clang::Expr *e, ComutContext *context)
+
+
+void OSBN::Mutate(clang::Expr *e, ComutContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))
@@ -89,3 +91,4 @@ void ORRN::Mutate(clang::Expr *e, ComutContext *context)
 																		token, mutated_token);
 		}
 }
+
