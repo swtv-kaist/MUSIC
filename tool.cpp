@@ -214,7 +214,6 @@ private:
       isa<MemberExpr>(sub_expr_of_unaryop) ||
       isa<ArraySubscriptExpr>(sub_expr_of_unaryop))
     {
-      context_.setAddressOpRange(new SourceRange(*start_loc, *end_loc));
       stmt_context_.setAddressOpRange(new SourceRange(*start_loc, *end_loc));
     }
   }
@@ -349,8 +348,6 @@ private:
     else if (uo->getOpcode() == UO_PostInc || uo->getOpcode() == UO_PreInc ||
              uo->getOpcode() == UO_PostDec || uo->getOpcode() == UO_PreDec)
     {
-      context_.setUnaryIncrementDecrementRange(
-          new SourceRange(start_loc, end_loc));
       stmt_context_.setUnaryIncrementDecrementRange(
           new SourceRange(start_loc, end_loc));
     }
@@ -373,8 +370,6 @@ private:
     // uncompilable mutants.
     if (bo->isAssignmentOp())
     {
-      context_.setLhsOfAssignmentRange(
-          new SourceRange(bo->getLHS()->getLocStart(), start_loc));
       stmt_context_.setLhsOfAssignmentRange(
           new SourceRange(bo->getLHS()->getLocStart(), start_loc));
     }
@@ -395,10 +390,8 @@ private:
     {
       // Setting up for blocking uncompilable mutants for OCOR
       if (!LocationIsInRange(
-          bo->getLocStart(), *(context_.non_OCOR_mutatable_expr_range)))
+          bo->getLocStart(), *(stmt_context_.getNonFloatingExprRange())))
       {
-        context_.setNonOcorMutatableRange(new SourceRange(
-            bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_)));
         stmt_context_.setNonFloatingExprRange(new SourceRange(
             bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_)));
       }        
@@ -437,15 +430,12 @@ public:
 
   bool VisitEnumDecl(EnumDecl *ed)
   {
-    context_.is_inside_enumdecl = true;
     stmt_context_.setIsInEnumDecl(true);
     return true;
   }
 
   bool VisitTypedefDecl(TypedefDecl *td)
   {
-    context_.setTypedefDeclRange(
-        new SourceRange(td->getLocStart(), td->getLocEnd()));
     stmt_context_.setTypedefDeclRange(
         new SourceRange(td->getLocStart(), td->getLocEnd()));
 
@@ -455,7 +445,8 @@ public:
   bool VisitExpr(Expr *e)
   {
     // Do not mutate or consider anything inside a typedef definition
-    if (LocationIsInRange(e->getLocStart(), *(context_.typedef_range)))
+    if (LocationIsInRange(
+        e->getLocStart(), *(stmt_context_.getTypedefRange())))
       return true;
 
     for (auto mutant_operator: expr_mutant_operator_list_)
@@ -472,7 +463,6 @@ public:
       SourceLocation start_loc = ase->getLocStart();
       SourceLocation end_loc = GetEndLocOfStmt(ase->getLocEnd(), comp_inst_);
 
-      context_.setArraySubscriptRange(new SourceRange(start_loc, end_loc));
       stmt_context_.setArraySubscriptRange(new SourceRange(start_loc, end_loc));
     }
     else if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
@@ -496,12 +486,10 @@ public:
     SourceLocation start_loc = fd->getLocStart();
     SourceLocation end_loc = fd->getLocEnd();
 
-    context_.setFieldDeclRange(new SourceRange(start_loc, end_loc));
     stmt_context_.setFieldDeclRange(new SourceRange(start_loc, end_loc));
     
     if (fd->getType().getTypePtr()->isArrayType())
     {
-      context_.is_inside_array_decl_size = true;
       stmt_context_.setIsInArrayDeclSize(true);
 
       array_decl_range_ = new SourceRange(fd->getLocStart(), fd->getLocEnd());
@@ -514,10 +502,9 @@ public:
     SourceLocation start_loc = vd->getLocStart();
     SourceLocation end_loc = vd->getLocEnd();
 
-    context_.is_inside_enumdecl = false;
     stmt_context_.setIsInEnumDecl(false);
 
-    if (LocationIsInRange(start_loc, *(context_.typedef_range)))
+    if (LocationIsInRange(start_loc, *(stmt_context_.getTypedefRange())))
       return true;
 
     if (LocationIsInRange(start_loc, *functionprototype_range_))
@@ -529,7 +516,6 @@ public:
 
       if (auto array_type =  dyn_cast_or_null<ConstantArrayType>(type)) 
       {  
-        context_.is_inside_array_decl_size = true;
         stmt_context_.setIsInArrayDeclSize(true);
 
         array_decl_range_ = new SourceRange(start_loc, end_loc);
@@ -541,8 +527,6 @@ public:
 
   bool VisitSwitchStmt(SwitchStmt *ss)
   {
-    context_.setSwitchStmtConditionRange(new SourceRange(
-        ss->getSwitchLoc(), ss->getBody()->getLocStart()));
     stmt_context_.setSwitchStmtConditionRange(
         new SourceRange(ss->getSwitchLoc(), ss->getBody()->getLocStart()));
 
@@ -600,8 +584,6 @@ public:
 
   bool VisitSwitchCase(SwitchCase *sc)
   {
-    context_.setSwitchCaseRange(
-        new SourceRange(sc->getLocStart(), sc->getColonLoc()));
     stmt_context_.setSwitchCaseRange(
         new SourceRange(sc->getLocStart(), sc->getColonLoc()));
     
@@ -622,8 +604,6 @@ public:
     // set up Proteum-style line number
     if (GetLineNumber(src_mgr_, start_loc) > proteumstyle_stmt_end_line_num_)
     {
-      context_.proteumstyle_stmt_start_line_num = GetLineNumber(
-          src_mgr_, start_loc);
       stmt_context_.setProteumStyleLineNum(GetLineNumber(
           src_mgr_, start_loc));
       
@@ -654,7 +634,6 @@ public:
     if (stmt_context_.IsInArrayDeclSize() && 
         !LocationIsInRange(start_loc, *array_decl_range_))
     {
-      context_.is_inside_array_decl_size = false;
       stmt_context_.setIsInArrayDeclSize(false);
     }
 
@@ -671,7 +650,7 @@ public:
     // another function is function prototype.
     // no global or local variable mutation will be applied here.
     if (!f->hasBody() || LocationIsInRange(
-        f->getLocStart(), *(context_.currently_parsed_function_range)))
+        f->getLocStart(), *(stmt_context_.getCurrentlyParsedFunctionRange())))
     {
       functionprototype_range_ = new SourceRange(f->getLocStart(), 
                                                  f->getLocEnd());
@@ -682,13 +661,10 @@ public:
       scope_list_.clear();
       scope_list_.push_back(SourceRange(f->getLocStart(), f->getLocEnd()));
 
-      context_.function_id_++;
+      context_.IncrementFunctionId();
 
-      context_.is_inside_enumdecl = false;
       stmt_context_.setIsInEnumDecl(false);
 
-      context_.setCurrentlyParsedFunctionRange(
-          new SourceRange(f->getLocStart(), f->getLocEnd()));
       stmt_context_.setCurrentlyParsedFunctionRange(
           new SourceRange(f->getLocStart(), f->getLocEnd()));
     }

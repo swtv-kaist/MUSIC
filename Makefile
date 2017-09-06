@@ -310,7 +310,7 @@ ocng.o : mutation_operators/ocng.h mutation_operators/ocng.cpp \
 
 oipm.o : mutation_operators/oipm.h mutation_operators/oipm.cpp \
 	mutation_operators/mutant_operator_template.h comut_utility.h \
-	comut_context.h
+	comut_context.h stmt_context.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/oipm.cpp
 
 ocor.o : mutation_operators/ocor.h mutation_operators/ocor.cpp \

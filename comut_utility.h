@@ -126,6 +126,8 @@ SourceLocation GetEndLocOfStmt(SourceLocation loc,
 
 void PrintLocation(SourceManager &src_mgr, SourceLocation loc);
 
+void PrintRange(SourceManager &src_mgr, SourceRange range);
+
 int CountNonNewlineChar(const string &s);
 
 bool LocationBeforeRangeStart(SourceLocation loc, SourceRange range);
@@ -214,6 +216,18 @@ void PrintUsageErrorMsg();
 
 void PrintLineColNumberErrorMsg();
 
+const Stmt* GetParentOfStmt(Stmt *s, CompilerInstance *comp_inst);
 
+Expr* GetLeftOperandAfterMutationToMultiplicativeOp(Expr *lhs);
+Expr* GetRightOperandAfterMutationToMultiplicativeOp(Expr *rhs);
+
+BinaryOperator::Opcode TranslateToOpcode(const string &binary_operator);
+
+int GetPrecedenceOfBinaryOperator(BinaryOperator::Opcode opcode);
+
+Expr* GetLeftOperandAfterMutation(
+    Expr *lhs, const BinaryOperator::Opcode mutated_opcode);
+Expr* GetRightOperandAfterMutation(
+    Expr *rhs, const BinaryOperator::Opcode mutated_opcode);
 
 #endif

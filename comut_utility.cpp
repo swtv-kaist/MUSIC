@@ -316,38 +316,38 @@ void ValidateDomainOfMutantOperator(std::string &mutant_name,
 																		std::set<std::string> &domain) 
 {  
   // set of operators mutating logical operator
-  std::set<std::string> logical{"OLLN", "OLAN", "OLBN", "OLRN", "OLSN"};
+  std::set<std::string> logical{/*"OLLN",*/ /*"OLAN",*/ /*"OLBN",*/ /*"OLRN",*/ /*"OLSN"*/};
 
   // set of operators mutating relational operator
-  std::set<std::string> relational{"ORLN", "ORAN", "ORBN", /*"ORRN",*/ "ORSN"};
+  std::set<std::string> relational{/*"ORLN",*/ /*"ORAN",*/ /*"ORBN",*/ /*"ORRN",*/ /*"ORSN"*/};
 
   // set of operators mutating arithmetic operator
-  std::set<std::string> arithmetic{"OALN", "OAAN", "OABN", "OARN", "OASN"};
+  std::set<std::string> arithmetic{/*"OALN",*/ /*"OAAN",*/ /*"OABN",*/ /*"OARN",*/ /*"OASN"*/};
 
   // set of operators mutating bitwise operator
-  std::set<std::string> bitwise{"OBLN", "OBAN", "OBBN", "OBRN", "OBSN"};
+  std::set<std::string> bitwise{/*"OBLN",*/ /*"OBAN",*/ /*"OBBN",*/ /*"OBRN",*/ /*"OBSN"*/};
 
   // set of operators mutating shift operator
-  std::set<std::string> shift{"OSLN", "OSAN", "OSBN", "OSRN", "OSSN"};
+  std::set<std::string> shift{/*"OSLN"*/ /*"OSAN",*/ /*"OSBN"*//*, "OSRN"*//*, "OSSN"*/};
 
   // set of operators mutating arithmetic assignment operator
-  std::set<std::string> arithmetic_assignment{"OAAA", "OABA", "OAEA", "OASA"};
+  std::set<std::string> arithmetic_assignment{/*"OAAA",*/ /*"OABA",*/ /*"OAEA",*/ /*"OASA"*/};
 
   // set of operators mutating bitwise assignment operator
-  std::set<std::string> bitwise_assignment{"OBAA", "OBBA", "OBEA", "OBSA"};
+  std::set<std::string> bitwise_assignment{/*"OBAA",*/ /*"OBBA",*/ /*"OBEA",*/ /*"OBSA"*/};
 
   // set of operators mutating shift assignment operator
-  std::set<std::string> shift_assignment{"OSAA", "OSBA", "OSEA", "OSSA"};
+  std::set<std::string> shift_assignment{/*"OSAA", "OSBA", "OSEA", "OSSA"*/};
 
   // set of operators mutating plain assignment operator
-  std::set<std::string> plain_assignment{"OEAA", "OEBA", "OESA"};
+  std::set<std::string> plain_assignment{/*"OEAA",*/ /*"OEBA",*/ /*"OESA"*/};
 
   // set of operators whose domain cannot be altered.
   std::set<std::string> empty_domain{/*"CRCR", "SSDL",*/ /*"VLSR",*/ /*"VGSR",*/ /*"VGAR",*/ 
   																	 /*"VLAR",*/ /*"VGTR",*/ /*"VLTR",*/ /*"VGPR",*/ /*"VLPR",*/ 
   																	 /*"VSCR",*/ /*"CGCR",*/ /*"CLCR",*/ /*"CGSR",*/ /*"CLSR",*/ 
   																	 /*"OMMO",*/ /*"OPPO",*/ /*"OLNG",*/ /*"OCNG",*/ /*"OBNG",*/ 
-  																	 "OBOM", /*"VTWD",*/ /*"OIPM",*/ "OCOR", /*"SANL",*/ 
+  																	 "OBOM", /*"VTWD",*/ /*"OIPM",*/ /*"OCOR",*/ /*"SANL",*/ 
   																	 /*"SRWS",*/ /*"SCSR",*/ /*"VLSF",*/ /*"VGSF",*/ /*"VGTF",*/ 
   																	 /*"VLTF",*/ /*"VGPF"*//*, "VLPF"*//*, "VTWF"*/};
 
@@ -442,38 +442,38 @@ void ValidateRangeOfMutantOperator(std::string &mutant_name,
 																	 std::set<std::string> &range) 
 {
   // set of operators mutating to a logical operator
-  std::set<std::string> logical{"OALN", "OBLN", "OLLN", "ORLN", "OSLN"};
+  std::set<std::string> logical{/*"OALN",*/ /*"OBLN",*/ /*"OLLN",*/ /*"ORLN",*/ /*"OSLN"*/};
 
   // set of operators mutating to a relational operator
-  std::set<std::string> relational{"OLRN", "OARN", "OBRN", /*"ORRN",*/ "OSRN"};
+  std::set<std::string> relational{/*"OLRN",*/ /*"OARN",*/ /*"OBRN",*/ /*"ORRN",*/ /*"OSRN"*/};
 
   // set of operators mutating to a arithmetic operator
-  std::set<std::string> arithmetic{"OLAN", "OAAN", "OBAN", "ORAN", "OSAN"};
+  std::set<std::string> arithmetic{/*"OLAN",*/ /*"OAAN",*/ /*"OBAN",*/ /*"ORAN",*/ /*"OSAN"*/};
 
   // set of operators mutating to a arithmetic operator
-  std::set<std::string> bitwise{"OLBN", "OABN", "OBBN", "ORBN", "OSBN"};
+  std::set<std::string> bitwise{/*"OLBN",*/ /*"OABN",*/ /*"OBBN",*/ /*"ORBN",*/ /*"OSBN"*/};
 
   // set of operators mutating to a arithmetic operator
-  std::set<std::string> shift{"OLSN", "OASN", "OBSN", "ORSN", "OSSN"};
+  std::set<std::string> shift{/*"OLSN", "OASN", "OBSN",*/ /*"ORSN"*//*, "OSSN"*/};
 
   // set of operators mutating to arithmetic assignment operator
-  std::set<std::string> arithmetic_assignment{"OAAA", "OBAA", "OEAA", "OSAA"};
+  std::set<std::string> arithmetic_assignment{/*"OAAA",*/ /*"OBAA",*/ /*"OEAA"*//*, "OSAA"*/};
 
   // set of operators mutating to bitwise assignment operator
-  std::set<std::string> bitwise_assignment{"OABA", "OBBA", "OEBA", "OSBA"};
+  std::set<std::string> bitwise_assignment{/*"OABA",*/ /*"OBBA",*/ /*"OEBA"*//*, "OSBA"*/};
 
   // set of operators mutating to shift assignment operator
-  std::set<std::string> shift_assignment{"OASA", "OBSA", "OESA", "OSSA"};
+  std::set<std::string> shift_assignment{/*"OASA", "OBSA",*/ /*"OESA"*//*, "OSSA"*/};
 
   // set of operators mutating to plain assignment operator
-  std::set<std::string> plain_assignment{"OAEA", "OBEA", "OSEA"};
+  std::set<std::string> plain_assignment{/*"OAEA",*/ /*"OBEA",*/ /*"OSEA"*/};
 
   // set of operators whose range cannot be altered.
   std::set<std::string> empty_range{/*"SSDL",*/ /*"VLSR",*/ /*"VGSR",*/ /*"VGAR",*/ /*"VLAR",*/ 
   																	/*"VGTR",*/ /*"VLTR",*/ /*"VGPR",*/ /*"VLPR",*/ /*"VSCR",*/ 
   																	/*"CGCR",*/ /*"CLCR",*/ /*"CGSR",*/ /*"CLSR",*/ /*"OMMO", */
   																	/*"OPPO",*/ /*"OLNG",*/ /*"OCNG",*/ /*"OBNG",*/ "OBOM", 
-  																	/*"VTWD",*/ /*"OIPM",*/ "OCOR", /*"SANL",*/  /*"SRWS",*/ 
+  																	/*"VTWD",*/ /*"OIPM",*/ /*"OCOR",*/ /*"SANL",*/  /*"SRWS",*/ 
   																	/*"SCSR",*/ /*"VLSF",*/ /*"VGSF",*/ /*"VGTF",*/ /*"VLTF",*/  
   																	/*"VGPF"*//*, "VLPF"*//*, "VTWF"*/};
 
@@ -608,6 +608,14 @@ void PrintLocation(SourceManager &src_mgr, SourceLocation loc)
 {
   cout << "(" << GetLineNumber(src_mgr, loc) << " : ";
   cout << GetColumnNumber(src_mgr, loc) << ")" << endl;
+}
+
+void PrintRange(SourceManager &src_mgr, SourceRange range)
+{
+  cout << "this range is from ";
+  PrintLocation(src_mgr, range.getBegin());
+  cout << "        to ";
+  PrintLocation(src_mgr, range.getEnd());
 }
 
 // Return the number of not-newline character
@@ -947,6 +955,11 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
     return GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts(), comp_inst);
 
+  if (UnaryExprOrTypeTraitExpr *uete = dyn_cast<UnaryExprOrTypeTraitExpr>(e))
+    if (!uete->isArgumentType())
+      return GetEndLocOfExpr(
+          uete->getArgumentExpr()->IgnoreImpCasts(), comp_inst);
+
   SourceLocation ret = e->getLocEnd();
   SourceManager &src_mgr = comp_inst->getSourceManager();
   Rewriter rewriter;
@@ -1141,4 +1154,173 @@ void PrintLineColNumberErrorMsg()
 {
   cout << "Invalid line/column number\n";
   cout << "Usage: [-rs <line #> <col #>] [-re <line #> <col #>]\n";
+}
+
+const Stmt* GetParentOfStmt(Stmt *s, CompilerInstance *comp_inst)
+{
+  const Stmt* stmt_ptr = s;
+
+  //get parents
+  const auto& parent_stmt = comp_inst->getASTContext().getParents(*stmt_ptr);
+
+  if (parent_stmt.empty()) {
+    return nullptr;
+  }
+  // cout << "find parent size=" << parents.size() << "\n";
+  stmt_ptr = parent_stmt[0].get<Stmt>();
+ 
+  if (!stmt_ptr)
+    return nullptr;
+
+  return stmt_ptr;
+}
+
+// Mutating an operator can make its lhs target change.
+// Return the new lhs of the mutated operator.
+// Applicable for multiplicative operator
+Expr* GetLeftOperandAfterMutationToMultiplicativeOp(Expr *lhs)
+{
+  if (BinaryOperator *b = dyn_cast<BinaryOperator>(lhs))
+  {
+    BinaryOperator::Opcode opcodeOfB = b->getOpcode();
+    if (opcodeOfB > BO_Rem)
+    {
+      // multiplicative operator has the highest precedence.
+      // go rhs right away if the operator is not multiplicative.
+      return GetLeftOperandAfterMutationToMultiplicativeOp(
+          b->getRHS()->IgnoreImpCasts());
+    }
+    else 
+    {
+      // * / % yield non-pointer only.
+      return lhs;   
+    }
+  }
+  else
+    return lhs->IgnoreImpCasts();
+}
+
+// Mutating an operator can make its rhs target change.
+// Return the new rhs of the mutated operator.
+// Applicable for multiplicative operator
+Expr* GetRightOperandAfterMutationToMultiplicativeOp(Expr *rhs)
+{
+  if (BinaryOperator *b = dyn_cast<BinaryOperator>(rhs))
+    return GetRightOperandAfterMutationToMultiplicativeOp(
+        b->getLHS()->IgnoreImpCasts());
+  else
+    return rhs->IgnoreImpCasts();
+}
+
+BinaryOperator::Opcode TranslateToOpcode(const string &binary_operator)
+{
+  if (binary_operator.compare("+") == 0)
+    return BO_Add;
+  if (binary_operator.compare("-") == 0)
+    return BO_Sub;
+  if (binary_operator.compare("*") == 0)
+    return BO_Mul;
+  if (binary_operator.compare("/") == 0)
+    return BO_Div;
+  if (binary_operator.compare("%") == 0)
+    return BO_Rem;
+  if (binary_operator.compare("<<") == 0)
+    return BO_Shl;
+  if (binary_operator.compare(">>") == 0)
+    return BO_Shr;
+  if (binary_operator.compare("|") == 0)
+    return BO_Or;
+  if (binary_operator.compare("&") == 0)
+    return BO_And;
+  if (binary_operator.compare("^") == 0)
+    return BO_Xor;
+  if (binary_operator.compare("<") == 0)
+    return BO_LT;
+  if (binary_operator.compare(">") == 0)
+    return BO_GT;
+  if (binary_operator.compare("<=") == 0)
+    return BO_LE;
+  if (binary_operator.compare(">=") == 0)
+    return BO_GE;
+  if (binary_operator.compare("==") == 0)
+    return BO_EQ;
+  if (binary_operator.compare("!=") == 0)
+    return BO_NE;
+  if (binary_operator.compare("&&") == 0)
+    return BO_LAnd;
+  if (binary_operator.compare("||") == 0)
+    return BO_LOr;
+  cout << "cannot translate " << binary_operator << " to opcode\n";
+  exit(1);
+}
+
+int GetPrecedenceOfBinaryOperator(BinaryOperator::Opcode opcode)
+{
+  switch (opcode)
+  {
+    case BO_Mul:
+    case BO_Div:
+    case BO_Rem:
+      return 10;
+    case BO_Add:
+    case BO_Sub:
+      return 9;
+    case BO_Shl:
+    case BO_Shr:
+      return 8;
+    case BO_LT:
+    case BO_GT:
+    case BO_LE:
+    case BO_GE:
+      return 7;
+    case BO_EQ:
+    case BO_NE:
+      return 6;
+    case BO_And:
+      return 5;
+    case BO_Xor:
+      return 4;
+    case BO_Or:
+      return 3;
+    case BO_LAnd:
+      return 2;
+    case BO_LOr:
+      return 1;
+    default:
+      cout << "Unknown opcode\n";
+      exit(1);
+  }
+  return 0;
+}
+
+Expr* GetLeftOperandAfterMutation(
+    Expr *lhs, const BinaryOperator::Opcode mutated_opcode)
+{
+  if (BinaryOperator *bo = dyn_cast<BinaryOperator>(lhs))
+  {
+    if (GetPrecedenceOfBinaryOperator(bo->getOpcode()) >= \
+        GetPrecedenceOfBinaryOperator(mutated_opcode))
+      return lhs;
+    else
+      return GetLeftOperandAfterMutation(
+          bo->getRHS()->IgnoreImpCasts(), mutated_opcode);
+  }
+
+  return lhs;
+}
+
+Expr* GetRightOperandAfterMutation(
+    Expr *rhs, const BinaryOperator::Opcode mutated_opcode)
+{
+  if (BinaryOperator *bo = dyn_cast<BinaryOperator>(rhs))
+  {
+    if (GetPrecedenceOfBinaryOperator(bo->getOpcode()) > \
+        GetPrecedenceOfBinaryOperator(mutated_opcode))
+      return rhs;
+    else
+      return GetRightOperandAfterMutation(
+          bo->getLHS()->IgnoreImpCasts(), mutated_opcode);
+  }
+
+  return rhs;
 }

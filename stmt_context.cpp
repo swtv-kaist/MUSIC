@@ -37,6 +37,26 @@ int StmtContext::getProteumStyleLineNum()
 	return proteumstyle_stmt_start_line_num_;
 }
 
+const SourceRange* const StmtContext::getLhsOfAssignmentRange()
+{
+	return lhs_of_assignment_range_;
+}
+
+const SourceRange* const StmtContext::getNonFloatingExprRange()
+{
+  return non_floating_expr_range_;
+}
+
+const SourceRange* const StmtContext::getCurrentlyParsedFunctionRange()
+{
+  return currently_parsed_function_range_;
+}
+
+const SourceRange* const StmtContext::getTypedefRange()
+{
+  return typedef_range_;
+}
+
 void StmtContext::setProteumStyleLineNum(int num)
 {
 	proteumstyle_stmt_start_line_num_ = num;
