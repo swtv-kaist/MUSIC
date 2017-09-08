@@ -63,9 +63,7 @@ void CGSR::Mutate(clang::Expr *e, ComutContext *context)
 	  if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
 	    mutated_token = ConvertCharStringToIntString(mutated_token);
 
-    GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																	token, mutated_token);
+    context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
   }
 }
 
