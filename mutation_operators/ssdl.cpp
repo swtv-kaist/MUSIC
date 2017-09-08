@@ -105,9 +105,7 @@ void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
 					 															 SourceRange(start_loc, end_loc),
 					 															 context->label_to_gotolist_map))
 	{
-		GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-
-		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, /*new_end_loc,*/ token, mutated_token);
+		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 	}
 }
 
@@ -228,9 +226,6 @@ void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, ComutContext *context)
 
   if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)))
   {
-  	GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-
-		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, /*new_end_loc,*/ 
-																	token, mutated_token);
+  	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
   }
 }

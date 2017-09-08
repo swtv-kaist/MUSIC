@@ -57,17 +57,13 @@ void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, ComutContext *context)
   uo->setOpcode(UO_PreDec);
   string mutated_token = rewriter.ConvertToString(uo);
 
-  GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-	WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																token, mutated_token);
+  context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // generate x++
   uo->setOpcode(UO_PostInc);
   mutated_token = rewriter.ConvertToString(uo);
   
-  GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-	WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																token, mutated_token);
+  context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // reset the code structure
   uo->setOpcode(UO_PostDec);
@@ -88,17 +84,13 @@ void OMMO::GenerateMutantForPreDec(UnaryOperator *uo, ComutContext *context)
   uo->setOpcode(UO_PostDec);
   string mutated_token = rewriter.ConvertToString(uo);
  
- 	GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-	WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																token, mutated_token);
+ 	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // generate --x
   uo->setOpcode(UO_PreDec);
   mutated_token = rewriter.ConvertToString(uo);
 
-  GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-	WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																token, mutated_token);
+  context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // reset the code structure
   uo->setOpcode(UO_PreDec);

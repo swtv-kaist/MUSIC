@@ -53,9 +53,7 @@ void SRWS::Mutate(clang::Expr *e, ComutContext *context)
   {
     string mutated_token = "\"" + token.substr(first_non_whitespace);
     
-    GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																	token, mutated_token);
+    context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
   }
 
   // Generate mutant by removing trailing whitespaces
@@ -63,9 +61,7 @@ void SRWS::Mutate(clang::Expr *e, ComutContext *context)
   if (last_non_whitespace < token.length()-2)
   {
     string mutated_token = token.substr(0, last_non_whitespace+1) + "\"";
-    GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-		WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																	token, mutated_token);
+    context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
     // Generate mutant by removing whitespaces in the front and back
     if (first_non_whitespace != 1)
@@ -76,9 +72,7 @@ void SRWS::Mutate(clang::Expr *e, ComutContext *context)
       mutated_token += token.substr(first_non_whitespace, str_length);
       mutated_token += "\"";
 
-      GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-			WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																	token, mutated_token);
+      context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
     }
   }
 }

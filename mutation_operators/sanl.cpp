@@ -49,8 +49,6 @@ void SANL::Mutate(clang::Expr *e, ComutContext *context)
 	mutated_token.pop_back();
 	mutated_token += "\\n\"";
 
-	GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-	WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
-																	token, mutated_token);
+	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 }
 

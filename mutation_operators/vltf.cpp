@@ -68,9 +68,7 @@ void VLTF::Mutate(clang::Expr *e, ComutContext *context)
     // Mutate if 2 variable have exactly same structure type
     if (struct_type.compare(getStructureType(vardecl->getType())) == 0)
     {
-      GenerateMutantFile(context, start_loc, end_loc, mutated_token);
-      WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, token, 
-                                    mutated_token);
+      context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
     }
   }
 }
