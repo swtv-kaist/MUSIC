@@ -5,10 +5,10 @@ LLVM_BUILD_DIRECTORY_NAME=llvm_build
 LLVM_BUILD_MODE=Debug+Asserts
 #LLVM_BUILD_MODE=Release+Asserts
 
-SRCS=tool.cpp configuration.cpp comut_utility.cpp \
+SRCS=tool.cpp configuration.cpp comut_utility.cpp mutant_entry.cpp\
 		 mutation_operators/mutant_operator_template.cpp \
 		 information_visitor.cpp information_gatherer.cpp comut_context.cpp \
-		 symbol_table.cpp stmt_context.cpp \
+		 symbol_table.cpp stmt_context.cpp mutant_database.cpp\
 		 mutation_operators/ssdl.cpp mutation_operators/orrn.cpp \
 		 mutation_operators/vtwf.cpp mutation_operators/crcr.cpp \
 		 mutation_operators/sanl.cpp mutation_operators/srws.cpp \
@@ -48,6 +48,7 @@ SRCS=tool.cpp configuration.cpp comut_utility.cpp \
 		 mutation_operators/orbn.cpp
   
 OBJS=tool.o configuration.o comut_utility.o symbol_table.o\
+		 mutant_entry.o mutant_database.o \
 		 stmt_context.o comut_context.o mutant_operator_template.o \
 		 information_visitor.o information_gatherer.o ssdl.o \
 		 orrn.o vtwf.o crcr.o sanl.o srws.o scsr.o vlsf.o vgsf.o \
@@ -92,6 +93,7 @@ $(TARGET) : $(OBJS)
 
 tool.o : tool.cpp comut_utility.h configuration.h comut_context.h \
 	information_visitor.h information_gatherer.h symbol_table.h stmt_context.h \
+	mutant_entry.h mutant_database.h \
 	comut_context.h mutation_operators/mutant_operator_template.h \
 	mutation_operators/expr_mutant_operator.h mutation_operators/stmt_mutant_operator.h \
 	mutation_operators/ssdl.h mutation_operators/orrn.h mutation_operators/vtwf.h \
@@ -124,7 +126,7 @@ tool.o : tool.cpp comut_utility.h configuration.h comut_context.h \
 configuration.o : configuration.h configuration.cpp
 	$(CXX) $(CXXFLAGS) -c configuration.cpp
 
-comut_utility.o : comut_utility.h comut_utility.cpp
+comut_utility.o : comut_utility.h comut_utility.cpp mutant_database.h
 	$(CXX) $(CXXFLAGS) -c comut_utility.cpp
 
 information_visitor.o : information_visitor.h information_visitor.cpp \
@@ -137,6 +139,13 @@ information_gatherer.o : information_gatherer.h information_gatherer.cpp \
 
 symbol_table.o: symbol_table.h symbol_table.cpp 
 	$(CXX) $(CXXFLAGS) -c symbol_table.cpp
+
+mutant_entry.o: mutant_entry.h mutant_entry.cpp comut_utility.h
+	$(CXX) $(CXXFLAGS) -c mutant_entry.cpp
+
+mutant_database.o: mutant_database.h mutant_database.cpp mutant_entry.h \
+	comut_utility.h
+	$(CXX) $(CXXFLAGS) -c mutant_database.cpp
 
 stmt_context.o: stmt_context.h stmt_context.cpp comut_utility.h
 	$(CXX) $(CXXFLAGS) -c stmt_context.cpp

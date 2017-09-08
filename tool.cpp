@@ -42,6 +42,7 @@
 #include "comut_context.h"
 #include "information_visitor.h"
 #include "information_gatherer.h"
+#include "mutant_database.h"
 
 #include "mutation_operators/mutant_operator_template.h"
 #include "mutation_operators/expr_mutant_operator.h"
@@ -1506,9 +1507,11 @@ int main(int argc, char *argv[])
   ParseAST(TheCompInst2.getPreprocessor(), TheGatherer, 
            TheCompInst2.getASTContext());
 
+  MutantDatabase mutant_database(&TheCompInst, inputFilename, output_dir);
+
   ComutContext context(
       &TheCompInst, config, TheGatherer->getLabelToGotoListMap(),
-      TheGatherer->getSymbolTable());
+      TheGatherer->getSymbolTable(), mutant_database);
 
   // Create an AST consumer instance which is going to get called by ParseAST.
   MyASTConsumer TheConsumer(
@@ -1520,6 +1523,9 @@ int main(int argc, char *argv[])
 
   // Parse the file to AST, registering our consumer as the AST consumer.
   ParseAST(sema);
+
+  mutant_database.ExportAllEntries();
+  // cout << mutant_database << endl;
 
   return 0;
 }

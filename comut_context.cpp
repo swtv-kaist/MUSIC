@@ -4,10 +4,10 @@
 ComutContext::ComutContext(
     clang::CompilerInstance *CI, Configuration *config,
     LabelStmtToGotoStmtListMap *label_map, 
-    SymbolTable *symbol_table)
+    SymbolTable *symbol_table, MutantDatabase &mutant_database)
   : comp_inst(CI), userinput(config),
     label_to_gotolist_map(label_map), function_id_(-1),
-    next_mutantfile_id(1), 
+    next_mutantfile_id(1), mutant_database_(mutant_database),
     symbol_table_(symbol_table), stmt_context_(CI)
 {
 	std::string input_filename{config->getInputFilename()};

@@ -1324,3 +1324,36 @@ Expr* GetRightOperandAfterMutation(
 
   return rhs;
 }
+
+ostream& operator<<(ostream &stream, const MutantEntry &entry)
+{
+  stream << "============ entry =============" << endl;
+  stream << "proteum line num: " << entry.getProteumStyleLineNum() << endl;
+  stream << "start location: "; PrintLocation(entry.src_mgr_, entry.getStartLocation());
+  stream << "end location: "; PrintLocation(entry.src_mgr_, entry.getTokenEndLocation());
+  stream << "token: " << entry.getToken() << endl;
+  stream << "mutated token: " << entry.getMutatedToken() << endl;
+  stream << "================================";
+
+  return stream;
+}
+
+ostream& operator<<(ostream &stream, const MutantDatabase &database)
+{
+  for (auto line_map_iter: database.getEntryTable())
+  {
+    cout << "LINE " << line_map_iter.first << endl;
+    for (auto column_map_iter: line_map_iter.second)
+    {
+      cout << "\tCOL " << column_map_iter.first << endl;
+      for (auto mutantname_map_iter: column_map_iter.second)
+      {
+        cout << "\t\t" << mutantname_map_iter.first << endl;
+        for (auto entry: mutantname_map_iter.second)
+          cout << entry << endl;
+      }
+    }
+  }
+
+  return stream;
+}

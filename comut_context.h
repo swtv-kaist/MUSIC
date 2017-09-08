@@ -14,6 +14,7 @@
 #include "configuration.h"
 #include "symbol_table.h"
 #include "stmt_context.h"
+#include "mutant_database.h"
 
 typedef std::vector<std::string> ScalarReferenceNameList;
 
@@ -45,10 +46,12 @@ public:
 
   ScopeRangeList *scope_list_;
 
+  MutantDatabase &mutant_database_;
+
   ComutContext(
       clang::CompilerInstance *CI, Configuration *config,
       LabelStmtToGotoStmtListMap *label_map, 
-      SymbolTable* symbol_table);
+      SymbolTable* symbol_table, MutantDatabase &mutant_database);
 
   bool IsRangeInMutationRange(clang::SourceRange range);
 

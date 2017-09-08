@@ -33,6 +33,8 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Frontend/Utils.h"
 
+#include "mutant_database.h"
+
 using namespace clang;
 using namespace std;
 
@@ -229,5 +231,8 @@ Expr* GetLeftOperandAfterMutation(
     Expr *lhs, const BinaryOperator::Opcode mutated_opcode);
 Expr* GetRightOperandAfterMutation(
     Expr *rhs, const BinaryOperator::Opcode mutated_opcode);
+
+ostream& operator<<(ostream &stream, const MutantEntry &entry);
+ostream& operator<<(ostream &stream, const MutantDatabase &database);
 
 #endif
