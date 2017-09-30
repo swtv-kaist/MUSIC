@@ -13,13 +13,13 @@ void MutantOperatorTemplate::setRange(set<string> &range)
   range_ = range;
 }
 
-void MutantOperatorTemplate::GenerateMutantFile(
+/*void MutantOperatorTemplate::GenerateMutantFile(
 	ComutContext *context, const SourceLocation &start_loc,
 	const SourceLocation &end_loc, const string &mutated_token)
 {
 	Rewriter rewriter;
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	int length = src_mgr.getFileOffset(end_loc) - \
 							 src_mgr.getFileOffset(start_loc);
@@ -71,7 +71,7 @@ void MutantOperatorTemplate::WriteMutantInfoToMutantDbFile(
 
   mutant_db_file << context->getStmtContext().getProteumStyleLineNum() << "\t";
 
-  SourceManager &src_mgr = context->comp_inst->getSourceManager();
+  SourceManager &src_mgr = context->comp_inst_->getSourceManager();
   SourceLocation new_end_loc = src_mgr.translateLineCol(
       src_mgr.getMainFileID(),
       GetLineNumber(src_mgr, start_loc),
@@ -95,4 +95,4 @@ void MutantOperatorTemplate::WriteMutantInfoToMutantDbFile(
   mutant_db_file.close(); 
 
   ++context->next_mutantfile_id;
-}
+}*/

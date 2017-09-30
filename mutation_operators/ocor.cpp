@@ -27,7 +27,7 @@ bool OCOR::CanMutate(clang::Expr *e, ComutContext *context)
 	if (CStyleCastExpr *csce = dyn_cast<CStyleCastExpr>(e))
 	{
 		SourceLocation start_loc = csce->getLocStart();
-    SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+    SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
     const Type *type{csce->getTypeAsWritten().getCanonicalType().getTypePtr()};
     StmtContext &stmt_context = context->getStmtContext();
 
@@ -68,7 +68,7 @@ void OCOR::Mutate(clang::Expr *e, ComutContext *context)
   while (walk != end_loc)
   {
     token += *(
-    		context->comp_inst->getSourceManager().getCharacterData(walk));
+    		context->comp_inst_->getSourceManager().getCharacterData(walk));
     walk = walk.getLocWithOffset(1);           
   }
 

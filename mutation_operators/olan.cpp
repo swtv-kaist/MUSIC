@@ -47,7 +47,7 @@ bool OLAN::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
-		SourceManager &src_mgr = context->comp_inst->getSourceManager();
+		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -78,14 +78,14 @@ void OLAN::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),
 			GetColumnNumber(src_mgr, start_loc) + token.length());
 
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	for (auto mutated_token: range_)
 	{
@@ -115,8 +115,8 @@ bool OLAN::CanMutate(BinaryOperator *bo, string mutated_token,
 
 	// modulo only takes integral operands
 	if (mutated_token.compare("%") == 0)
-		return ExprIsIntegral(context->comp_inst, lhs) && 
-			 		 ExprIsIntegral(context->comp_inst, rhs);
+		return ExprIsIntegral(context->comp_inst_, lhs) && 
+			 		 ExprIsIntegral(context->comp_inst_, rhs);
 
 	// mutated_token is additive (+ or -)
 	// for cases that one of operand is pointer, only the followings are allowed
@@ -129,7 +129,7 @@ bool OLAN::CanMutate(BinaryOperator *bo, string mutated_token,
 				lhs_type.compare(getPointerType(rhs->getType())) == 0)
 			return (mutated_token.compare("-") == 0);
 
-		if (ExprIsIntegral(context->comp_inst, rhs))
+		if (ExprIsIntegral(context->comp_inst_, rhs))
 			return true;
 
 		// rhs is neither pointer nor integral -> not mutatable
@@ -138,7 +138,7 @@ bool OLAN::CanMutate(BinaryOperator *bo, string mutated_token,
 
 	if (ExprIsPointer(rhs))
 	{
-		if (ExprIsIntegral(context->comp_inst, lhs))
+		if (ExprIsIntegral(context->comp_inst_, lhs))
 			return (mutated_token.compare("+") == 0);
 
 		return false;

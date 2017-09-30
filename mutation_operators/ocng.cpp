@@ -25,7 +25,7 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = is->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-    end_loc = GetEndLocOfExpr(condition, context->comp_inst);
+    end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (WhileStmt *ws = dyn_cast<WhileStmt>(s))
 	{
@@ -35,7 +35,7 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = ws->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-    end_loc = GetEndLocOfExpr(condition, context->comp_inst);
+    end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (DoStmt *ds = dyn_cast<DoStmt>(s))
 	{
@@ -45,7 +45,7 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = ds->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-    end_loc = GetEndLocOfExpr(condition, context->comp_inst);
+    end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (ForStmt *fs = dyn_cast<ForStmt>(s))
 	{
@@ -55,7 +55,7 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = fs->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-    end_loc = GetEndLocOfExpr(condition, context->comp_inst);
+    end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (
 			AbstractConditionalOperator *aco = dyn_cast<AbstractConditionalOperator>(s))
@@ -66,7 +66,7 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = aco->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-    end_loc = GetEndLocOfExpr(condition, context->comp_inst);
+    end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else
 		return false;
@@ -99,12 +99,12 @@ void OCNG::Mutate(clang::Stmt *s, ComutContext *context)
 void OCNG::GenerateMutantByNegation(Expr *e, ComutContext *context)
 {
   SourceLocation start_loc = e->getLocStart();
-  SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst); 
+  SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 
 
   Rewriter rewriter;
   rewriter.setSourceMgr(
-  		context->comp_inst->getSourceManager(),
-  		context->comp_inst->getLangOpts());
+  		context->comp_inst_->getSourceManager(),
+  		context->comp_inst_->getLangOpts());
   string token{rewriter.ConvertToString(e)};    
 
   string mutated_token = "!(" + token + ")";

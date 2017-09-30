@@ -47,7 +47,7 @@ bool OABN::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
-		SourceManager &src_mgr = context->comp_inst->getSourceManager();
+		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -64,8 +64,8 @@ bool OABN::CanMutate(clang::Expr *e, ComutContext *context)
 			return false;
 
 		// bitwise operators only take integral operands
-		if (ExprIsIntegral(context->comp_inst, bo->getLHS()->IgnoreImpCasts()) && 
-				ExprIsIntegral(context->comp_inst, bo->getRHS()->IgnoreImpCasts()))
+		if (ExprIsIntegral(context->comp_inst_, bo->getLHS()->IgnoreImpCasts()) && 
+				ExprIsIntegral(context->comp_inst_, bo->getRHS()->IgnoreImpCasts()))
 			return true;
 	}
 
@@ -79,7 +79,7 @@ void OABN::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),

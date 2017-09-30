@@ -19,7 +19,7 @@ bool CLCR::CanMutate(clang::Expr *e, ComutContext *context)
 		return false;
 
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
 	// CLCR can mutate this constant literal if it is in mutation range,
@@ -35,11 +35,11 @@ bool CLCR::CanMutate(clang::Expr *e, ComutContext *context)
 void CLCR::Mutate(clang::Expr *e, ComutContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{rewriter.ConvertToString(e)};
 
@@ -75,7 +75,7 @@ void CLCR::Mutate(clang::Expr *e, ComutContext *context)
     // If this constant is in range of a case label
     // then check if the replacing token is same with any other label.
     if (stmt_context.IsInSwitchCaseRange(e) &&
-    		IsDuplicateCaseLabel(mutated_token, context->switchstmt_info_list))
+    		IsDuplicateCaseLabel(mutated_token, context->switchstmt_info_list_))
     	continue;
 
     context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());

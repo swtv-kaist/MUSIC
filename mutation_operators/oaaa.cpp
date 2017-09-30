@@ -47,7 +47,7 @@ bool OAAA::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
-		SourceManager &src_mgr = context->comp_inst->getSourceManager();
+		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -81,7 +81,7 @@ void OAAA::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),
@@ -103,8 +103,8 @@ void OAAA::Mutate(clang::Expr *e, ComutContext *context)
 			Expr *lhs = bo->getLHS()->IgnoreImpCasts();
 			Expr *rhs = bo->getRHS()->IgnoreImpCasts();
 
-			if (!ExprIsIntegral(context->comp_inst, lhs) ||
-					!ExprIsIntegral(context->comp_inst, rhs))
+			if (!ExprIsIntegral(context->comp_inst_, lhs) ||
+					!ExprIsIntegral(context->comp_inst_, rhs))
 					continue;
 		}
 

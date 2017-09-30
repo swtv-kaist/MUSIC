@@ -47,7 +47,7 @@ bool OALN::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
-		SourceManager &src_mgr = context->comp_inst->getSourceManager();
+		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -80,16 +80,16 @@ void OALN::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),
 			GetColumnNumber(src_mgr, start_loc) + token.length());
 
 	SourceLocation start_of_expr = e->getLocStart();
-	SourceLocation end_of_expr = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_of_expr = GetEndLocOfExpr(e, context->comp_inst_);
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 	string lhs = rewriter.ConvertToString(bo->getLHS());
 	string rhs = rewriter.ConvertToString(bo->getRHS());
 

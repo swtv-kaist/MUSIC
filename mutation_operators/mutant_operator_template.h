@@ -30,8 +30,8 @@ class MutantOperatorTemplate
 protected:
 	std::string name_;
 	int num_of_generated_mutants_;
-	std::set<string> domain_;
-	std::set<string> range_;
+	std::set<std::string> domain_;
+	std::set<std::string> range_;
 
 public:
 	MutantOperatorTemplate(const std::string name) 
@@ -45,7 +45,7 @@ public:
   virtual void setRange(std::set<std::string> &range);
 	
 protected:
-	void GenerateMutantFile(ComutContext *context, 
+	/*void GenerateMutantFile(ComutContext *context, 
 													const clang::SourceLocation &start_loc,
 													const clang::SourceLocation &end_loc, 
 													const std::string &mutated_token);
@@ -56,7 +56,7 @@ protected:
   void WriteMutantInfoToMutantDbFile(
 		ComutContext *context, const clang::SourceLocation &start_loc, 
 		const clang::SourceLocation &end_loc, const std::string &token, 
-		const std::string &mutated_token);
+		const std::string &mutated_token);*/
 };
 
 #endif	// COMUT_MUTANT_OPERATOR_TEMPLATE_H_

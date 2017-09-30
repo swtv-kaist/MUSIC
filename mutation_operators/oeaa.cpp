@@ -47,7 +47,7 @@ bool OEAA::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
-		SourceManager &src_mgr = context->comp_inst->getSourceManager();
+		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -66,7 +66,7 @@ bool OEAA::CanMutate(clang::Expr *e, ComutContext *context)
 		// 		- left and right side are both scalar
 		// 		- only subtraction between same-type pointers is allowed
 		// 		- only ptr+int and ptr-int are allowed
-		if (CanMutate(bo, context->comp_inst))
+		if (CanMutate(bo, context->comp_inst_))
 			return true;
 	}
 
@@ -83,7 +83,7 @@ void OEAA::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),
@@ -114,8 +114,8 @@ void OEAA::Mutate(clang::Expr *e, ComutContext *context)
 			Expr *lhs = bo->getLHS()->IgnoreImpCasts();
 			Expr *rhs = bo->getRHS()->IgnoreImpCasts();
 
-			if (!ExprIsIntegral(context->comp_inst, lhs) ||
-					!ExprIsIntegral(context->comp_inst, rhs))
+			if (!ExprIsIntegral(context->comp_inst_, lhs) ||
+					!ExprIsIntegral(context->comp_inst_, rhs))
 					continue;
 		}
 

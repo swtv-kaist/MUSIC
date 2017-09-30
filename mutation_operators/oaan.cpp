@@ -47,7 +47,7 @@ bool OAAN::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
-		SourceManager &src_mgr = context->comp_inst->getSourceManager();
+		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -76,14 +76,14 @@ void OAAN::Mutate(clang::Expr *e, ComutContext *context)
 
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),
 			GetColumnNumber(src_mgr, start_loc) + token.length());
 
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	for (auto mutated_token: range_)
 	{
@@ -107,8 +107,8 @@ bool OAAN::CanMutate(BinaryOperator *bo, string mutated_token,
 	if (bo->isMultiplicativeOp())
 	{
 		if (mutated_token.compare("%") == 0 &&
-				(!ExprIsIntegral(context->comp_inst, lhs) ||
-				 !ExprIsIntegral(context->comp_inst, rhs)))
+				(!ExprIsIntegral(context->comp_inst_, lhs) ||
+				 !ExprIsIntegral(context->comp_inst_, rhs)))
 			return false;
 
 		return true;
@@ -125,8 +125,8 @@ bool OAAN::CanMutate(BinaryOperator *bo, string mutated_token,
 			return false;
 
 		if (mutated_token.compare("%") == 0 &&
-				(!ExprIsIntegral(context->comp_inst, lhs) ||
-				 !ExprIsIntegral(context->comp_inst, rhs)))
+				(!ExprIsIntegral(context->comp_inst_, lhs) ||
+				 !ExprIsIntegral(context->comp_inst_, rhs)))
 			return false;
 
 		return true;

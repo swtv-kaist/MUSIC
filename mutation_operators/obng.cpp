@@ -17,7 +17,7 @@ bool OBNG::CanMutate(clang::Expr *e, ComutContext *context)
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
 		SourceLocation start_loc = e->getLocStart();
-    SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+    SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
     StmtContext &stmt_context = context->getStmtContext();
 
     // OPPO can mutate binary bitwise expression in mutation range,
@@ -54,12 +54,12 @@ void OBNG::Mutate(clang::Expr *e, ComutContext *context)
 void OBNG::GenerateMutantByNegation(Expr *e, ComutContext *context)
 {
   SourceLocation start_loc = e->getLocStart();
-  SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst); 
+  SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 
 
   Rewriter rewriter;
   rewriter.setSourceMgr(
-  		context->comp_inst->getSourceManager(),
-  		context->comp_inst->getLangOpts());
+  		context->comp_inst_->getSourceManager(),
+  		context->comp_inst_->getLangOpts());
   string token{rewriter.ConvertToString(e)};    
 
   string mutated_token = "~(" + token + ")";

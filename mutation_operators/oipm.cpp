@@ -41,7 +41,7 @@ bool OIPM::CanMutate(clang::Expr *e, ComutContext *context)
     }
 
     SourceLocation start_loc = uo->getLocStart();
-    SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst);
+    SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
     if (isa<ArraySubscriptExpr>(first_non_deref_subexpr))
     {
@@ -85,8 +85,8 @@ void OIPM::Mutate(clang::Expr *e, ComutContext *context)
 		return;
 
 	Rewriter rewriter;
-	rewriter.setSourceMgr(context->comp_inst->getSourceManager(), 
-														context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(context->comp_inst_->getSourceManager(), 
+														context->comp_inst_->getLangOpts());
 	string token{rewriter.ConvertToString(uo)};
 
 	Expr *first_non_deref_subexpr = cast<Expr>(uo);
@@ -107,7 +107,7 @@ void OIPM::Mutate(clang::Expr *e, ComutContext *context)
   }
 
   SourceLocation start_loc = uo->getLocStart();
-  SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst);
+  SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
 	if (is_subexpr_pointer)
 	{
@@ -146,7 +146,7 @@ void OIPM::MutateArraySubscriptSubExpr(
 	if (!(ase = dyn_cast<ArraySubscriptExpr>(subexpr)))
 		return;
 
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation left_bracket_loc = GetLeftBracketOfArraySubscript(
 			ase, src_mgr);
 
