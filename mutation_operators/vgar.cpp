@@ -18,7 +18,7 @@ bool VGAR::CanMutate(clang::Expr *e, ComutContext *context)
 		return false;
 
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
 	// VGAR can mutate this expression only if it is array type
@@ -37,11 +37,11 @@ string newGetArrayTypeFunction(QualType type)
 void VGAR::Mutate(clang::Expr *e, ComutContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{rewriter.ConvertToString(e)};
 	StmtContext &stmt_context = context->getStmtContext();

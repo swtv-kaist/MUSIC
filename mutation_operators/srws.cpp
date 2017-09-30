@@ -18,7 +18,7 @@ bool SRWS::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		SourceLocation start_loc = sl->getLocStart();
     SourceLocation end_loc = GetEndLocOfStringLiteral(
-    		context->comp_inst->getSourceManager(), start_loc);
+    		context->comp_inst_->getSourceManager(), start_loc);
     StmtContext &stmt_context = context->getStmtContext();
     
     // Mutation is applicable if this expression is in mutation range,
@@ -36,12 +36,12 @@ bool SRWS::CanMutate(clang::Expr *e, ComutContext *context)
 
 void SRWS::Mutate(clang::Expr *e, ComutContext *context)
 {
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfStringLiteral(src_mgr, start_loc);
 
   Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 	string token{rewriter.ConvertToString(e)};
 
 	int first_non_whitespace = GetFirstNonWhitespaceIndex(token);

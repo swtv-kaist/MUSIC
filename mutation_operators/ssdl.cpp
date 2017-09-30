@@ -25,7 +25,7 @@ bool SSDL::CanMutate(Stmt *s, ComutContext *context)
     return false;
 
   // Only delete COMPLETE statements whose parent is a CompoundStmt.
-  const Stmt* parent = GetParentOfStmt(s, context->comp_inst);
+  const Stmt* parent = GetParentOfStmt(s, context->comp_inst_);
 
   if (!parent)
     return false;
@@ -81,13 +81,13 @@ void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
   	HandleStmtWithBody(s, context);
 
   Rewriter rewriter;
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{rewriter.ConvertToString(s)};
 	SourceLocation start_loc = s->getLocStart();
 	SourceLocation end_loc = GetLocationAfterSemicolon(
-    src_mgr, GetEndLocOfStmt(s->getLocEnd(), context->comp_inst));
+    src_mgr, GetEndLocOfStmt(s->getLocEnd(), context->comp_inst_));
 
 	// make replacing token
   string mutated_token{";"};
@@ -103,7 +103,7 @@ void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
 	else if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
 					 NoUnremovableLabelInsideRange(src_mgr,
 					 															 SourceRange(start_loc, end_loc),
-					 															 context->label_to_gotolist_map))
+					 															 context->label_to_gotolist_map_))
 	{
 		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 	}
@@ -207,12 +207,12 @@ void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, ComutContext *context)
   SourceLocation end_loc = c->getRBracLoc().getLocWithOffset(1);
 
   Rewriter rewriter;
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
   if (!NoUnremovableLabelInsideRange(src_mgr, 
   																	 SourceRange(start_loc, end_loc),
-  																	 context->label_to_gotolist_map))
+  																	 context->label_to_gotolist_map_))
     return;
 
   string token{rewriter.ConvertToString(c)};

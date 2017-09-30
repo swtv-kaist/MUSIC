@@ -17,7 +17,7 @@ bool VSCR::CanMutate(clang::Expr *e, ComutContext *context)
 	if (MemberExpr *me = dyn_cast<MemberExpr>(e))
 	{
 		SourceLocation start_loc = e->getLocStart();
-		SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+		SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 		return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
            !context->getStmtContext().IsInEnumDecl() &&
@@ -45,7 +45,7 @@ void VSCR::Mutate(clang::Expr *e, ComutContext *context)
 
   string token{me->getMemberDecl()->getNameAsString()};
   SourceLocation start_loc = me->getMemberLoc();
-  SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+  SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
   if (auto rt = dyn_cast<RecordType>(base_type.getTypePtr()))
   {
@@ -66,7 +66,7 @@ void VSCR::Mutate(clang::Expr *e, ComutContext *context)
   else
   {
   	cout << "GenerateVscrMutant: cannot convert to record type at "; 
-    PrintLocation(context->comp_inst->getSourceManager(), start_loc);
+    PrintLocation(context->comp_inst_->getSourceManager(), start_loc);
   }
 }
 

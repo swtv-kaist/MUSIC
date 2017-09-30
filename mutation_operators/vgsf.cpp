@@ -47,8 +47,8 @@ void VGSF::Mutate(clang::Expr *e, ComutContext *context)
   end_loc = end_loc.getLocWithOffset(1);
 
   Rewriter rewriter;
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{rewriter.ConvertToString(e)};
 

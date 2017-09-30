@@ -18,7 +18,7 @@ bool VGPR::CanMutate(clang::Expr *e, ComutContext *context)
 		return false;
 
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
 	// VGPR can mutate this expression only if it is a pointer expression
@@ -33,11 +33,11 @@ bool VGPR::CanMutate(clang::Expr *e, ComutContext *context)
 void VGPR::Mutate(clang::Expr *e, ComutContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{rewriter.ConvertToString(e)};
 	StmtContext &stmt_context = context->getStmtContext();

@@ -18,7 +18,7 @@ bool OPPO::CanMutate(clang::Expr *e, ComutContext *context)
 		if (uo->getOpcode() == UO_PostInc || uo->getOpcode() == UO_PreInc)
 		{
 			SourceLocation start_loc = uo->getLocStart();
-    	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst);
+    	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
     	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
 		}
@@ -45,11 +45,11 @@ void OPPO::Mutate(clang::Expr *e, ComutContext *context)
 void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, ComutContext *context)
 {
 	SourceLocation start_loc = uo->getLocStart();
-	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{rewriter.ConvertToString(uo)};
 
@@ -72,11 +72,11 @@ void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, ComutContext *context)
 void OPPO::GenerateMutantForPreInc(UnaryOperator *uo, ComutContext *context)
 {
 	SourceLocation start_loc = uo->getLocStart();
-	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{rewriter.ConvertToString(uo)};
 

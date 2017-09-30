@@ -18,12 +18,12 @@ bool VTWD::CanMutate(clang::Expr *e, ComutContext *context)
 		return false;
 
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	Rewriter rewriter;
 	rewriter.setSourceMgr(
-			context->comp_inst->getSourceManager(),
-			context->comp_inst->getLangOpts());
+			context->comp_inst_->getSourceManager(),
+			context->comp_inst_->getLangOpts());
 	StmtContext &stmt_context = context->getStmtContext();
 
 	// VTWD can mutate expr that are
@@ -44,12 +44,12 @@ bool VTWD::CanMutate(clang::Expr *e, ComutContext *context)
 void VTWD::Mutate(clang::Expr *e, ComutContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
-	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst);
+	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	Rewriter rewriter;
 	rewriter.setSourceMgr(
-			context->comp_inst->getSourceManager(),
-			context->comp_inst->getLangOpts());
+			context->comp_inst_->getSourceManager(),
+			context->comp_inst_->getLangOpts());
 	string token{rewriter.ConvertToString(e)};
 
 	string mutated_token = "(" + token + "+1)";
@@ -66,7 +66,7 @@ bool VTWD::CanMutate(std::string scalarref_name, ComutContext *context)
 {
 	// if reference name is in the nonMutatableList then it is not mutatable
 	ScalarReferenceNameList *scalarref_list = \
-			context->non_VTWD_mutatable_scalarref_list;
+			context->non_VTWD_mutatable_scalarref_list_;
 
   for (auto it = (*scalarref_list).begin(); it != (*scalarref_list).end(); ++it)
     if (scalarref_name.compare(*it) == 0)

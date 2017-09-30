@@ -18,7 +18,7 @@ bool SCSR::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		SourceLocation start_loc = sl->getLocStart();
     SourceLocation end_loc = GetEndLocOfStringLiteral(
-    		context->comp_inst->getSourceManager(), start_loc);
+    		context->comp_inst_->getSourceManager(), start_loc);
     StmtContext &stmt_context = context->getStmtContext();
 
     // Mutation is applicable if this expression is in mutation range,
@@ -47,12 +47,12 @@ void SCSR::Mutate(clang::Expr *e, ComutContext *context)
 void SCSR::GenerateGlobalMutants(Expr *e, ComutContext *context,
 																 set<string> *stringCache)
 {
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfStringLiteral(src_mgr, start_loc);
 
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 	string token{rewriter.ConvertToString(e)};
 
 	// All string literals from global list are distinct 
@@ -73,12 +73,12 @@ void SCSR::GenerateGlobalMutants(Expr *e, ComutContext *context,
 void SCSR::GenerateLocalMutants(Expr *e, ComutContext *context,
 															  set<string> *stringCache)
 {
-	SourceManager &src_mgr = context->comp_inst->getSourceManager();
+	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfStringLiteral(src_mgr, start_loc);
 
 	Rewriter rewriter;
-	rewriter.setSourceMgr(src_mgr, context->comp_inst->getLangOpts());
+	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 	string token{rewriter.ConvertToString(e)};
 
 	if (!context->getStmtContext().IsInCurrentlyParsedFunctionRange(e))
