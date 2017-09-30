@@ -32,7 +32,7 @@ private:
   std::string token_;
   std::string mutated_token_;
   clang::SourceLocation start_location_;
-  clang::SourceLocation end_location_;
+  clang::SourceLocation end_location_before_mutation_;
   clang::SourceLocation end_location_after_mutation_;
 };
 

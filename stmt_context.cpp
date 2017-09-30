@@ -42,21 +42,6 @@ const SourceRange* const StmtContext::getLhsOfAssignmentRange()
 	return lhs_of_assignment_range_;
 }
 
-const SourceRange* const StmtContext::getNonFloatingExprRange()
-{
-  return non_floating_expr_range_;
-}
-
-const SourceRange* const StmtContext::getCurrentlyParsedFunctionRange()
-{
-  return currently_parsed_function_range_;
-}
-
-const SourceRange* const StmtContext::getTypedefRange()
-{
-  return typedef_range_;
-}
-
 void StmtContext::setProteumStyleLineNum(int num)
 {
 	proteumstyle_stmt_start_line_num_ = num;
@@ -241,4 +226,19 @@ bool StmtContext::IsInNonFloatingExprRange(Stmt *s)
 bool StmtContext::IsInTypedefRange(Stmt *s)
 {
 	return LocationIsInRange(s->getLocStart(), *typedef_range_);
+}
+
+bool StmtContext::IsInCurrentlyParsedFunctionRange(clang::SourceLocation loc)
+{
+  return LocationIsInRange(loc, *currently_parsed_function_range_);
+}
+
+bool StmtContext::IsInNonFloatingExprRange(clang::SourceLocation loc)
+{
+  return LocationIsInRange(loc, *non_floating_expr_range_);
+}
+
+bool StmtContext::IsInTypedefRange(clang::SourceLocation loc)
+{
+  return LocationIsInRange(loc, *typedef_range_);
 }

@@ -32,17 +32,12 @@ typedef std::vector<clang::SourceRange> ScopeRangeList;
 class ComutContext
 {
 public:
-  // initialize to 1
-  int next_mutantfile_id;
-
-  std::string mutant_filename;
-
-  clang::CompilerInstance *comp_inst;
+  clang::CompilerInstance *comp_inst_;
   
-  LabelStmtToGotoStmtListMap *label_to_gotolist_map;
-  SwitchStmtInfoList *switchstmt_info_list;
+  LabelStmtToGotoStmtListMap *label_to_gotolist_map_;
+  SwitchStmtInfoList *switchstmt_info_list_;
 
-  ScalarReferenceNameList *non_VTWD_mutatable_scalarref_list;
+  ScalarReferenceNameList *non_VTWD_mutatable_scalarref_list_;
 
   ScopeRangeList *scope_list_;
 
@@ -67,7 +62,7 @@ private:
 
   SymbolTable *symbol_table_;
   StmtContext stmt_context_;
-  Configuration *userinput;
+  Configuration *config_;
 };
 
 #endif	// COMUT_CONTEXT_H_

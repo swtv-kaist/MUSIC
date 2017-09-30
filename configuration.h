@@ -36,7 +36,7 @@ public:
 	clang::SourceLocation* getStartOfMutationRange();
 	clang::SourceLocation* getEndOfMutationRange();
 	std::string getOutputDir();
-	int getLimit();
+	int getLimitNumOfMutants();
 };
 
 #endif	// COMUT_USER_INPUT_H_

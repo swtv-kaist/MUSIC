@@ -235,4 +235,6 @@ Expr* GetRightOperandAfterMutation(
 ostream& operator<<(ostream &stream, const MutantEntry &entry);
 ostream& operator<<(ostream &stream, const MutantDatabase &database);
 
+Expr* IgnoreParenExpr(Expr *e);
+
 #endif

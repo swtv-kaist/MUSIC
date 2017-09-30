@@ -38,15 +38,13 @@ struct comp
 // Key is location instead of name to resolve same named labels in different ftn.
 typedef std::map<LabelStmtLocation, GotoStmtLocationList, comp> LabelStmtToGotoStmtListMap;
 
-typedef std::vector<clang::Expr*> GlobalStringLiteralList;
 typedef std::vector<clang::Expr*> ExprList;
+typedef std::vector<clang::VarDecl *> VarDeclList;
+
+typedef ExprList GlobalStringLiteralList;
 typedef std::vector<ExprList> LocalStringLiteralList;
 
-typedef std::vector<clang::VarDecl *> VarDeclList;
-// pair<string representation, isFloat?>
 typedef ExprList GlobalScalarConstantList;
-
-// pair<string representation, pair<location, isFloat?>>
 typedef std::vector<ExprList> LocalScalarConstantList;
 
 // pair<range of switch statement, list of case values' string representation>

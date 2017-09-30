@@ -25,10 +25,8 @@ public:
   bool VisitVarDecl(clang::VarDecl *vd);
   bool VisitFunctionDecl(clang::FunctionDecl *fd);
 
-  VarDeclList* getGlobalScalarVardeclList();
-  std::vector<VarDeclList>* getLocalScalarVardeclList();
-
   SymbolTable* getSymbolTable();
+  LabelStmtToGotoStmtListMap* getLabelToGotoListMap();
 
 private:
 	clang::CompilerInstance *comp_inst_;
@@ -70,18 +68,6 @@ private:
   VarDeclList global_pointer_vardecl_list_;
   std::vector<VarDeclList> local_pointer_vardecl_list_;
 
-  void CollectVarDecl(clang::VarDecl *vd);
-  void CollectScalarConstant(clang::Expr *e);
-  void CollectStringLiteral(clang::Expr *e);
-
-public:
-  // List of locations of label declarations
-  std::vector<clang::SourceLocation> *label_srclocation_list_; 
-
-  // Map from label declaration location to locations of Goto statements
-  // pointing to that label.
-  LabelStmtToGotoStmtListMap label_to_gotolist_map_;
-
   // Global/Local numbers, chars
   GlobalScalarConstantList global_scalarconstant_list_;
   LocalScalarConstantList local_scalarconstant_list_;
@@ -92,6 +78,14 @@ public:
   // A vector holding string literals used inside a function (local scope)
   // and their location.
   LocalStringLiteralList local_stringliteral_list_;
+
+  // Map from label declaration location to locations of Goto statements
+  // pointing to that label.
+  LabelStmtToGotoStmtListMap label_to_gotolist_map_;
+
+  void CollectVarDecl(clang::VarDecl *vd);
+  void CollectScalarConstant(clang::Expr *e);
+  void CollectStringLiteral(clang::Expr *e);
 };
 
 #endif	// COMUT_INFORMATION_VISITOR_H_

@@ -34,7 +34,7 @@ std::string Configuration::getOutputDir()
 	return output_directory_;
 }
 
-int Configuration::getLimit() 
+int Configuration::getLimitNumOfMutants() 
 {
 	return limit_num_of_mutant_;
 }

@@ -39,9 +39,6 @@ public:
 	// getter
 	int getProteumStyleLineNum();
 	const clang::SourceRange* const getLhsOfAssignmentRange();
-  const clang::SourceRange* const getCurrentlyParsedFunctionRange();
-  const clang::SourceRange* const getNonFloatingExprRange();
-  const clang::SourceRange* const getTypedefRange();
 
 	// setters
 	void setProteumStyleLineNum(int num);
@@ -73,6 +70,10 @@ public:
 	bool IsInSwitchCaseRange(clang::Stmt *s);
 	bool IsInNonFloatingExprRange(clang::Stmt *s);
 	bool IsInTypedefRange(clang::Stmt *s);
+
+  bool IsInCurrentlyParsedFunctionRange(clang::SourceLocation loc);
+  bool IsInNonFloatingExprRange(clang::SourceLocation loc);
+  bool IsInTypedefRange(clang::SourceLocation loc);
 };
 
 #endif	// COMUT_STMT_CONTEXT_H_

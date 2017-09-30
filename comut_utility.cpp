@@ -1357,3 +1357,19 @@ ostream& operator<<(ostream &stream, const MutantDatabase &database)
 
   return stream;
 }
+
+// return the first non-ParenExpr inside this Expr e
+Expr* IgnoreParenExpr(Expr *e)
+{
+  Expr *ret = e;
+
+  if (isa<ParenExpr>(ret))
+  {
+    ParenExpr *pe;
+
+    while (pe = dyn_cast<ParenExpr>(ret))
+      ret = pe->getSubExpr()->IgnoreImpCasts();
+  }
+  
+  return ret;
+}

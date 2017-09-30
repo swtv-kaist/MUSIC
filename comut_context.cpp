@@ -5,20 +5,20 @@ ComutContext::ComutContext(
     clang::CompilerInstance *CI, Configuration *config,
     LabelStmtToGotoStmtListMap *label_map, 
     SymbolTable *symbol_table, MutantDatabase &mutant_database)
-  : comp_inst(CI), userinput(config),
-    label_to_gotolist_map(label_map), function_id_(-1),
-    next_mutantfile_id(1), mutant_database_(mutant_database),
+  : comp_inst_(CI), config_(config),
+    label_to_gotolist_map_(label_map), function_id_(-1),
+    mutant_database_(mutant_database),
     symbol_table_(symbol_table), stmt_context_(CI)
 {
-	std::string input_filename{config->getInputFilename()};
+	/*std::string input_filename{config->getInputFilename()};
 	mutant_filename.assign(input_filename, 0, input_filename.length()-2);
-	mutant_filename += ".MUT";
+	mutant_filename += ".MUT";*/
 }
 
 bool ComutContext::IsRangeInMutationRange(clang::SourceRange range)
 {
-	SourceRange mutation_range(*(userinput->getStartOfMutationRange()),
-														 *(userinput->getEndOfMutationRange()));
+	SourceRange mutation_range(*(config_->getStartOfMutationRange()),
+														 *(config_->getEndOfMutationRange()));
 
 	return Range1IsPartOfRange2(range, mutation_range);
 }
@@ -40,7 +40,7 @@ StmtContext& ComutContext::getStmtContext()
 
 Configuration* ComutContext::getConfiguration() const
 {
-  return userinput;
+  return config_;
 }
 
 void ComutContext::IncrementFunctionId()

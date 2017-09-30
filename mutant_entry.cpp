@@ -6,7 +6,7 @@ MutantEntry::MutantEntry(
     clang::SourceLocation end_loc, clang::SourceManager &src_mgr,
     int proteum_style_line_num)
 : token_(token), mutated_token_(mutated_token),
-start_location_(start_loc), end_location_(end_loc),
+start_location_(start_loc), end_location_before_mutation_(end_loc),
 proteum_style_line_num_(proteum_style_line_num), src_mgr_(src_mgr)
 {
   end_location_after_mutation_ = src_mgr.translateLineCol(
@@ -34,11 +34,11 @@ clang::SourceLocation MutantEntry::getStartLocation() const
 }
 clang::SourceLocation MutantEntry::getTokenEndLocation() const
 {
-  return end_location_;
+  return end_location_before_mutation_;
 }
 clang::SourceRange MutantEntry::getTokenRange() const
 {
-  return SourceRange(start_location_, end_location_);
+  return SourceRange(start_location_, end_location_before_mutation_);
 }
 clang::SourceLocation MutantEntry::getMutatedTokenEndLocation() const
 {

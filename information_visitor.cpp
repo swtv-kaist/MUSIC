@@ -6,8 +6,6 @@ InformationVisitor::InformationVisitor(
   : comp_inst_(CI), 
     src_mgr_(CI->getSourceManager()), lang_option_(CI->getLangOpts())
 {
-  label_srclocation_list_ = new vector<SourceLocation>();
-
   SourceLocation start_of_file = src_mgr_.getLocForStartOfFile(src_mgr_.getMainFileID());
   currently_parsed_function_range_ = new SourceRange(
       start_of_file, start_of_file);
@@ -43,7 +41,6 @@ bool InformationVisitor::VisitLabelStmt(LabelStmt *ls)
   SourceLocation start_loc = ls->getLocStart();
 
   // Insert new entity into list of labels and LabelStmtToGotoStmtListMap
-  label_srclocation_list_->push_back(start_loc);
   label_to_gotolist_map_.insert(pair<LabelStmtLocation, GotoStmtLocationList>(
       LabelStmtLocation(GetLineNumber(src_mgr_, start_loc),
                         GetColumnNumber(src_mgr_, start_loc)),
@@ -137,16 +134,6 @@ bool InformationVisitor::VisitFunctionDecl(FunctionDecl *fd)
   return true;
 }
 
-VarDeclList* InformationVisitor::getGlobalScalarVardeclList()
-{
-  return &global_scalar_vardecl_list_;
-}
-
-std::vector<VarDeclList>* InformationVisitor::getLocalScalarVardeclList()
-{
-  return &local_scalar_vardecl_list_;
-}
-
 SymbolTable* InformationVisitor::getSymbolTable()
 {
   return new SymbolTable(
@@ -156,6 +143,11 @@ SymbolTable* InformationVisitor::getSymbolTable()
       &global_array_vardecl_list_, &local_array_vardecl_list_,
       &global_struct_vardecl_list_, &local_struct_vardecl_list_,
       &global_pointer_vardecl_list_, &local_pointer_vardecl_list_);
+}
+
+LabelStmtToGotoStmtListMap* InformationVisitor::getLabelToGotoListMap()
+{
+  return &label_to_gotolist_map_;
 }
 
 void InformationVisitor::CollectVarDecl(VarDecl *vd)
