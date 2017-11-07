@@ -1,11 +1,11 @@
 #PARAMETERS
-LLVM_BASE_PATH=/CS453/
-LLVM_SRC_DIRECTORY_NAME=llvm
-LLVM_BUILD_DIRECTORY_NAME=llvm_build
-LLVM_BUILD_MODE=Debug+Asserts
+LLVM_BASE_PATH=/home/swtv/clang-llvm-3.4.2
+LLVM_SRC_DIRECTORY_NAME=llvmsrc
+LLVM_BUILD_DIRECTORY_NAME=build
+LLVM_BUILD_MODE=.
 #LLVM_BUILD_MODE=Release+Asserts
 
-SRCS=tool.cpp configuration.cpp comut_utility.cpp mutant_entry.cpp\
+SRCS=tool.cpp comut_ast_consumer.cpp configuration.cpp comut_utility.cpp mutant_entry.cpp\
 		 mutation_operators/mutant_operator_template.cpp \
 		 information_visitor.cpp information_gatherer.cpp comut_context.cpp \
 		 symbol_table.cpp stmt_context.cpp mutant_database.cpp\
@@ -47,7 +47,7 @@ SRCS=tool.cpp configuration.cpp comut_utility.cpp mutant_entry.cpp\
 		 mutation_operators/olsn.cpp mutation_operators/orsn.cpp \
 		 mutation_operators/orbn.cpp
   
-OBJS=tool.o configuration.o comut_utility.o symbol_table.o\
+OBJS=tool.o comut_ast_consumer.o configuration.o comut_utility.o symbol_table.o\
 		 mutant_entry.o mutant_database.o \
 		 stmt_context.o comut_context.o mutant_operator_template.o \
 		 information_visitor.o information_gatherer.o ssdl.o \
@@ -84,7 +84,7 @@ CLANGLIBS = \
 
 CXX=g++
 CXX_INCLUDE=-I$(LLVM_SRC_PATH)/include -I$(LLVM_BUILD_PATH)/include
-CXXFLAGS=$(CXX_INCLUDE) $(CLANG_BUILD_FLAGS) $(CLANGLIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual
+CXXFLAGS=$(CXX_INCLUDE) $(CLANG_BUILD_FLAGS) $(CLANGLIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl
 		
 all: $(TARGET)
 
