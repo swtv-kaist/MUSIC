@@ -53,13 +53,13 @@ void SCSR::GenerateGlobalMutants(Expr *e, ComutContext *context,
 
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	// All string literals from global list are distinct 
   // (filtered from InformationGatherer).
   for (auto it: *(context->getSymbolTable()->getGlobalStringLiteralList()))
   {
-  	string mutated_token{rewriter.ConvertToString(it)};
+  	string mutated_token{ConvertToString(it, context->comp_inst_->getLangOpts())};
 
     if (mutated_token.compare(token) != 0)
     {
@@ -79,14 +79,14 @@ void SCSR::GenerateLocalMutants(Expr *e, ComutContext *context,
 
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	if (!context->getStmtContext().IsInCurrentlyParsedFunctionRange(e))
 		return;
 
 	for (auto it: (*(context->getSymbolTable()->getLocalStringLiteralList()))[context->getFunctionId()])
 	{
-		string mutated_token = rewriter.ConvertToString(it);
+		string mutated_token = ConvertToString(it, context->comp_inst_->getLangOpts());
 
     // mutate if the literal is not the same as the token
     // and prevent duplicate if the literal is already in the cache

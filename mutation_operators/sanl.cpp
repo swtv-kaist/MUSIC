@@ -43,7 +43,7 @@ void SANL::Mutate(clang::Expr *e, ComutContext *context)
 	SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfStringLiteral(src_mgr, start_loc);
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 	
 	string mutated_token{token};
 	mutated_token.pop_back();

@@ -34,9 +34,9 @@ void OMMO::Mutate(clang::Expr *e, ComutContext *context)
 	if (!(uo = dyn_cast<UnaryOperator>(e)))
 		return;
 
-	if (uo->getOpcode() == UO_PostInc)  // x++
+	if (uo->getOpcode() == UO_PostDec)  // x--
 		GenerateMutantForPostDec(uo, context);
-	else  // ++x
+	else  // --x
 		GenerateMutantForPreDec(uo, context);
 }
 
@@ -51,17 +51,17 @@ void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(uo)};
+	string token{ConvertToString(uo, context->comp_inst_->getLangOpts())};
 
 	// generate --x
   uo->setOpcode(UO_PreDec);
-  string mutated_token = rewriter.ConvertToString(uo);
+  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // generate x++
   uo->setOpcode(UO_PostInc);
-  mutated_token = rewriter.ConvertToString(uo);
+  mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
   
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
@@ -78,17 +78,17 @@ void OMMO::GenerateMutantForPreDec(UnaryOperator *uo, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(uo)};
+	string token{ConvertToString(uo, context->comp_inst_->getLangOpts())};
 
 	// generate x--
   uo->setOpcode(UO_PostDec);
-  string mutated_token = rewriter.ConvertToString(uo);
+  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
  
  	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // generate --x
   uo->setOpcode(UO_PreDec);
-  mutated_token = rewriter.ConvertToString(uo);
+  mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 

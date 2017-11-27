@@ -48,7 +48,7 @@ void VGPF::Mutate(clang::Expr *e, ComutContext *context)
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	// cannot mutate variable in switch condition to a floating-type variable
   bool skip_float_vardecl = \

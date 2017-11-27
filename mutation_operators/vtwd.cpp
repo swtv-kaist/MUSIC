@@ -36,7 +36,7 @@ bool VTWD::CanMutate(clang::Expr *e, ComutContext *context)
 				 !stmt_context.IsInLhsOfAssignmentRange(e) &&
 				 !stmt_context.IsInAddressOpRange(e) &&
 				 !stmt_context.IsInUnaryIncrementDecrementRange(e) &&
-				 CanMutate(rewriter.ConvertToString(e), context);
+				 CanMutate(ConvertToString(e, context->comp_inst_->getLangOpts()), context);
 }
 
 
@@ -50,7 +50,7 @@ void VTWD::Mutate(clang::Expr *e, ComutContext *context)
 	rewriter.setSourceMgr(
 			context->comp_inst_->getSourceManager(),
 			context->comp_inst_->getLangOpts());
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	string mutated_token = "(" + token + "+1)";
 

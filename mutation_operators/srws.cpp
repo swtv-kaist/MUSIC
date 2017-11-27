@@ -42,7 +42,7 @@ void SRWS::Mutate(clang::Expr *e, ComutContext *context)
 
   Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	int first_non_whitespace = GetFirstNonWhitespaceIndex(token);
   int last_non_whitespace = GetLastNonWhitespaceIndex(token);

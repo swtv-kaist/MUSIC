@@ -1,14 +1,20 @@
 #include "../comut_utility.h"
 #include "vgsf.h"
 
+/* The domain for VGSF must be names of functions whose
+   function calls will be mutated. */
 bool VGSF::ValidateDomain(const std::set<std::string> &domain)
 {
-	return domain.empty();
+	return true;
 }
 
 bool VGSF::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	for (auto e: range)
+    if (!IsValidVariableName(e))
+      return false;
+
+  return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -22,6 +28,14 @@ bool VGSF::CanMutate(clang::Expr *e, ComutContext *context)
     SourceLocation end_loc = ce->getRParenLoc();
     end_loc = end_loc.getLocWithOffset(1);
 
+    FunctionDecl *fd = ce->getDirectCallee();
+    if (!fd)
+      return false;
+
+    if (!domain_.empty() && 
+        !IsStringElementOfSet(fd->getNameAsString(), domain_))
+      return false;
+
     // Return True if expr is in mutation range, NOT inside enum decl
     // and is scalar type.
 		return (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
@@ -31,8 +45,6 @@ bool VGSF::CanMutate(clang::Expr *e, ComutContext *context)
 
 	return false;
 }
-
-
 
 void VGSF::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -50,7 +62,7 @@ void VGSF::Mutate(clang::Expr *e, ComutContext *context)
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	// cannot mutate variable in switch condition to a floating-type variable
   bool skip_float_vardecl = \
@@ -60,11 +72,14 @@ void VGSF::Mutate(clang::Expr *e, ComutContext *context)
   {
   	if (!(vardecl->getLocStart() < start_loc))
   		break;
+
+    string mutated_token{GetVarDeclName(vardecl)};
+
+    if (!range_.empty() && !IsStringElementOfSet(mutated_token, range_))
+      continue;
   	
   	if (skip_float_vardecl && IsVarDeclFloating(vardecl))
       continue;
-
-    string mutated_token{GetVarDeclName(vardecl)};
 
     if (token.compare(mutated_token) != 0)
     {

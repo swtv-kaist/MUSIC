@@ -50,7 +50,7 @@ void VLPF::Mutate(clang::Expr *e, ComutContext *context)
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	// get all variable declaration that VLSR can mutate this expr to.
   VarDeclList range(
@@ -82,7 +82,7 @@ void VLPF::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
   rewriter.setSourceMgr(context->comp_inst_->getSourceManager(), 
                         context->comp_inst_->getLangOpts());
 
-  string token{rewriter.ConvertToString(e)};
+  string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
   
   // cannot mutate variable in switch condition to a floating-type variable
   bool skip_float_vardecl = \

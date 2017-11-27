@@ -51,17 +51,17 @@ void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(uo)};
+	string token{ConvertToString(uo, context->comp_inst_->getLangOpts())};
 
 	// generate ++x
   uo->setOpcode(UO_PreInc);
-  string mutated_token = rewriter.ConvertToString(uo);
+  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // generate x--
   uo->setOpcode(UO_PostDec);
-  mutated_token = rewriter.ConvertToString(uo);
+  mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
@@ -78,17 +78,17 @@ void OPPO::GenerateMutantForPreInc(UnaryOperator *uo, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(uo)};
+	string token{ConvertToString(uo, context->comp_inst_->getLangOpts())};
 
 	// generate x++
   uo->setOpcode(UO_PostInc);
-  string mutated_token = rewriter.ConvertToString(uo);
+  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
   
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // generate --x
   uo->setOpcode(UO_PreDec);
-  mutated_token = rewriter.ConvertToString(uo);
+  mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 

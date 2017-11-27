@@ -3,12 +3,24 @@
 
 bool VGSR::ValidateDomain(const std::set<std::string> &domain)
 {
-	return domain.empty();
+  for (auto e: domain)
+    if (!IsValidVariableName(e))
+      return false;
+
+  return true;
+
+	// return domain.empty();
 }
 
 bool VGSR::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+  for (auto e: range)
+    if (!IsValidVariableName(e))
+      return false;
+
+  return true;
+
+	// return range.empty();
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -21,14 +33,21 @@ bool VGSR::CanMutate(clang::Expr *e, ComutContext *context)
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
+  SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
+
+  string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
+  bool is_in_domain = domain_.empty() ? true : 
+                      IsStringElementOfSet(token, domain_);
+
 	// VGSR can mutate this expression only if it is a scalar expression
 	// inside mutation range and NOT inside array decl size or enum declaration
 	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
 				 !stmt_context.IsInArrayDeclSize() &&
-				 !stmt_context.IsInEnumDecl();
+				 !stmt_context.IsInEnumDecl() &&
+         is_in_domain;
 }
-
-
 
 void VGSR::Mutate(clang::Expr *e, ComutContext *context)
 {
@@ -39,7 +58,7 @@ void VGSR::Mutate(clang::Expr *e, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 	StmtContext &stmt_context = context->getStmtContext();
 
 	// cannot mutate variable in switch condition to a floating-type variable
@@ -50,16 +69,21 @@ void VGSR::Mutate(clang::Expr *e, ComutContext *context)
 
   for (auto vardecl: *(context->getSymbolTable()->getGlobalScalarVarDeclList()))
   {
+    // The rest of loop are VarDecl declared after current point of parsing.
   	if (!(vardecl->getLocStart() < start_loc))
-  		break; 
+  		break;
+
+    string mutated_token{GetVarDeclName(vardecl)};
+
+    // Skip if range is specified and this VarDecl is not in range.
+    if (!range_.empty() && !IsStringElementOfSet(mutated_token, range_))
+      continue; 
 
   	if (skip_const_vardecl && IsVarDeclConst(vardecl)) 
       continue;   
 
     if (skip_float_vardecl && IsVarDeclFloating(vardecl))
       continue;
-
-    string mutated_token{GetVarDeclName(vardecl)};
 
     if (token.compare(mutated_token) != 0)
     {

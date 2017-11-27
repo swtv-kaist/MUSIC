@@ -17,6 +17,28 @@ bool SSDL::ValidateRange(const set<string> &range)
   return false;
 }
 
+const Stmt *GetSecondLevelParent(Stmt *s, CompilerInstance *comp_inst)
+{
+  const Stmt* stmt_ptr = s;
+
+  for (int i = 0; i < 2; ++i)
+  {
+    //get parents
+    const auto& parent_stmt = comp_inst->getASTContext().getParents(*stmt_ptr);
+
+    if (parent_stmt.empty()) {
+      return nullptr;
+    }
+
+    stmt_ptr = parent_stmt[0].get<Stmt>();
+   
+    if (!stmt_ptr)
+      return nullptr;
+  }
+
+  return stmt_ptr;
+}
+
 bool SSDL::CanMutate(Stmt *s, ComutContext *context)
 {
   // Do NOT delete declaration statement.
@@ -35,8 +57,10 @@ bool SSDL::CanMutate(Stmt *s, ComutContext *context)
 
   auto c = cast<CompoundStmt>(parent);
 
+  const Stmt *second_level_parent = GetSecondLevelParent(s, context->comp_inst_);
+
   // Do NOT delete last stmt of a StmtExpr
-  if (context->getStmtContext().IsInStmtExpr())
+  if (second_level_parent && isa<StmtExpr>(second_level_parent))
   {
     // find the a child stmt of parent that match 
     // the parameter stmt s's start and end locations
@@ -84,7 +108,7 @@ void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(s)};
+	string token{ConvertToString(s, context->comp_inst_->getLangOpts())};
 	SourceLocation start_loc = s->getLocStart();
 	SourceLocation end_loc = GetLocationAfterSemicolon(
     src_mgr, GetEndLocOfStmt(s->getLocEnd(), context->comp_inst_));
@@ -215,7 +239,7 @@ void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, ComutContext *context)
   																	 context->label_to_gotolist_map_))
     return;
 
-  string token{rewriter.ConvertToString(c)};
+  string token{ConvertToString(c, context->comp_inst_->getLangOpts())};
   
   // make replacing token
   string mutated_token{"{"};

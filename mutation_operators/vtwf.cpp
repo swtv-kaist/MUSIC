@@ -49,7 +49,7 @@ void VTWF::Mutate(clang::Expr *e, ComutContext *context)
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 	string mutated_token = "(" + token + "+1)";
 
 	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
