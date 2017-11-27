@@ -91,7 +91,8 @@ CompilerInstance* MakeCompilerInstance(char *filename)
 
   // Set target platform options 
   // Initialize target info with the default triple for our platform.
-  TargetOptions *TO = new TargetOptions();
+  // TargetOptions *TO = new TargetOptions();
+  shared_ptr<TargetOptions> TO(new TargetOptions());
   TO->Triple = llvm::sys::getDefaultTargetTriple();
   TargetInfo *TI = TargetInfo::CreateTargetInfo(TheCompInst->getDiagnostics(), 
                                                 TO);
@@ -107,19 +108,19 @@ CompilerInstance* MakeCompilerInstance(char *filename)
   SourceManager &SourceMgr = TheCompInst->getSourceManager();
   
   // Prreprocessor runs within a single source file
-  TheCompInst->createPreprocessor();
+  TheCompInst->createPreprocessor(TU_Complete);
   
   // ASTContext holds long-lived AST nodes (such as types and decls) .
   TheCompInst->createASTContext();
 
   // Enable HeaderSearch option
-  llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> hso( 
-      new HeaderSearchOptions());
-  HeaderSearch headerSearch(hso,
-                            TheCompInst->getFileManager(),
+  // llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> hso( 
+      // new HeaderSearchOptions());
+
+  shared_ptr<HeaderSearchOptions> hso(new HeaderSearchOptions());
+  HeaderSearch headerSearch(hso, SourceMgr,
                             TheCompInst->getDiagnostics(),
-                            TheCompInst->getLangOpts(),
-                            TI);
+                            TheCompInst->getLangOpts(), TI);
 
   // <Warning!!> -- Platform Specific Code lives here
   // This depends on A) that you're running linux and
@@ -145,12 +146,14 @@ CompilerInstance* MakeCompilerInstance(char *filename)
 
   InitializePreprocessor(TheCompInst->getPreprocessor(), 
                          TheCompInst->getPreprocessorOpts(),
-                         *hso,
+                         TheCompInst->getPCHContainerReader(),
                          TheCompInst->getFrontendOpts());
 
   // Set the main file Handled by the source manager to the input file.
   const FileEntry *FileIn = FileMgr.getFile(filename);
-  SourceMgr.createMainFileID(FileIn);
+  FileID FileId = SourceMgr.createFileID(FileIn, SourceLocation(), SrcMgr::C_User);
+  SourceMgr.setMainFileID(FileId);
+  // SourceMgr.createMainFileID(FileIn);
   
   // Inform Diagnostics that processing of a source file is beginning. 
   TheCompInst->getDiagnosticClient().BeginSourceFile(

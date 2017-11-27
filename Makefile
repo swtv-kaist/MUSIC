@@ -1,13 +1,13 @@
-#PARAMETERS
-LLVM_BASE_PATH=/home/swtv/clang-llvm-3.4.2
-LLVM_SRC_DIRECTORY_NAME=llvmsrc
-LLVM_BUILD_DIRECTORY_NAME=build
-LLVM_BUILD_MODE=.
-#LLVM_BUILD_MODE=Release+Asserts
+# Edit these variables based on where you put your llvm source file
+# and build file.
+LLVM_SRC_PATH := $$HOME/llvm
+LLVM_BUILD_PATH := $$HOME/build-clang
+LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 
-SRCS=tool.cpp comut_ast_consumer.cpp configuration.cpp comut_utility.cpp mutant_entry.cpp\
+SRCS=tool.cpp configuration.cpp comut_utility.cpp mutant_entry.cpp\
 		 mutation_operators/mutant_operator_template.cpp \
-		 information_visitor.cpp information_gatherer.cpp comut_context.cpp \
+		 information_visitor.cpp information_gatherer.cpp \
+		 comut_context.cpp comut_ast_consumer.cpp \
 		 symbol_table.cpp stmt_context.cpp mutant_database.cpp\
 		 mutation_operators/ssdl.cpp mutation_operators/orrn.cpp \
 		 mutation_operators/vtwf.cpp mutation_operators/crcr.cpp \
@@ -47,10 +47,11 @@ SRCS=tool.cpp comut_ast_consumer.cpp configuration.cpp comut_utility.cpp mutant_
 		 mutation_operators/olsn.cpp mutation_operators/orsn.cpp \
 		 mutation_operators/orbn.cpp
   
-OBJS=tool.o comut_ast_consumer.o configuration.o comut_utility.o symbol_table.o\
+OBJS=tool.o configuration.o comut_utility.o symbol_table.o\
 		 mutant_entry.o mutant_database.o \
 		 stmt_context.o comut_context.o mutant_operator_template.o \
-		 information_visitor.o information_gatherer.o ssdl.o \
+		 information_visitor.o information_gatherer.o \
+		 comut_ast_consumer.o ssdl.o \
 		 orrn.o vtwf.o crcr.o sanl.o srws.o scsr.o vlsf.o vgsf.o \
 		 vltf.o vgtf.o vlpf.o vgpf.o vgsr.o vlsr.o vgar.o vlar.o \
 		 vgtr.o vltr.o vgpr.o vlpr.o vtwd.o vscr.o cgcr.o clcr.o \
@@ -64,27 +65,28 @@ OBJS=tool.o comut_ast_consumer.o configuration.o comut_utility.o symbol_table.o\
 TARGET=	tool
 
 ################
-LLVM_SRC_PATH=$(LLVM_BASE_PATH)/$(LLVM_SRC_DIRECTORY_NAME)
-LLVM_BUILD_PATH=$(LLVM_BASE_PATH)/$(LLVM_BUILD_DIRECTORY_NAME)
-
-LLVM_BIN_PATH = $(LLVM_BUILD_PATH)/$(LLVM_BUILD_MODE)/bin
-LLVM_LIBS=core mc all
-LLVM_CONFIG_COMMAND = $(LLVM_BIN_PATH)/llvm-config  \
+LLVM_LIBS := core mc all
+LLVM_CONFIG_COMMAND := $(LLVM_BIN_PATH)/llvm-config  \
 					  --ldflags --libs $(LLVM_LIBS)
-CLANG_BUILD_FLAGS = -I$(LLVM_SRC_PATH)/tools/clang/include \
+CLANG_BUILD_FLAGS := -I$(LLVM_SRC_PATH)/tools/clang/include \
 					-I$(LLVM_BUILD_PATH)/tools/clang/include
 
-CLANGLIBS = \
+CLANG_LIBS := \
 	-lclangFrontendTool -lclangFrontend -lclangDriver \
 	-lclangSerialization -lclangCodeGen -lclangParse \
 	-lclangSema -lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore \
-	-lclangAnalysis -lclangARCMigrate -lclangRewriteCore -lclangRewriteFrontend \
-	-lclangEdit -lclangAST -lclangLex -lclangBasic
+	-lclangAnalysis -lclangARCMigrate -lclangRewrite \
+	-lclangRewriteFrontend -lclangEdit -lclangAST \
+	-lclangLex -lclangBasic -pthread
 
-CXX=g++
-CXX_INCLUDE=-I$(LLVM_SRC_PATH)/include -I$(LLVM_BUILD_PATH)/include
-CXXFLAGS=$(CXX_INCLUDE) $(CLANG_BUILD_FLAGS) $(CLANGLIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl
+CXX := g++
+
+CLANG_INCLUDES := \
+	-I$(LLVM_SRC_PATH)/include \
+	-I$(LLVM_BUILD_PATH)/include
+
+CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl
 		
 all: $(TARGET)
 
@@ -93,7 +95,7 @@ $(TARGET) : $(OBJS)
 
 tool.o : tool.cpp comut_utility.h configuration.h comut_context.h \
 	information_visitor.h information_gatherer.h symbol_table.h stmt_context.h \
-	mutant_entry.h mutant_database.h \
+	mutant_entry.h mutant_database.h all_mutant_operators.h comut_ast_consumer.h \
 	comut_context.h mutation_operators/mutant_operator_template.h \
 	mutation_operators/expr_mutant_operator.h mutation_operators/stmt_mutant_operator.h \
 	mutation_operators/ssdl.h mutation_operators/orrn.h mutation_operators/vtwf.h \
@@ -120,7 +122,7 @@ tool.o : tool.cpp comut_utility.h configuration.h comut_context.h \
 	mutation_operators/oaan.h mutation_operators/oarn.h mutation_operators/oabn.h \
 	mutation_operators/oasn.h mutation_operators/olan.h mutation_operators/oran.h \
 	mutation_operators/olbn.h mutation_operators/olsn.h mutation_operators/orsn.h \
-	mutation_operators/orbn.h
+	mutation_operators/orbn.h 
 	$(CXX) $(CXXFLAGS) -c tool.cpp
 
 configuration.o : configuration.h configuration.cpp
@@ -130,11 +132,11 @@ comut_utility.o : comut_utility.h comut_utility.cpp mutant_database.h
 	$(CXX) $(CXXFLAGS) -c comut_utility.cpp
 
 information_visitor.o : information_visitor.h information_visitor.cpp \
-	comut_context.h mutant_operator_holder.h comut_utility.h
+	comut_context.h comut_utility.h
 	$(CXX) $(CXXFLAGS) -c information_visitor.cpp
 
 information_gatherer.o : information_gatherer.h information_gatherer.cpp \
-	mutant_operator_holder.h comut_context.h information_visitor.h
+	comut_context.h information_visitor.h
 	$(CXX) $(CXXFLAGS) -c information_gatherer.cpp
 
 symbol_table.o: symbol_table.h symbol_table.cpp 
@@ -154,8 +156,14 @@ comut_context.o : comut_context.h comut_context.cpp configuration.h \
 	symbol_table.h stmt_context.h
 	$(CXX) $(CXXFLAGS) -c comut_context.cpp
 
-mutant_operator_template.o : mutation_operators/mutant_operator_template.h mutation_operators/mutant_operator_template.cpp comut_utility.h
+mutant_operator_template.o : mutation_operators/mutant_operator_template.h \
+	mutation_operators/mutant_operator_template.cpp comut_utility.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/mutant_operator_template.cpp
+
+comut_ast_consumer.o: comut_ast_consumer.h comut_ast_consumer.cpp \
+	mutation_operators/expr_mutant_operator.h mutation_operators/stmt_mutant_operator.h \
+	comut_context.h
+	$(CXX) $(CXXFLAGS) -c comut_ast_consumer.cpp
 
 ssdl.o : mutation_operators/ssdl.h mutation_operators/ssdl.cpp \
 	mutation_operators/stmt_mutant_operator.h comut_utility.h \
