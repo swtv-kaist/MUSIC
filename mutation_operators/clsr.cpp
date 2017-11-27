@@ -3,12 +3,16 @@
 
 bool CLSR::ValidateDomain(const std::set<std::string> &domain)
 {
-	return domain.empty();
+	for (auto e: domain)
+    if (!IsValidVariableName(e))
+      return false;
+
+  return true;
 }
 
 bool CLSR::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -21,6 +25,14 @@ bool CLSR::CanMutate(clang::Expr *e, ComutContext *context)
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
+  SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
+
+  string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
+  bool is_in_domain = domain_.empty() ? true : 
+                      IsStringElementOfSet(token, domain_);
+
 	// CLSR can mutate scalar-type Declaration Reference Expression
 	// inside mutation range, outside enum declaration, array decl size
 	// (vulnerable to different uncompilable cases) and outside 
@@ -32,7 +44,8 @@ bool CLSR::CanMutate(clang::Expr *e, ComutContext *context)
 				 !stmt_context.IsInLhsOfAssignmentRange(e) &&
 				 !stmt_context.IsInUnaryIncrementDecrementRange(e) &&
 				 !stmt_context.IsInAddressOpRange(e) &&
-				 stmt_context.IsInCurrentlyParsedFunctionRange(e);
+				 stmt_context.IsInCurrentlyParsedFunctionRange(e) &&
+         is_in_domain;
 }
 
 void CLSR::Mutate(clang::Expr *e, ComutContext *context)
@@ -44,7 +57,7 @@ void CLSR::Mutate(clang::Expr *e, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	// cannot mutate the variable in switch condition or 
   // array subscript to a floating-type variable
@@ -55,10 +68,14 @@ void CLSR::Mutate(clang::Expr *e, ComutContext *context)
 
   for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->getFunctionId()])
   {
-  	if (skip_float_literal && ExprIsFloat(it))
-              continue;
+    string mutated_token{
+        ConvertToString(it, context->comp_inst_->getLangOpts())};
 
-    string mutated_token{rewriter.ConvertToString(it)};
+    if (!range_.empty() && !IsStringElementOfSet(mutated_token, range_))
+      continue;
+
+  	if (skip_float_literal && ExprIsFloat(it))
+      continue;
 
     if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
     	mutated_token = ConvertCharStringToIntString(mutated_token);

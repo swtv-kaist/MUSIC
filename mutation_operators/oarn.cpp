@@ -92,8 +92,8 @@ void OARN::Mutate(clang::Expr *e, ComutContext *context)
 	SourceLocation end_of_expr = GetEndLocOfExpr(e, context->comp_inst_);
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
-	string lhs = rewriter.ConvertToString(bo->getLHS());
-	string rhs = rewriter.ConvertToString(bo->getRHS());
+	string lhs = ConvertToString(bo->getLHS(), context->comp_inst_->getLangOpts());
+	string rhs = ConvertToString(bo->getRHS(), context->comp_inst_->getLangOpts());
 
 	for (auto mutated_token: range_)
 		if (token.compare(mutated_token) != 0)

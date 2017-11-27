@@ -41,11 +41,11 @@ void CLCR::Mutate(clang::Expr *e, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	// if token is char, then convert to int string for later comparison
 	// to avoid mutating to same value constant.
-	string int_string{rewriter.ConvertToString(e)};
+	string int_string{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
   if (int_string.front() == '\'' && int_string.back() == '\'')
     int_string = ConvertCharStringToIntString(int_string);
@@ -63,7 +63,8 @@ void CLCR::Mutate(clang::Expr *e, ComutContext *context)
     if (skip_float_literal && ExprIsFloat(it))
     	continue;
 
-    string mutated_token{rewriter.ConvertToString(it)};
+    string mutated_token{
+        ConvertToString(it, context->comp_inst_->getLangOpts())};
 
     if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
     	mutated_token = ConvertCharStringToIntString(mutated_token);

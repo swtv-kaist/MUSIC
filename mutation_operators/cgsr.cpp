@@ -3,12 +3,16 @@
 
 bool CGSR::ValidateDomain(const std::set<std::string> &domain)
 {
-	return domain.empty();
+	for (auto e: domain)
+    if (!IsValidVariableName(e))
+      return false;
+
+  return true;
 }
 
 bool CGSR::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -21,6 +25,30 @@ bool CGSR::CanMutate(clang::Expr *e, ComutContext *context)
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
+  SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
+
+  string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
+  bool is_in_domain = domain_.empty() ? true : 
+                      IsStringElementOfSet(token, domain_);
+
+  if (GetLineNumber(src_mgr, start_loc) == 5924 &&
+      GetColumnNumber(src_mgr, start_loc) == 8 &&
+      GetLineNumber(src_mgr, end_loc) == 5924 &&
+      GetColumnNumber(src_mgr, end_loc) == 20)
+  {
+    PrintLocation(src_mgr, start_loc);
+    PrintLocation(src_mgr, end_loc);
+    PrintRange(src_mgr, *stmt_context.unary_inc_dec_range_);
+    cout << context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) << endl;
+    cout << stmt_context.IsInEnumDecl() << endl;
+    cout << stmt_context.IsInArrayDeclSize() << endl;
+    cout << stmt_context.IsInLhsOfAssignmentRange(e) << endl;
+    cout << stmt_context.IsInUnaryIncrementDecrementRange(e) << endl;
+    cout << stmt_context.IsInAddressOpRange(e) << endl;
+  }
+
 	// CGSR can mutate scalar-type Declaration Reference Expression
 	// inside mutation range, outside enum declaration, array decl size
 	// (vulnerable to different uncompilable cases) and outside 
@@ -31,7 +59,7 @@ bool CGSR::CanMutate(clang::Expr *e, ComutContext *context)
 				 !stmt_context.IsInArrayDeclSize() &&
 				 !stmt_context.IsInLhsOfAssignmentRange(e) &&
 				 !stmt_context.IsInUnaryIncrementDecrementRange(e) &&
-				 !stmt_context.IsInAddressOpRange(e);
+				 !stmt_context.IsInAddressOpRange(e) && is_in_domain;
 }
 
 void CGSR::Mutate(clang::Expr *e, ComutContext *context)
@@ -42,22 +70,25 @@ void CGSR::Mutate(clang::Expr *e, ComutContext *context)
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
+  StmtContext &stmt_context = context->getStmtContext();
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
 	// cannot mutate the variable in switch condition or 
   // array subscript to a floating-type variable
-  StmtContext &stmt_context = context->getStmtContext();
   bool skip_float_literal = stmt_context.IsInArraySubscriptRange(e) ||
                             stmt_context.IsInSwitchStmtConditionRange(e) ||
                             stmt_context.IsInSwitchCaseRange(e);
 
   for (auto it: *(context->getSymbolTable()->getGlobalScalarConstantList()))
   {
-  	if (skip_float_literal && ExprIsFloat(it))
+    string mutated_token{ConvertToString(it, context->comp_inst_->getLangOpts())};
+
+    if (!range_.empty() && !IsStringElementOfSet(mutated_token, range_))
       continue;
 
-    string mutated_token{rewriter.ConvertToString(it)};
+  	if (skip_float_literal && ExprIsFloat(it))
+      continue;
 
     // convert to int value if it is a char literal
 	  if (mutated_token.front() == '\'' && mutated_token.back() == '\'')

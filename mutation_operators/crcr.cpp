@@ -53,7 +53,7 @@ void CRCR::Mutate(clang::Expr *e, ComutContext *context)
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	string token{rewriter.ConvertToString(e)};
+	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
@@ -63,7 +63,9 @@ void CRCR::Mutate(clang::Expr *e, ComutContext *context)
 		{
 			string mutated_token{"(" + num + ")"};
 
-			context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+			context->mutant_database_.AddMutantEntry(
+					name_, start_loc, end_loc, token, mutated_token, 
+				  context->getStmtContext().getProteumStyleLineNum());
 		}
 
 		return;
@@ -75,7 +77,9 @@ void CRCR::Mutate(clang::Expr *e, ComutContext *context)
 		{
 			string mutated_token{"(" + num + ")"};
 
-			context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+			context->mutant_database_.AddMutantEntry(
+					name_, start_loc, end_loc, token, mutated_token, 
+					context->getStmtContext().getProteumStyleLineNum());
 		}
 
 		return;

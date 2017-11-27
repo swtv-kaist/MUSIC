@@ -87,7 +87,7 @@ void OIPM::Mutate(clang::Expr *e, ComutContext *context)
 	Rewriter rewriter;
 	rewriter.setSourceMgr(context->comp_inst_->getSourceManager(), 
 														context->comp_inst_->getLangOpts());
-	string token{rewriter.ConvertToString(uo)};
+	string token{ConvertToString(uo, context->comp_inst_->getLangOpts())};
 
 	Expr *first_non_deref_subexpr = cast<Expr>(uo);
 

@@ -60,7 +60,7 @@ void OLNG::GenerateMutantByNegation(Expr *e, ComutContext *context)
   rewriter.setSourceMgr(
   		context->comp_inst_->getSourceManager(),
   		context->comp_inst_->getLangOpts());
-  string token{rewriter.ConvertToString(e)};    
+  string token{ConvertToString(e, context->comp_inst_->getLangOpts())};    
 
   string mutated_token = "!(" + token + ")";
 
