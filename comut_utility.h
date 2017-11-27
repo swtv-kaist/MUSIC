@@ -38,6 +38,8 @@
 using namespace clang;
 using namespace std;
 
+string ConvertToString(Stmt *from, LangOptions &LangOpts);
+
 // Print out each element of a string set in a single line.
 void PrintStringSet(std::set<std::string> &string_set);
 
@@ -59,7 +61,9 @@ string ConvertHexaStringToIntString(const string hexa_str);
 
 string ConvertCharStringToIntString(const string s);
 
-bool StringIsInVector(string s, vector<string> &string_vector);
+bool IsStringElementOfVector(string s, vector<string> &string_vector);
+
+bool IsStringElementOfSet(string s, set<string> &set);
 
 bool ConvertStringToInt(string s, int &n);
 
@@ -72,6 +76,8 @@ bool ConvertStringToInt(string s, int &n);
           position after the whitespace
 */
 bool IsWhitespace(const string &s, int &pos);
+
+bool IsValidVariableName(string s);
 
 /**
   @param  s string literal from input file

@@ -13,7 +13,7 @@
 
 class StmtContext
 {
-private:
+public:
 	// initialize to 0
   int proteumstyle_stmt_start_line_num_;
 

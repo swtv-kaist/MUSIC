@@ -12,6 +12,7 @@
 #include <set>
 #include <cctype>
 #include <limits.h>
+#include <time.h>
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -22,10 +23,12 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -482,7 +485,7 @@ void HandleInputArgument(string input, UserInputAnalyzingState &state,
       break;
 
     case UserInputAnalyzingState::kRsLine:
-      if (!ConvertStringToInt(input, line_num))
+      if (NumIsFloat(input) || !ConvertStringToInt(input, line_num))
       {
         PrintLineColNumberErrorMsg();
         exit(1);
@@ -498,13 +501,7 @@ void HandleInputArgument(string input, UserInputAnalyzingState &state,
       break;
 
     case UserInputAnalyzingState::kRsColumn:
-      if (!ConvertStringToInt(input, col_num))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      if (col_num <= 0)
+      if (NumIsFloat(input) || !ConvertStringToInt(input, col_num))
       {
         PrintLineColNumberErrorMsg();
         exit(1);
@@ -512,11 +509,19 @@ void HandleInputArgument(string input, UserInputAnalyzingState &state,
 
       *start_loc = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
                                             line_num, col_num);
+
+      if (col_num <= 0 || GetLineNumber(src_mgr, *start_loc) < line_num ||
+          GetColumnNumber(src_mgr, *start_loc) < col_num)
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
       state = UserInputAnalyzingState::kNonAOrBOption;
       break;
 
     case UserInputAnalyzingState::kReLine:
-      if (!ConvertStringToInt(input, line_num))
+      if (NumIsFloat(input) || !ConvertStringToInt(input, line_num))
       {
         PrintLineColNumberErrorMsg();
         exit(1);
@@ -532,13 +537,7 @@ void HandleInputArgument(string input, UserInputAnalyzingState &state,
       break;
 
     case UserInputAnalyzingState::kReColumn:
-      if (!ConvertStringToInt(input, col_num))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      if (col_num <= 0)
+      if (NumIsFloat(input) || !ConvertStringToInt(input, col_num))
       {
         PrintLineColNumberErrorMsg();
         exit(1);
@@ -546,11 +545,19 @@ void HandleInputArgument(string input, UserInputAnalyzingState &state,
 
       *end_loc = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
                                           line_num, col_num);
+
+      if (col_num <= 0 || GetLineNumber(src_mgr, *end_loc) < line_num ||
+          GetColumnNumber(src_mgr, *end_loc) < col_num)
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
       state = UserInputAnalyzingState::kNonAOrBOption;
       break;
 
     case UserInputAnalyzingState::kLimitNumOfMutant:
-      if (!ConvertStringToInt(input, limit))
+      if (NumIsFloat(input) || !ConvertStringToInt(input, limit))
       {
         cout << "Invalid input for -l option, must be an positive integer smaller than 2147483648\n";
         cout << "Usage: -l <max>\n";
@@ -587,13 +594,13 @@ void HandleInputArgument(string input, UserInputAnalyzingState &state,
 
     case UserInputAnalyzingState::kDomainOfMutantOperator:
       SplitStringIntoSet(input, domain, string(","));
-      ValidateDomainOfMutantOperator(mutant_name, domain);
+      // ValidateDomainOfMutantOperator(mutant_name, domain);
       state = UserInputAnalyzingState::kNonAOptionAndMutantName;
       break;
 
     case UserInputAnalyzingState::kRangeOfMutantOperator:
       SplitStringIntoSet(input, range, string(","));
-      ValidateRangeOfMutantOperator(mutant_name, range);
+      // ValidateRangeOfMutantOperator(mutant_name, range);
       state = UserInputAnalyzingState::kNonAOrBOptionAndMutantName;
       break;
 
@@ -702,6 +709,8 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  srand(time(NULL));
+
   CompilerInstance *TheCompInst = MakeCompilerInstance(argv[1]);
   SourceManager &SourceMgr = TheCompInst->getSourceManager();
 
@@ -792,12 +801,16 @@ int main(int argc, char *argv[])
   // Parse the file to AST, registering our consumer as the AST consumer.
   ParseAST(sema);
 
+  //=================================================
+  //==================== OUTPUT =====================
+  //=================================================
   /* Open the file with mode TRUNC to create the file if not existed
   or delete content if existed. */
   ofstream out_mutDb(mutDbFilename.data(), ios::trunc);   
   out_mutDb.close();
 
   mutant_database.ExportAllEntries();
+  // mutant_database.WriteAllEntriesToDatabaseFile();
 
   return 0;
 }

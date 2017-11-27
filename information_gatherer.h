@@ -1,7 +1,6 @@
 #ifndef COMUT_INFORMATION_GATHERER_H_
 #define COMUT_INFORMATION_GATHERER_H_ 
 
-#include "mutant_operator_holder.h"
 #include "information_visitor.h"
 
 class InformationGatherer : public clang::ASTConsumer

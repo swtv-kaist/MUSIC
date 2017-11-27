@@ -186,7 +186,7 @@ void InformationVisitor::CollectVarDecl(VarDecl *vd)
 
 void InformationVisitor::CollectScalarConstant(Expr* e)
 {
-  string token{rewriter_.ConvertToString(e)};
+  string token{ConvertToString(e, comp_inst_->getLangOpts())};
 
   // convert to int value if it is a char literal
   if (token.front() == '\'' && token.back() == '\'')
@@ -219,7 +219,7 @@ void InformationVisitor::CollectScalarConstant(Expr* e)
 void InformationVisitor::CollectStringLiteral(Expr *e)
 {
   SourceLocation start_loc = e->getLocStart();
-  string string_literal{rewriter_.ConvertToString(e)};
+  string string_literal{ConvertToString(e, comp_inst_->getLangOpts())};
 
   if (LocationIsInRange(start_loc, *currently_parsed_function_range_))
   {
@@ -229,7 +229,8 @@ void InformationVisitor::CollectStringLiteral(Expr *e)
     auto it = local_stringliteral_list_.back().begin();
 
     while (it != local_stringliteral_list_.back().end() &&
-           string_literal.compare(rewriter_.ConvertToString(*it)) != 0)
+           string_literal.compare(
+               ConvertToString(*it, comp_inst_->getLangOpts())) != 0)
       ++it;
 
     if (it == local_stringliteral_list_.back().end())
@@ -241,7 +242,8 @@ void InformationVisitor::CollectStringLiteral(Expr *e)
     // Insert if global string vector does not contain this literal
     for (auto it: global_stringliteral_list_)
     {
-      if (string_literal.compare(rewriter_.ConvertToString(it)) == 0)
+      if (string_literal.compare(
+              ConvertToString(it, comp_inst_->getLangOpts())) == 0)
         return;
     }
 

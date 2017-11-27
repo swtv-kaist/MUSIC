@@ -70,7 +70,8 @@ bool ComutASTVisitor::CollectNonVtwdMutatableScalarRef(
       {
         if (ExprIsScalarReference(rhs))
         {
-          string reference_name{rewriter_.ConvertToString(rhs)};
+          string reference_name{
+              ConvertToString(rhs, comp_inst_->getLangOpts())};
 
           // if this scalar reference is mutatable then block it
           if (IsScalarRefMutatableByVtwd(reference_name))
@@ -83,7 +84,8 @@ bool ComutASTVisitor::CollectNonVtwdMutatableScalarRef(
 
         if (ExprIsScalarReference(lhs))
         {
-          string reference_name{rewriter_.ConvertToString(lhs)};
+          string reference_name{
+              ConvertToString(lhs, comp_inst_->getLangOpts())};
 
           // if this scalar reference is mutatable then block it
           if (IsScalarRefMutatableByVtwd(reference_name))
@@ -112,7 +114,8 @@ bool ComutASTVisitor::CollectNonVtwdMutatableScalarRef(
         {
           if (scalarref_excluded)
           {
-            string reference_name{rewriter_.ConvertToString(lhs)};
+            string reference_name{
+                ConvertToString(lhs, comp_inst_->getLangOpts())};
 
             // if this scalar reference is mutatable then block it
             if (IsScalarRefMutatableByVtwd(reference_name))
@@ -162,6 +165,9 @@ void ComutASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
 void ComutASTVisitor::HandleBinaryOperatorExpr(Expr *e)
 {
   BinaryOperator *bo = cast<BinaryOperator>(e);
+
+  // if (bo->getOpcode() == BO_Sub && ExprIsPointer(bo->getLHS()) && ExprIsPointer(bo->getRHS()))
+  //   cout << bo->getType().getAsString() << endl;
 
   // Retrieve the location and the operator of the expression
   string binary_operator = static_cast<string>(bo->getOpcodeStr());
@@ -422,6 +428,8 @@ bool ComutASTVisitor::VisitFieldDecl(clang::FieldDecl *fd)
 
 bool ComutASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 {
+  // cout << GetVarDeclName(vd) << " : " << vd->getType().getCanonicalType().getAsString() << endl;
+
   SourceLocation start_loc = vd->getLocStart();
   SourceLocation end_loc = vd->getLocEnd();
 

@@ -1,7 +1,15 @@
+#include <time.h>
+
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "comut_utility.h"
 #include "mutant_database.h"
+
+void GenerateRandomNumbers(set<int> &s, int desired_size, int cap)
+{
+  while (s.size() != desired_size)
+    s.insert(rand() % cap);
+}
 
 MutantDatabase::MutantDatabase(clang::CompilerInstance *comp_inst, 
                std::string input_filename, std::string output_dir)
@@ -63,9 +71,10 @@ void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start
   }
 }
 
-void MutantDatabase::WriteEntryToDatabaseFile(string mutant_name, const MutantEntry &entry)
+void MutantDatabase::WriteEntryToDatabaseFile(
+    string mutant_name, const MutantEntry &entry)
 {
-  // Open mutattion database file in APPEND mode (write to the end_loc of file)
+  // Open mutattion database file in APPEND mode
   ofstream mutant_db_file(database_filename_.data(), ios::app);
 
   // write input file name

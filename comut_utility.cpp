@@ -1,5 +1,15 @@
-#include "comut_utility.h"
 #include <iostream>
+
+#include "comut_utility.h"
+#include "clang/AST/PrettyPrinter.h"
+
+string ConvertToString(Stmt *from, LangOptions &LangOpts)
+{
+  string SStr;
+  llvm::raw_string_ostream S(SStr);
+  from->printPretty(S, 0, PrintingPolicy(LangOpts));
+  return S.str();
+}
 
 // Print out each element of a string set in a single line.
 void PrintStringSet(std::set<std::string> &string_set)
@@ -158,7 +168,7 @@ string ConvertCharStringToIntString(const string s)
   return s;
 }
 
-bool StringIsInVector(string s, vector<string> &string_vector)
+bool IsStringElementOfVector(string s, vector<string> &string_vector)
 {
   auto it = string_vector.begin();
 
@@ -167,6 +177,16 @@ bool StringIsInVector(string s, vector<string> &string_vector)
 
   // if the iterator reach the end_loc then the string is NOT in vector v
   return !(it == string_vector.end());
+}
+
+bool IsStringElementOfSet(string s, set<string> &string_set)
+{
+  auto it = string_set.begin();
+
+  while (it != string_set.end() && (*it).compare(s) != 0)
+    ++it;
+
+  return it != string_set.end();
 }
 
 bool ConvertStringToInt(string s, int &n)
@@ -219,6 +239,32 @@ bool IsWhitespace(const string &s, int &pos)
   }
 
   return false;
+}
+
+bool IsCharAlphabetic(char c)
+{
+  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+}
+
+bool IsCharNumeric(char c)
+{
+  return c >= '0' && c <= '9';
+}
+
+bool IsValidVariableName(string s)
+{
+  // First char has to be alphabetic or underscore
+  // String should not be empty
+  if ((!IsCharAlphabetic(s[0]) && s[0] != '_') ||
+      s.length() < 1)
+    return false;
+
+  // Variable name can only consists of alphabet, number and underscore.
+  for (char c: s)
+    if (!(IsCharAlphabetic(c) || IsCharNumeric(c) || c == '_'))
+      return false;
+
+  return true;
 }
 
 /**
@@ -973,7 +1019,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   }
   else if (isa<DeclRefExpr>(e) || isa<MemberExpr>(e))
   {
-    int length = rewriter.ConvertToString(e).length();
+    int length = ConvertToString(e, comp_inst->getLangOpts()).length();
     SourceLocation start_loc = e->getLocStart();
     ret = src_mgr.translateLineCol(
         src_mgr.getMainFileID(), 
