@@ -91,6 +91,8 @@ void SSDL::Mutate(Stmt *s, ComutContext *context)
 
 void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
 {
+  // cout << "DeleteStatement called\n";
+
 	// Do NOT delete declaration statement.
   // Deleting null statement causes equivalent mutants.
   if (isa<DeclStmt>(s) || isa<NullStmt>(s))
@@ -113,24 +115,32 @@ void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
 	SourceLocation end_loc = GetLocationAfterSemicolon(
     src_mgr, GetEndLocOfStmt(s->getLocEnd(), context->comp_inst_));
 
-	// make replacing token
+  // cout << "returned from GetLocationAfterSemicolon\n";
+
+  if (end_loc.isInvalid())
+  {
+    cout << "DeleteStatement: cannot get end loc of stmt at ";
+    PrintLocation(src_mgr, start_loc);
+    cout << start_loc.printToString(src_mgr) << endl;
+    cout << ConvertToString(s, context->comp_inst_->getLangOpts()) << endl;
+    return;
+  }
+
+	// make replacing token without changing the line or column of other
   string mutated_token{";"};
   mutated_token.append(
     GetLineNumber(src_mgr, end_loc) - GetLineNumber(src_mgr, start_loc),
 	  '\n');
-
-	if (end_loc.isInvalid())
-	{
-		cout << "DeleteStatement: cannot get end loc of stmt at";
-		PrintLocation(src_mgr, start_loc);
-	}
-	else if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
-					 NoUnremovableLabelInsideRange(src_mgr,
-					 															 SourceRange(start_loc, end_loc),
-					 															 context->label_to_gotolist_map_))
+	
+	if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+      NoUnremovableLabelInsideRange(src_mgr,
+      															SourceRange(start_loc, end_loc),
+      															context->label_to_gotolist_map_))
 	{
 		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 	}
+
+  // cout << "returning fron DeleteStatement\n";
 }
 
 // an unremovable label is a label defined inside range stmtRange,
@@ -141,19 +151,23 @@ bool SSDL::NoUnremovableLabelInsideRange(
 	SourceManager &src_mgr, SourceRange range, 
 	LabelStmtToGotoStmtListMap *label_map)
 {
-  for (auto element: *label_map)
+  auto it = label_map->begin();
+
+  for (; it != label_map->end(); ++it)
   {
+    // cout << "cp ssdl\n";
+
     SourceLocation loc = src_mgr.translateLineCol(
     	src_mgr.getMainFileID(),
-      element.first.first,
-      element.first.second);
+      it->first.first,
+      it->first.second);
 
     // check only those labels inside range
     if (LocationIsInRange(loc, range))
     {
       // check if this label is goto-ed from outside of the statement
       // if yes, then the label is unremovable, return False
-      for (auto e: element.second)  
+      for (auto e: it->second)  
       {   
         // the goto is outside of the statement
         if (!LocationIsInRange(e, range))  

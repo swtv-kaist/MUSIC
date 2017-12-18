@@ -732,16 +732,28 @@ confusing
 SourceLocation GetLocationAfterSemicolon(SourceManager &src_mgr, 
                                          SourceLocation loc)
 {
+  // cout << "cp GetLocationAfterSemicolon\n";
+  // PrintLocation(src_mgr, loc);
+  if (loc.isInvalid() || GetColumnNumber(src_mgr, loc) == 1)
+    return loc;
+  // cout << "passed\n";
+
   SourceLocation previous_loc = src_mgr.translateLineCol(
-    src_mgr.getMainFileID(),
-    GetLineNumber(src_mgr, loc),
-    GetColumnNumber(src_mgr, loc) - 1);
+      src_mgr.getMainFileID(),
+      GetLineNumber(src_mgr, loc),
+      GetColumnNumber(src_mgr, loc) - 1);
+
+  // cout << "done translate\n";
 
   if (*(src_mgr.getCharacterData(previous_loc)) == ';')
     return loc;
 
+  // cout << "cp1\n";
+
   if (*(src_mgr.getCharacterData(loc)) == ';')
     return loc.getLocWithOffset(1);
+
+  // cout << "cp2\n";
 
   return loc;
 }
@@ -869,6 +881,7 @@ SourceLocation GetEndLocOfStringLiteral(
   int line_num = GetLineNumber(src_mgr, start_loc);
   int col_num = GetColumnNumber(src_mgr, start_loc) + 1;
 
+  // cout << "cp GetEndLocOfStringLiteral\n";
   // Get the location right AFTER the first double quote
   SourceLocation ret = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
                                                 line_num, col_num);
@@ -898,6 +911,7 @@ SourceLocation GetEndLocOfConstantLiteral(
   int line_num = GetLineNumber(src_mgr, start_loc);
   int col_num = GetColumnNumber(src_mgr, start_loc);
 
+  // cout << "cp GetEndLocOfConstantLiteral\n";
   SourceLocation ret = src_mgr.translateLineCol(
       src_mgr.getMainFileID(), line_num, col_num);
 
@@ -995,8 +1009,64 @@ SourceLocation GetEndLocOfUnaryOpExpr(
 
 SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
 {
+  bool print = false;
+  int line = GetLineNumber(comp_inst->getSourceManager(), e->getLocStart());
+  if (false)
+    print = true;
+
+  SourceManager &src_mgr = comp_inst->getSourceManager();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(src_mgr, comp_inst->getLangOpts());
+  
+  // cout << "GetEndLocOfExpr: " << ConvertToString(e, comp_inst->getLangOpts()) << endl << endl;
+
+  // If this is macro, try the best to retrieve then end 
+  // loc in source code
+  if (e->getLocStart().isMacroID() && e->getLocEnd().isMacroID())
+  {
+    pair<SourceLocation, SourceLocation> expansionRange = 
+          rewriter.getSourceMgr().getImmediateExpansionRange(e->getLocEnd());
+    SourceLocation end_macro = Lexer::getLocForEndOfToken(src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, comp_inst->getLangOpts());
+    // cout << "macro: " << end_macro.printToString(src_mgr) << endl;
+
+    // Check whether it is a variable-typed or function-typed macro.
+    SourceLocation it_loc = end_macro;
+    while (*(src_mgr.getCharacterData(it_loc)) == ' ')
+      it_loc = it_loc.getLocWithOffset(1);
+
+     // Return end_macro if variable-typed. 
+    if (*(src_mgr.getCharacterData(it_loc)) != '(')
+      return end_macro;
+
+    int parenthesis_counter = 1;
+    it_loc = it_loc.getLocWithOffset(1);
+
+     // Find the matching close-parenthesis for this open-parenthesis. 
+    while (parenthesis_counter != 0)
+    {
+      if (*(src_mgr.getCharacterData(it_loc)) == '(')
+        parenthesis_counter++;
+
+      if (*(src_mgr.getCharacterData(it_loc)) == ')')
+        parenthesis_counter--;
+
+      it_loc = it_loc.getLocWithOffset(1);
+    }
+
+    if (GetLineNumber(src_mgr, it_loc) == 468)
+    {
+      cout << it_loc.printToString(src_mgr) << endl;
+      // exit(1);
+    }
+
+    return it_loc;
+  }
+
   if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
+  {
+    if (print) cout << "into unary\n";
     return GetEndLocOfUnaryOpExpr(uo, comp_inst);
+  }
 
   if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
     return GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts(), comp_inst);
@@ -1007,20 +1077,40 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
           uete->getArgumentExpr()->IgnoreImpCasts(), comp_inst);
 
   SourceLocation ret = e->getLocEnd();
-  SourceManager &src_mgr = comp_inst->getSourceManager();
-  Rewriter rewriter;
-  rewriter.setSourceMgr(src_mgr, comp_inst->getLangOpts());
+
+  if (print) cout << "cp 1\n";
 
   // classify expression and get end_loc location accordingly
   if (isa<ArraySubscriptExpr>(e))
   {
+    if (print) cout << "cp 2\n";
     ret = e->getLocEnd();
     ret = GetEndLocOfStmt(ret, comp_inst);
   }
+  else if (CallExpr *ce = dyn_cast<CallExpr>(e))
+  {
+    if (print) cout << "cp 3\n";
+    // getRParenLoc returns the location before the right parenthesis
+    ret = ce->getRParenLoc();
+
+    /* Handling macro. */
+    if (ret.isMacroID()) 
+    {
+      pair<SourceLocation, SourceLocation> expansionRange = 
+          rewriter.getSourceMgr().getImmediateExpansionRange(ret);
+
+      ret = expansionRange.second;
+    }
+
+    ret = ret.getLocWithOffset(1);
+  }
   else if (isa<DeclRefExpr>(e) || isa<MemberExpr>(e))
   {
+    if (print) cout << "cp 4\n";
     int length = ConvertToString(e, comp_inst->getLangOpts()).length();
     SourceLocation start_loc = e->getLocStart();
+
+    // cout << "cp GetEndLocOfExpr\n";
     ret = src_mgr.translateLineCol(
         src_mgr.getMainFileID(), 
         GetLineNumber(src_mgr, start_loc),
@@ -1030,31 +1120,61 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
             isa<FloatingLiteral>(e) || 
             isa<IntegerLiteral>(e))
   {
+    if (print) cout << "cp 5\n";
     ret = GetEndLocOfConstantLiteral(src_mgr, e->getLocStart());
   }
   else if (isa<CStyleCastExpr>(e))  // explicit cast
   {
+    if (print) cout << "cp 6\n";
     return GetEndLocOfExpr(
       cast<CStyleCastExpr>(e)->getSubExpr()->IgnoreImpCasts(),
       comp_inst);
   }
   else if (ParenExpr *pe = dyn_cast<ParenExpr>(e))
   {
+    if (print) cout << "cp 7\n";
     ret = pe->getRParen();
+
+    if (print && ret.isMacroID())
+    {
+      pair<SourceLocation, SourceLocation> expansionRange = 
+          rewriter.getSourceMgr().getImmediateExpansionRange(ret);
+      cout << expansionRange.first.printToString(src_mgr) << endl;
+      cout << expansionRange.second.printToString(src_mgr) << endl;
+      // cout << *(src_mgr.getCharacterData(expansionRange.second)) << endl;
+      SourceLocation end_macro = Lexer::getLocForEndOfToken(src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, comp_inst->getLangOpts());
+
+      cout << end_macro.printToString(src_mgr) << endl;
+
+      // if (src_mgr.getFileID(end_macro) == src_mgr.getMainFileID())
+      //   cout << std::string(src_mgr.getCharacterData(expansionRange.first),
+      //     src_mgr.getCharacterData(end_macro)-src_mgr.getCharacterData(expansionRange.first)) << endl;
+    }
+
     ret = ret.getLocWithOffset(1);
   }
   else if (isa<StringLiteral>(e))
   {
+    if (print) cout << "cp 8\n";
     ret = GetEndLocOfStringLiteral(src_mgr, e->getLocStart());
   }
   else 
   {
+    if (print) cout << "cp 9\n";
     ret = e->getLocEnd();
+    // cout << ConvertToString(e, comp_inst->getLangOpts()) << endl;
+    // ret.dump(src_mgr);
+    // cout << GetLineNumber(src_mgr, ret) << "=:=" << GetColumnNumber(src_mgr, ret) - 1 << endl;
     ret = GetEndLocOfStmt(ret, comp_inst);
 
     if (ret.isInvalid())
       ret = e->getLocEnd();
 
+    if (GetColumnNumber(src_mgr, ret) == 1)
+      goto done;
+
+    // cout << "cp GetEndLocOfExpr2\n";
+    // cout << GetLineNumber(src_mgr, ret) << ":" << GetColumnNumber(src_mgr, ret) - 1 << endl;
     // GetEndLocOfStmt sometimes returns location after semicolon
     SourceLocation prevLoc = src_mgr.translateLineCol(
         src_mgr.getMainFileID(),
@@ -1065,6 +1185,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
       ret = prevLoc;
   }
 
+  done:
   return ret;
 }
 

@@ -38,7 +38,7 @@ public:
 
 	// getter
 	int getProteumStyleLineNum();
-	const clang::SourceRange* const getLhsOfAssignmentRange();
+	clang::SourceRange* getLhsOfAssignmentRange();
 
 	// setters
 	void setProteumStyleLineNum(int num);

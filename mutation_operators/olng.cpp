@@ -56,6 +56,9 @@ void OLNG::GenerateMutantByNegation(Expr *e, ComutContext *context)
   SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 
 
+  // cout << "OLNG end loc is: ";
+  // PrintLocation(context->comp_inst_->getSourceManager(), end_loc);
+
   Rewriter rewriter;
   rewriter.setSourceMgr(
   		context->comp_inst_->getSourceManager(),
