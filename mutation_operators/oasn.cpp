@@ -43,15 +43,11 @@ void OASN::setRange(std::set<std::string> &range)
 
 bool OASN::CanMutate(clang::Expr *e, ComutContext *context)
 {
-	// cout << name_ << " is mutating?\n";
-	
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
 		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-
-		// cout << "cp oasn\n";
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -86,8 +82,6 @@ void OASN::Mutate(clang::Expr *e, ComutContext *context)
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-	
-	// cout << "cp oasn 2\n";
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),

@@ -9,7 +9,6 @@ MutantEntry::MutantEntry(
 start_location_(start_loc), end_location_before_mutation_(end_loc),
 proteum_style_line_num_(proteum_style_line_num), src_mgr_(src_mgr)
 {
-  // cout << "cp MutantEntry\n";
   end_location_after_mutation_ = src_mgr.translateLineCol(
       src_mgr.getMainFileID(), GetLineNumber(src_mgr, start_loc),
       GetColumnNumber(src_mgr, start_loc) + \

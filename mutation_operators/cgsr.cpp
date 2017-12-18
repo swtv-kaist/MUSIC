@@ -33,6 +33,22 @@ bool CGSR::CanMutate(clang::Expr *e, ComutContext *context)
   bool is_in_domain = domain_.empty() ? true : 
                       IsStringElementOfSet(token, domain_);
 
+  if (GetLineNumber(src_mgr, start_loc) == 5924 &&
+      GetColumnNumber(src_mgr, start_loc) == 8 &&
+      GetLineNumber(src_mgr, end_loc) == 5924 &&
+      GetColumnNumber(src_mgr, end_loc) == 20)
+  {
+    PrintLocation(src_mgr, start_loc);
+    PrintLocation(src_mgr, end_loc);
+    PrintRange(src_mgr, *stmt_context.unary_inc_dec_range_);
+    cout << context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) << endl;
+    cout << stmt_context.IsInEnumDecl() << endl;
+    cout << stmt_context.IsInArrayDeclSize() << endl;
+    cout << stmt_context.IsInLhsOfAssignmentRange(e) << endl;
+    cout << stmt_context.IsInUnaryIncrementDecrementRange(e) << endl;
+    cout << stmt_context.IsInAddressOpRange(e) << endl;
+  }
+
 	// CGSR can mutate scalar-type Declaration Reference Expression
 	// inside mutation range, outside enum declaration, array decl size
 	// (vulnerable to different uncompilable cases) and outside 

@@ -25,10 +25,6 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = is->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-
-		if (start_loc.isInvalid())
-			goto invalid_start_loc;
-
     end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (WhileStmt *ws = dyn_cast<WhileStmt>(s))
@@ -39,10 +35,6 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = ws->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-
-		if (start_loc.isInvalid())
-			goto invalid_start_loc;
-
     end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (DoStmt *ds = dyn_cast<DoStmt>(s))
@@ -53,10 +45,6 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = ds->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-
-		if (start_loc.isInvalid())
-			goto invalid_start_loc;
-
     end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (ForStmt *fs = dyn_cast<ForStmt>(s))
@@ -67,10 +55,6 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = fs->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-
-		if (start_loc.isInvalid())
-			goto invalid_start_loc;
-
     end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else if (
@@ -82,22 +66,12 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 
 		condition = aco->getCond()->IgnoreImpCasts();
 		start_loc = condition->getLocStart();
-
-		if (start_loc.isInvalid())
-			goto invalid_start_loc;
-
     end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
 	}
 	else
 		return false;
 
 	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
-
-	invalid_start_loc:
-	cout << "OCNG: cannot retrieve start loc for condition of ";
-	ConvertToString(s, context->comp_inst_->getLangOpts());
-	cout << endl;
-	return false;
 }
 
 void OCNG::Mutate(clang::Stmt *s, ComutContext *context)

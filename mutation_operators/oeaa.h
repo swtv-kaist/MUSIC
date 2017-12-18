@@ -28,7 +28,7 @@ private:
 	bool only_plus_;
 
 	bool CanMutate(clang::BinaryOperator * const bo, 
-								 clang::CompilerInstance *comp_inst);
+								 CompilerInstance *comp_inst);
 };
 
 #endif	// COMUT_OEAA_H_

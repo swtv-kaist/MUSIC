@@ -1,5 +1,4 @@
 #include "information_gatherer.h"
-#include <stdio.h>
 
 void InformationGatherer::HandleTranslationUnit(clang::ASTContext &Context)
 {

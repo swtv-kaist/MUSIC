@@ -37,7 +37,7 @@ int StmtContext::getProteumStyleLineNum()
 	return proteumstyle_stmt_start_line_num_;
 }
 
-SourceRange* StmtContext::getLhsOfAssignmentRange()
+const SourceRange* const StmtContext::getLhsOfAssignmentRange()
 {
 	return lhs_of_assignment_range_;
 }

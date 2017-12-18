@@ -73,7 +73,7 @@ CLANG_BUILD_FLAGS := -I$(LLVM_SRC_PATH)/tools/clang/include \
 
 CLANG_LIBS := \
 	-lclangFrontendTool -lclangFrontend -lclangDriver \
-	-lclangTooling -lclangSerialization -lclangCodeGen -lclangParse \
+	-lclangSerialization -lclangCodeGen -lclangParse \
 	-lclangSema -lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore \
 	-lclangAnalysis -lclangARCMigrate -lclangRewrite \

@@ -48,7 +48,6 @@ bool OAEA::CanMutate(clang::Expr *e, ComutContext *context)
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
 		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-		// cout << "cp oaea\n";
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -78,7 +77,6 @@ void OAEA::Mutate(clang::Expr *e, ComutContext *context)
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-	// cout << "cp oaea 2\n";
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),

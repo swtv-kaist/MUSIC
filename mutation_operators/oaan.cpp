@@ -48,8 +48,6 @@ bool OAAN::CanMutate(clang::Expr *e, ComutContext *context)
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
 		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-
-		// cout << "cp oaan\n";
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -73,16 +71,12 @@ bool OAAN::CanMutate(clang::Expr *e, ComutContext *context)
 
 void OAAN::Mutate(clang::Expr *e, ComutContext *context)
 {
-	// cout << name_ << " is mutating\n";
-	
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e))) return;
 
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-
-	// cout << "cp oaan 2\n";
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),

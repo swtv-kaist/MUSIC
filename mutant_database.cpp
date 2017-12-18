@@ -74,8 +74,6 @@ void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start
 void MutantDatabase::WriteEntryToDatabaseFile(
     string mutant_name, const MutantEntry &entry)
 {
-  // cout << "making " << mutant_name << " mutant\n" << entry << endl;
-
   // Open mutattion database file in APPEND mode
   ofstream mutant_db_file(database_filename_.data(), ios::app);
 
@@ -109,19 +107,14 @@ void MutantDatabase::WriteEntryToDatabaseFile(
 
 void MutantDatabase::WriteAllEntriesToDatabaseFile()
 {
-  long count = 0;
-
   for (auto line_map_iter: mutant_entry_table_)
     for (auto column_map_iter: line_map_iter.second)
       for (auto mutantname_map_iter: column_map_iter.second)
         for (auto entry: mutantname_map_iter.second)
         {
-          count++;
           WriteEntryToDatabaseFile(mutantname_map_iter.first, entry);
           IncrementNextMutantfileId();
         }
-
-  cout << "wrote " << count << " mutants to db file\n";
 }
 
 void MutantDatabase::WriteEntryToMutantFile(const MutantEntry &entry)
@@ -129,36 +122,22 @@ void MutantDatabase::WriteEntryToMutantFile(const MutantEntry &entry)
   Rewriter rewriter;
   rewriter.setSourceMgr(src_mgr_, lang_opts_);
 
-  SourceLocation start_loc = src_mgr_.getExpansionLoc(entry.getStartLocation());
-  SourceLocation end_loc = src_mgr_.getExpansionLoc(entry.getTokenEndLocation());
+  int length = src_mgr_.getFileOffset(entry.getTokenEndLocation()) - \
+               src_mgr_.getFileOffset(entry.getStartLocation());
 
-  int length = src_mgr_.getFileOffset(end_loc) - \
-               src_mgr_.getFileOffset(start_loc);
-
-  // cout << "length = " << length << endl;
-  
-  rewriter.ReplaceText(start_loc, length, entry.getMutatedToken());
-
-  // cout << rewriter.getRewrittenText(SourceRange(entry.getStartLocation(), entry.getTokenEndLocation())) << endl;
-  // cout << entry.getStartLocation().printToString(src_mgr_) << endl;
-
+  rewriter.ReplaceText(entry.getStartLocation(), length, 
+                       entry.getMutatedToken());
 
   string mutant_filename{output_dir_};
   mutant_filename += GetNextMutantFilename();
   mutant_filename += ".c";
 
   // Make and write mutated code to output file.
-  // cout << "cp 1\n";
   const RewriteBuffer *RewriteBuf = rewriter.getRewriteBufferFor(
       src_mgr_.getMainFileID());
-  // cout << "cp 2\n";
   ofstream output(mutant_filename.data());
-  // cout << "cp 3\n";
   output << string(RewriteBuf->begin(), RewriteBuf->end());
-  // cout << "cp 4\n";
   output.close(); 
-
-  // cout << "done\n";
 }
 
 void MutantDatabase::WriteAllEntriesToMutantFile()

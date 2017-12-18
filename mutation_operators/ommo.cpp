@@ -87,7 +87,7 @@ void OMMO::GenerateMutantForPreDec(UnaryOperator *uo, ComutContext *context)
  	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 
   // generate --x
-  uo->setOpcode(UO_PreInc);
+  uo->setOpcode(UO_PreDec);
   mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
   context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
