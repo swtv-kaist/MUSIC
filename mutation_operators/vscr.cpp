@@ -47,6 +47,30 @@ void VSCR::Mutate(clang::Expr *e, ComutContext *context)
   SourceLocation start_loc = me->getMemberLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
+  SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+
+  int line = GetLineNumber(src_mgr, start_loc);
+  int col = GetColumnNumber(src_mgr, start_loc);
+
+  /* Handling Macro. */
+  if (start_loc.isMacroID())
+  {
+    start_loc = src_mgr.getExpansionLoc(start_loc);
+    end_loc = Lexer::getLocForEndOfToken(start_loc, 0, src_mgr, context->comp_inst_->getLangOpts());
+    string temp_member = string(
+        src_mgr.getCharacterData(start_loc),
+        src_mgr.getCharacterData(end_loc)-src_mgr.getCharacterData(start_loc));
+
+    if (temp_member.compare(token) != 0)
+      return;
+  }
+
+  if (end_loc.isInvalid() || end_loc < start_loc ||
+      end_loc == start_loc)
+  {
+    end_loc = Lexer::getLocForEndOfToken(start_loc, 0, src_mgr, context->comp_inst_->getLangOpts());
+  }
+
   if (auto rt = dyn_cast<RecordType>(base_type.getTypePtr()))
   {
   	RecordDecl *rd = rt->getDecl()->getDefinition();

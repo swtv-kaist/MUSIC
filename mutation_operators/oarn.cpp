@@ -43,11 +43,15 @@ void OARN::setRange(std::set<std::string> &range)
 
 bool OARN::CanMutate(clang::Expr *e, ComutContext *context)
 {
+	// cout << name_ << " is mutating\n";
+	
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
 		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+
+		// cout << "cp oarn\n";
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -83,6 +87,8 @@ void OARN::Mutate(clang::Expr *e, ComutContext *context)
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+
+	// cout << "cp oarn 2\n";
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),

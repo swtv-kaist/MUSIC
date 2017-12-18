@@ -16,6 +16,11 @@ InformationVisitor::InformationVisitor(
   rewriter_.setSourceMgr(src_mgr_, lang_option_);
 }
 
+InformationVisitor::~InformationVisitor()
+{
+  // cout << "InformationVisitor destructor called\n";
+}
+
 // Add a new Goto statement location to LabelStmtToGotoStmtListMap.
 // Add the label to the map if map does not contain label.
 // Else add the Goto location to label's list of Goto locations.
@@ -181,6 +186,7 @@ void InformationVisitor::CollectVarDecl(VarDecl *vd)
   {
     cout << "local variable not inside a function at ";
     PrintLocation(src_mgr_, start_loc);
+    cout << start_loc.printToString(src_mgr_) << endl;
   }
 }
 
