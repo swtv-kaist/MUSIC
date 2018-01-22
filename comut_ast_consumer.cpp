@@ -4,6 +4,7 @@
 void ComutASTVisitor::UpdateAddressOfRange(
     UnaryOperator *uo, SourceLocation *start_loc, SourceLocation *end_loc)
 {
+  // cout << "UpdateAddressOfRange called\n";
   Expr *sub_expr_of_unaryop = uo->getSubExpr()->IgnoreImpCasts();
 
   if (isa<ParenExpr>(sub_expr_of_unaryop))
@@ -30,6 +31,7 @@ void ComutASTVisitor::UpdateAddressOfRange(
 */
 bool ComutASTVisitor::IsScalarRefMutatableByVtwd(string scalarref_name)
 {
+  // cout << "IsScalarRefMutatableByVtwd called\n";
   // if reference name is in the nonMutatableList then it is not mutatable
   for (auto it = non_VTWD_mutatable_scalarref_list_.begin(); 
         it != non_VTWD_mutatable_scalarref_list_.end(); ++it)
@@ -57,6 +59,7 @@ bool ComutASTVisitor::IsScalarRefMutatableByVtwd(string scalarref_name)
 bool ComutASTVisitor::CollectNonVtwdMutatableScalarRef(
     Expr *e, bool exclude_last_scalarref)
 {
+  // cout << "CollectNonVtwdMutatableScalarRef called\n";
   bool scalarref_excluded{false};
 
   if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
@@ -145,6 +148,7 @@ bool ComutASTVisitor::CollectNonVtwdMutatableScalarRef(
 
 void ComutASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
 {
+  // cout << "HandleUnaryOperatorExpr called\n";
   SourceLocation start_loc = uo->getLocStart();
   SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, comp_inst_);
 
@@ -164,6 +168,7 @@ void ComutASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
 
 void ComutASTVisitor::HandleBinaryOperatorExpr(Expr *e)
 {
+  // cout << "HandleBinaryOperatorExpr called\n";
   BinaryOperator *bo = cast<BinaryOperator>(e);
 
   // if (bo->getOpcode() == BO_Sub && ExprIsPointer(bo->getLHS()) && ExprIsPointer(bo->getRHS()))
@@ -176,6 +181,7 @@ void ComutASTVisitor::HandleBinaryOperatorExpr(Expr *e)
       src_mgr_.getMainFileID(),
       GetLineNumber(src_mgr_, start_loc),
       GetColumnNumber(src_mgr_, start_loc) + binary_operator.length());
+  // cout << "cp consumer\n";
 
   // Certain mutations are NOT syntactically correct for left side of 
   // assignment. Store location for prevention of generating 
@@ -194,11 +200,26 @@ void ComutASTVisitor::HandleBinaryOperatorExpr(Expr *e)
   if (bo->isAdditiveOp())
     CollectNonVtwdMutatableScalarRef(e, true);
 
+  // In an expression PTR+<expr> or PTR-<EXPR>,
+  // right hand side <expr> should not be floating
+  if (bo->getOpcode() == BO_Add || bo->getOpcode() == BO_Sub)
+  {
+    if (ExprIsPointer(bo->getLHS()->IgnoreImpCasts()) &&
+        !stmt_context_.IsInNonFloatingExprRange(e))
+      stmt_context_.setNonFloatingExprRange(new SourceRange(
+          bo->getRHS()->getLocStart(), 
+          GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts(), comp_inst_)));
+
+  }
+
+
+
   // Modulo, shift and bitwise expressions' values are integral,
   // and they also only take integral operands.
   // So OCOR should not mutate any cast inside these expr to float type
   if (binary_operator.compare("%") == 0 || bo->isBitwiseOp() || 
-      bo->isShiftOp()) 
+      bo->isShiftOp() || bo->getOpcode() == BO_RemAssign ||
+      OperatorIsBitwiseAssignment(bo) || OperatorIsShiftAssignment(bo)) 
   {
     // Setting up for blocking uncompilable mutants for OCOR
     if (!stmt_context_.IsInNonFloatingExprRange(e))
@@ -243,6 +264,25 @@ bool ComutASTVisitor::VisitStmt(clang::Stmt *s)
 {
   SourceLocation start_loc = s->getLocStart();
   SourceLocation end_loc = s->getLocEnd();
+  SourceLocation start_spelling_loc = src_mgr_.getSpellingLoc(start_loc);
+  SourceLocation end_spelling_loc = src_mgr_.getSpellingLoc(end_loc);
+
+  if (start_loc.isMacroID() && end_loc.isMacroID())
+    return true;
+
+  /* This stmt is not written inside current target file */
+  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
+  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // {
+  //   // cout << "Not a statement inside currently parsed file\n";
+  //   // cout << ConvertToString(s, comp_inst_->getLangOpts()) << endl;
+  //   // cout << start_loc.printToString(src_mgr_) << endl;
+  //   return true;
+  // }
+
+  // cout << "VisitStmt\n" << ConvertToString(s, comp_inst_->getLangOpts()) << endl;
+  // PrintLocation(src_mgr_, start_loc);
+  // start_loc.dump(src_mgr_);
 
   // set up Proteum-style line number
   if (GetLineNumber(src_mgr_, start_loc) > proteumstyle_stmt_end_line_num_)
@@ -280,6 +320,8 @@ bool ComutASTVisitor::VisitStmt(clang::Stmt *s)
     stmt_context_.setIsInArrayDeclSize(false);
   }
 
+  // cout << "mutating\n";
+
   for (auto mutant_operator: stmt_mutant_operator_list_)
     if (mutant_operator->CanMutate(s, &context_))
       mutant_operator->Mutate(s, &context_);
@@ -289,6 +331,22 @@ bool ComutASTVisitor::VisitStmt(clang::Stmt *s)
 
 bool ComutASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
 {
+  SourceLocation start_spelling_loc = \
+      src_mgr_.getSpellingLoc(c->getLocStart());
+  SourceLocation end_spelling_loc = \
+      src_mgr_.getSpellingLoc(c->getLocEnd());
+
+  if (c->getLBracLoc().isMacroID() && c->getRBracLoc().isMacroID())
+    return true;
+
+  /* This expr is not written inside current target file */
+  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
+  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // {
+  //   return true;
+  // }
+
+  // cout << "VisitCompoundStmt called\n";
   // entering a new scope
   scope_list_.push_back(SourceRange(c->getLocStart(), c->getLocEnd()));
 
@@ -297,6 +355,22 @@ bool ComutASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
 
 bool ComutASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
 {
+  SourceLocation start_spelling_loc = \
+      src_mgr_.getSpellingLoc(ss->getLocStart());
+  SourceLocation end_spelling_loc = \
+      src_mgr_.getSpellingLoc(ss->getLocEnd());
+
+  if (ss->getLocStart().isMacroID() && ss->getLocEnd().isMacroID())
+    return true;
+
+  /* This expr is not written inside current target file */
+  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
+  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // {
+  //   return true;
+  // }
+
+  // cout << "VisitSwitchStmt called\n";
   stmt_context_.setSwitchStmtConditionRange(
       new SourceRange(ss->getSwitchLoc(), ss->getBody()->getLocStart()));
 
@@ -306,32 +380,31 @@ bool ComutASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
              ss->getLocStart(), switchstmt_info_list_.back().first))
     switchstmt_info_list_.pop_back();
 
+  // cout << "done removing passed switch stmt\n";
+
   vector<string> case_value_list;
   SwitchCase *sc = ss->getSwitchCaseList();
 
   // collect all case values' strings
   while (sc != nullptr)
   {
+    // cout << "retrieving " << ConvertToString(sc, comp_inst_->getLangOpts()) << endl;
     if (isa<DefaultStmt>(sc))
     {
       sc = sc->getNextSwitchCase();
       continue;
     }
 
-    // retrieve location before 'case'
-    SourceLocation keyword_loc = sc->getKeywordLoc();  
-    SourceLocation colon_loc = sc->getColonLoc();
-    string case_value{""};
+    // cout << "not default\n";
 
-    // retrieve case label starting from after 'case'
-    SourceLocation location_iterator = keyword_loc.getLocWithOffset(4);
-
-    // retrieve string from after 'case' to before ':'
-    while (location_iterator != colon_loc)
+    CaseStmt *cs = dyn_cast<CaseStmt>(sc);
+    if (!cs)
     {
-      case_value += *(src_mgr_.getCharacterData(location_iterator));
-      location_iterator = location_iterator.getLocWithOffset(1);
+      cout << "cannot cast to CaseStmt for " << ConvertToString(sc, comp_inst_->getLangOpts()) << endl;
+      exit(1);
     }
+
+    string case_value{ConvertToString(cs->getLHS(), comp_inst_->getLangOpts())};
 
     // remove whitespaces at the beginning and end_loc of retrieved string
     case_value = TrimBeginningAndEndingWhitespace(case_value);
@@ -354,6 +427,21 @@ bool ComutASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
 
 bool ComutASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
 {
+  SourceLocation start_spelling_loc = \
+      src_mgr_.getSpellingLoc(sc->getLocStart());
+  SourceLocation end_spelling_loc = \
+      src_mgr_.getSpellingLoc(sc->getLocEnd());
+
+  if (sc->getLocStart().isMacroID() && sc->getLocEnd().isMacroID())
+    return true;
+
+  /* This expr is not written inside current target file */
+  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
+  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // {
+  //   return true;
+  // }
+
   stmt_context_.setSwitchCaseRange(
       new SourceRange(sc->getLocStart(), sc->getColonLoc()));
   
@@ -368,13 +456,45 @@ bool ComutASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
 
 bool ComutASTVisitor::VisitExpr(clang::Expr *e)
 {
+  // cout << "VisitExpr\n" << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
+  // PrintLocation(src_mgr_, e->getLocStart());
+
+  if (e->getLocStart().isMacroID() && e->getLocEnd().isMacroID())
+    return true;
+
+  // if (GetLineNumber(src_mgr_, e->getLocStart()) == 49)
+  // {
+  //   cout << "VisitExpr\n" << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
+  //   cout << e->getLocStart().printToString(src_mgr_) << endl;
+  // }
+
+  // SourceLocation start_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(e->getLocStart());
+  // SourceLocation end_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(e->getLocEnd());
+
+  // /* This expr is not written inside current target file */
+  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
+  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // {
+  //   // cout << "Not a expression inside currently parsed file\n";
+  //   // cout << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
+  //   // cout << e->getLocStart().printToString(src_mgr_) << endl;
+  //   return true;
+  // }
+
   // Do not mutate or consider anything inside a typedef definition
   if (stmt_context_.IsInTypedefRange(e))
     return true;
 
   for (auto mutant_operator: expr_mutant_operator_list_)
     if (mutant_operator->CanMutate(e, &context_))
+    {
+      // if (GetLineNumber(src_mgr_, e->getLocStart()) == 49)
+      //   cout << "yes\n";
+
       mutant_operator->Mutate(e, &context_);
+    }
 
   if (StmtExpr *se = dyn_cast<StmtExpr>(e))  
   {
@@ -428,10 +548,23 @@ bool ComutASTVisitor::VisitFieldDecl(clang::FieldDecl *fd)
 
 bool ComutASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 {
-  // cout << GetVarDeclName(vd) << " : " << vd->getType().getCanonicalType().getAsString() << endl;
-
   SourceLocation start_loc = vd->getLocStart();
   SourceLocation end_loc = vd->getLocEnd();
+
+  SourceLocation start_spelling_loc = \
+      src_mgr_.getSpellingLoc(start_loc);
+  SourceLocation end_spelling_loc = \
+      src_mgr_.getSpellingLoc(end_loc);
+
+  if (start_loc.isMacroID() && end_loc.isMacroID())
+    return true;
+
+  /* This expr is not written inside current target file */
+  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
+  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // {
+  //   return true;
+  // }
 
   stmt_context_.setIsInEnumDecl(false);
 
@@ -479,6 +612,12 @@ bool ComutASTVisitor::VisitFunctionDecl(clang::FunctionDecl *f)
 
     stmt_context_.setCurrentlyParsedFunctionRange(
         new SourceRange(f->getLocStart(), f->getLocEnd()));
+
+    // if (f->getName().compare("read_field_headers") == 0 ||
+    //     f->getName().compare("formparse") == 0)
+    // {
+    //   f->getBody()->dumpColor();
+    // }
   }
 
   return true;

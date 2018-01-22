@@ -79,7 +79,8 @@ void VLSF::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
 
 	// cannot mutate variable in switch condition to a floating-type variable
   bool skip_float_vardecl = \
-      context->getStmtContext().IsInSwitchStmtConditionRange(e);
+      context->getStmtContext().IsInSwitchStmtConditionRange(e) ||
+      context->getStmtContext().IsInNonFloatingExprRange(e);
 
 	// remove all vardecl appear after expr
 	for (auto it = range->begin(); it != range->end(); )

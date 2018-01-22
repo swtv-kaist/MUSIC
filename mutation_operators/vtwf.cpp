@@ -19,6 +19,16 @@ bool VTWF::CanMutate(clang::Expr *e, ComutContext *context)
 	{
 		SourceLocation start_loc = ce->getLocStart();
 
+    // Only delete COMPLETE statements whose parent is a CompoundStmt.
+    const Stmt* parent = GetParentOfStmt(e, context->comp_inst_);
+
+    // Single function call statement
+    // Mutating +1 or -1 has no impact.
+    // And it can sometimes cause uncompilable mutants.
+    if (parent)
+      if (isa<CompoundStmt>(parent))
+        return false;
+
     // getRParenLoc returns the location before the right parenthesis
     SourceLocation end_loc = ce->getRParenLoc();
     end_loc = end_loc.getLocWithOffset(1);

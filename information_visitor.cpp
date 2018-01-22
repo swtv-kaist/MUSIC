@@ -16,6 +16,11 @@ InformationVisitor::InformationVisitor(
   rewriter_.setSourceMgr(src_mgr_, lang_option_);
 }
 
+InformationVisitor::~InformationVisitor()
+{
+  // cout << "InformationVisitor destructor called\n";
+}
+
 // Add a new Goto statement location to LabelStmtToGotoStmtListMap.
 // Add the label to the map if map does not contain label.
 // Else add the Goto location to label's list of Goto locations.
@@ -103,8 +108,13 @@ bool InformationVisitor::VisitFunctionDecl(FunctionDecl *fd)
 {
   if (fd->hasBody() && 
       !LocationIsInRange(fd->getLocStart(), 
-                         *currently_parsed_function_range_))
+                         *currently_parsed_function_range_)/* &&
+      src_mgr_.getFileID(src_mgr_.getSpellingLoc(fd->getLocStart())) == \
+      src_mgr_.getMainFileID()*/)
   {
+    // cout << "in here\n";
+    // cout << fd->getLocStart().printToString(src_mgr_) << endl;
+
     if (currently_parsed_function_range_ != nullptr)
       delete currently_parsed_function_range_;
 
@@ -155,10 +165,24 @@ void InformationVisitor::CollectVarDecl(VarDecl *vd)
   SourceLocation start_loc = vd->getLocStart();
   SourceLocation end_loc = vd->getLocEnd();
 
+  if (src_mgr_.getFileID(src_mgr_.getSpellingLoc(start_loc)) != \
+      src_mgr_.getMainFileID())
+    return;
+
   if(vd->isFileVarDecl())
   {
     if (IsVarDeclScalar(vd))
+    {
       global_scalar_vardecl_list_.push_back(vd);
+
+      // cout << "collect global scalar vardecl " << GetVarDeclName(vd) << endl;
+      // cout << vd->getLocStart().printToString(src_mgr_) << endl;
+      // cout << src_mgr_.getFileID(start_loc).getHashValue() << endl;
+      // cout << src_mgr_.getExpansionLoc(start_loc).printToString(src_mgr_) << endl;
+      // cout << src_mgr_.getFileID(src_mgr_.getExpansionLoc(start_loc)).getHashValue() << endl;
+      // cout << src_mgr_.getSpellingLoc(start_loc).printToString(src_mgr_) << endl;
+      // cout << src_mgr_.getFileID(src_mgr_.getSpellingLoc(start_loc)).getHashValue() << endl;
+    }
     else if (IsVarDeclArray(vd))
       global_array_vardecl_list_.push_back(vd);
     else if (IsVarDeclStruct(vd))
@@ -181,11 +205,16 @@ void InformationVisitor::CollectVarDecl(VarDecl *vd)
   {
     cout << "local variable not inside a function at ";
     PrintLocation(src_mgr_, start_loc);
+    cout << start_loc.printToString(src_mgr_) << endl;
   }
 }
 
 void InformationVisitor::CollectScalarConstant(Expr* e)
 {
+  // if (src_mgr_.getFileID(src_mgr_.getSpellingLoc(e->getLocStart())) != \
+  //     src_mgr_.getMainFileID())
+  //   return;
+
   string token{ConvertToString(e, comp_inst_->getLangOpts())};
 
   // convert to int value if it is a char literal
@@ -193,7 +222,7 @@ void InformationVisitor::CollectScalarConstant(Expr* e)
     token = ConvertCharStringToIntString(token);
 
   // local constants
-  if (LocationIsInRange(e->getLocStart(), 
+  if (LocationIsInRange(src_mgr_.getExpansionLoc(e->getLocStart()), 
                         *currently_parsed_function_range_))  
   {
     // If the constant is not in the cache, add this new entity into
@@ -211,6 +240,16 @@ void InformationVisitor::CollectScalarConstant(Expr* e)
   else if (
     global_scalar_constant_cache_.find(token) == global_scalar_constant_cache_.end())
   {
+    // cout << "found " << token << " at\n";
+    // cout << e->getLocStart().isMacroID() << endl;
+    // cout << src_mgr_.getMainFileID().getHashValue() << endl;
+    // cout << e->getLocStart().printToString(src_mgr_) << endl;
+    // cout << src_mgr_.getFileID(e->getLocStart()).getHashValue() << endl;
+    // cout << src_mgr_.getExpansionLoc(e->getLocStart()).printToString(src_mgr_) << endl;
+    // cout << src_mgr_.getFileID(src_mgr_.getExpansionLoc(e->getLocStart())).getHashValue() << endl;
+    // cout << src_mgr_.getSpellingLoc(e->getLocStart()).printToString(src_mgr_) << endl;
+    // cout << src_mgr_.getFileID(src_mgr_.getSpellingLoc(e->getLocStart())).getHashValue() << endl;
+
     global_scalar_constant_cache_.insert(token);
     global_scalarconstant_list_.push_back(e);
   }

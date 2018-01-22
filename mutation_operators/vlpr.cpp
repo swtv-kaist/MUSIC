@@ -71,8 +71,8 @@ void VLPR::Mutate(clang::Expr *e, ComutContext *context)
 
     if (pointee_type.compare(getPointerType(vardecl->getType())) == 0)
     {
-      cout << mutated_token << endl;
-      PrintLocation(src_mgr, vardecl->getLocEnd());
+      // cout << mutated_token << endl;
+      // PrintLocation(src_mgr, vardecl->getLocEnd());
 
       context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
     }

@@ -9,6 +9,9 @@ private:
 	std::set<std::string> range_integral_;
 	std::set<std::string> range_float_;
 
+	std::string GetMaxValue(clang::QualType qualtype);
+	std::string GetMinValue(clang::QualType qualtype);
+
 public:
 	CRCR(const std::string name = "CRCR")
 		: ExprMutantOperator(name)

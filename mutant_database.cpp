@@ -1,4 +1,5 @@
 #include <time.h>
+#include <algorithm>
 
 #include "clang/Rewrite/Core/Rewriter.h"
 
@@ -49,6 +50,7 @@ void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start
   {
     auto column_map_iter = mutant_entry_table_[line_num].find(col_num);
 
+    // Similar for column
     if (column_map_iter == mutant_entry_table_[line_num].end())
     {
       mutant_entry_table_[line_num][col_num] = MutantNameToEntryMap();
@@ -60,13 +62,29 @@ void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start
       auto mutantname_map_iter = \
           mutant_entry_table_[line_num][col_num].find(name);
 
+      // Similar for mutant name
       if (mutantname_map_iter == mutant_entry_table_[line_num][col_num].end())
       {
         mutant_entry_table_[line_num][col_num][name] = MutantEntryList();
         mutant_entry_table_[line_num][col_num][name].push_back(new_entry);
       }
       else
+      {
+        // Check if there is already another mutant with the same replacement inside.
+        // If yes, then skip. Otherwise push new entry in.
+
+        // All these entries will have the same line and column number and
+        // mutant name, so if they make the same replacement then they are
+        // duplicated.
+        for (auto entry: mutant_entry_table_[line_num][col_num][name])
+        {
+          if (new_entry == entry)
+            return;
+        }
+
+
         mutant_entry_table_[line_num][col_num][name].push_back(new_entry);
+      }
     }
   }
 }
@@ -74,6 +92,8 @@ void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start
 void MutantDatabase::WriteEntryToDatabaseFile(
     string mutant_name, const MutantEntry &entry)
 {
+  // cout << "making " << mutant_name << " mutant\n" << entry << endl;
+
   // Open mutattion database file in APPEND mode
   ofstream mutant_db_file(database_filename_.data(), ios::app);
 
@@ -107,14 +127,19 @@ void MutantDatabase::WriteEntryToDatabaseFile(
 
 void MutantDatabase::WriteAllEntriesToDatabaseFile()
 {
+  long count = 0;
+
   for (auto line_map_iter: mutant_entry_table_)
     for (auto column_map_iter: line_map_iter.second)
       for (auto mutantname_map_iter: column_map_iter.second)
         for (auto entry: mutantname_map_iter.second)
         {
+          count++;
           WriteEntryToDatabaseFile(mutantname_map_iter.first, entry);
           IncrementNextMutantfileId();
         }
+
+  cout << "wrote " << count << " mutants to db file\n";
 }
 
 void MutantDatabase::WriteEntryToMutantFile(const MutantEntry &entry)
@@ -122,22 +147,36 @@ void MutantDatabase::WriteEntryToMutantFile(const MutantEntry &entry)
   Rewriter rewriter;
   rewriter.setSourceMgr(src_mgr_, lang_opts_);
 
-  int length = src_mgr_.getFileOffset(entry.getTokenEndLocation()) - \
-               src_mgr_.getFileOffset(entry.getStartLocation());
+  SourceLocation start_loc = src_mgr_.getExpansionLoc(entry.getStartLocation());
+  SourceLocation end_loc = src_mgr_.getExpansionLoc(entry.getTokenEndLocation());
 
-  rewriter.ReplaceText(entry.getStartLocation(), length, 
-                       entry.getMutatedToken());
+  int length = src_mgr_.getFileOffset(end_loc) - \
+               src_mgr_.getFileOffset(start_loc);
+
+  // cout << "length = " << length << endl;
+  
+  rewriter.ReplaceText(start_loc, length, entry.getMutatedToken());
+
+  // cout << rewriter.getRewrittenText(SourceRange(entry.getStartLocation(), entry.getTokenEndLocation())) << endl;
+  // cout << entry.getStartLocation().printToString(src_mgr_) << endl;
+
 
   string mutant_filename{output_dir_};
   mutant_filename += GetNextMutantFilename();
   mutant_filename += ".c";
 
   // Make and write mutated code to output file.
+  // cout << "cp 1\n";
   const RewriteBuffer *RewriteBuf = rewriter.getRewriteBufferFor(
       src_mgr_.getMainFileID());
+  // cout << "cp 2\n";
   ofstream output(mutant_filename.data());
+  // cout << "cp 3\n";
   output << string(RewriteBuf->begin(), RewriteBuf->end());
+  // cout << "cp 4\n";
   output.close(); 
+
+  // cout << "done\n";
 }
 
 void MutantDatabase::WriteAllEntriesToMutantFile()
@@ -152,18 +191,47 @@ void MutantDatabase::WriteAllEntriesToMutantFile()
         }
 }
 
+bool CompareEntry(long i, long j)
+{
+  return i < j;
+}
+
 // generate mutant file and write to database file
 void MutantDatabase::ExportAllEntries()
 {
+  map<string, int> mutant_count;
+  set<string> all_mutant_operators{
+      "SSDL", "OCNG", "ORRN", "VTWF", "CRCR", "SANL", "SRWS", "SCSR", 
+      "VLSF", "VGSF", "VLTF", "VGTF", "VLPF", "VGPF", "VGSR", "VLSR", 
+      "VGAR", "VLAR", "VGTR", "VLTR", "VGPR", "VLPR", "VTWD", "VSCR", 
+      "CGCR", "CLCR", "CGSR", "CLSR", "OPPO", "OMMO", "OLNG", "OBNG", 
+      "OIPM", "OCOR", "OLLN", "OSSN", "OBBN", "OLRN", "ORLN", "OBLN", 
+      "OBRN", "OSLN", "OSRN", "OBAN", "OBSN", "OSAN", "OSBN", "OAEA", 
+      "OBAA", "OBBA", "OBEA", "OBSA", "OSAA", "OSBA", "OSEA", "OSSA", 
+      "OEAA", "OEBA", "OESA", "OAAA", "OABA", "OASA", "OALN", "OAAN", 
+      "OARN", "OABN", "OASN", "OLAN", "ORAN", "OLBN", "OLSN", "ORSN", 
+      "ORBN"};
+      
+  for (auto e: all_mutant_operators)
+    mutant_count[e] = 0;
+
+
   for (auto line_map_iter: mutant_entry_table_)
     for (auto column_map_iter: line_map_iter.second)
       for (auto mutantname_map_iter: column_map_iter.second)
+      {
         for (auto entry: mutantname_map_iter.second)
         {
           WriteEntryToDatabaseFile(mutantname_map_iter.first, entry);
           WriteEntryToMutantFile(entry);
           IncrementNextMutantfileId();
-        }
+
+          mutant_count[mutantname_map_iter.first] += 1;
+        } 
+      }
+
+  for (auto it: mutant_count)
+    cout << it.first << " " << it.second << endl;
 }
 
 const MutantEntryTable& MutantDatabase::getEntryTable() const

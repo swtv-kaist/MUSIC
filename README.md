@@ -28,9 +28,9 @@ $ sudo apt-get install clang-4.0 libclang-common-4.0-dev libclang-4.0-dev libcla
 
 ## Compile
 
-Before compilation of tool, clang v4.0 should be installed.
+Before compilation of MUSIC, clang v4.0 should be installed.
 
-The current version of the tool has only been tested to compile and run successfully on clang v4.0, Linux x86-64.
+The current version of MUSIC has only been tested to compile and run successfully on clang v4.0, Linux x86-64.
 
 After install and build clang, if necessary, you can edit llvm source and build directory specification in the following 3 lines of Makefile
 
@@ -52,12 +52,12 @@ In short, according to the current Makefile:
 
 	/usr/lib/llvm-4.0/bin is the directory containing bin folder with all the executables.
 
-Compile the tool using make to produce tool executable.
+Compile using make to produce MUSIC executable.
 
-## Tool Options
+## MUSIC Options
 
 ```
-./tool inputfilename1 [inputfilename2 ...] [option ...]
+./music inputfilename1 [inputfilename2 ...] [option ...]
 ```
 
 ### -o option

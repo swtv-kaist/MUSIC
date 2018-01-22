@@ -28,7 +28,9 @@
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/Rewriters.h"
+#include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -45,136 +47,9 @@
 #include "comut_ast_consumer.h"
 #include "all_mutant_operators.h"
 
-enum class UserInputAnalyzingState
-{
-  // expecting any not-A-B option
-  kNonAOrBOption,
+// #include <cstring>
+// #include <cerrno>
 
-  // expecting a mutant operator name
-  kMutantName,
-
-  // expecting a mutant operator name, or another not-A-B option
-  kNonAOrBOptionAndMutantName,
-
-  // expecting a directory
-  kOutputDir,
-
-  // expecting a number
-  kRsLine, kRsColumn,
-  kReLine, kReColumn,
-  kLimitNumOfMutant,
-
-  // expecting a mutant name or any option
-  kAnyOptionAndMutantName,
-
-  // expecting either mutant name or any not-A option
-  kNonAOptionAndMutantName,
-
-  // expecting domain for previous mutant operator
-  kDomainOfMutantOperator,
-
-  // expecting range for previous mutant operator
-  kRangeOfMutantOperator,
-
-  // A_SDL_LINE, A_SDL_COL,  // expecting a number
-  // B_SDL_LINE, B_SDL_COL,  // expecting a number
-};
-
-CompilerInstance* MakeCompilerInstance(char *filename)
-{
-  // CompilerInstance will hold the instance of the Clang compiler for us,
-  // managing the various objects needed to run the compiler.
-  CompilerInstance *TheCompInst = new CompilerInstance();
-  
-  // Diagnostics manage problems and issues in compile 
-  TheCompInst->createDiagnostics(NULL, false);
-
-  // Set target platform options 
-  // Initialize target info with the default triple for our platform.
-  // TargetOptions *TO = new TargetOptions();
-  shared_ptr<TargetOptions> TO(new TargetOptions());
-  TO->Triple = llvm::sys::getDefaultTargetTriple();
-  TargetInfo *TI = TargetInfo::CreateTargetInfo(TheCompInst->getDiagnostics(), 
-                                                TO);
-  TheCompInst->setTarget(TI);
-
-  // FileManager supports for file system lookup, file system caching, 
-  // and directory search management.
-  TheCompInst->createFileManager();
-  FileManager &FileMgr = TheCompInst->getFileManager();
-  
-  // SourceManager handles loading and caching of source files into memory.
-  TheCompInst->createSourceManager(FileMgr);
-  SourceManager &SourceMgr = TheCompInst->getSourceManager();
-  
-  // Prreprocessor runs within a single source file
-  TheCompInst->createPreprocessor(TU_Complete);
-  
-  // ASTContext holds long-lived AST nodes (such as types and decls) .
-  TheCompInst->createASTContext();
-
-  // Enable HeaderSearch option
-  // llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> hso( 
-      // new HeaderSearchOptions());
-
-  shared_ptr<HeaderSearchOptions> hso(new HeaderSearchOptions());
-  HeaderSearch headerSearch(hso, SourceMgr,
-                            TheCompInst->getDiagnostics(),
-                            TheCompInst->getLangOpts(), TI);
-
-  // <Warning!!> -- Platform Specific Code lives here
-  // This depends on A) that you're running linux and
-  // B) that you have the same GCC LIBs installed that I do. 
-  /*
-  $ gcc -xc -E -v -
-  ..
-   /usr/local/include
-   /usr/lib/gcc/x86_64-linux-gnu/4.4.5/include
-   /usr/lib/gcc/x86_64-linux-gnu/4.4.5/include-fixed
-   /usr/include
-  End of search list.
-  */
-  const char *include_paths[] = {"/usr/local/include",
-      "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include",
-      "/usr/lib/gcc/x86_64-linux-gnu/4.4.6/include-fixed",
-      "/usr/include"};
-
-  for (int i=0; i<4; i++) 
-    hso->AddPath(include_paths[i], clang::frontend::Angled, 
-                 false, false);
-  // </Warning!!> -- End of Platform Specific Code
-
-  InitializePreprocessor(TheCompInst->getPreprocessor(), 
-                         TheCompInst->getPreprocessorOpts(),
-                         TheCompInst->getPCHContainerReader(),
-                         TheCompInst->getFrontendOpts());
-
-  // Set the main file Handled by the source manager to the input file.
-  const FileEntry *FileIn = FileMgr.getFile(filename);
-  FileID FileId = SourceMgr.createFileID(FileIn, SourceLocation(), SrcMgr::C_User);
-  SourceMgr.setMainFileID(FileId);
-  // SourceMgr.createMainFileID(FileIn);
-  
-  // Inform Diagnostics that processing of a source file is beginning. 
-  TheCompInst->getDiagnosticClient().BeginSourceFile(
-      TheCompInst->getLangOpts(),&TheCompInst->getPreprocessor());
-
-  return TheCompInst;
-}
-
-InformationGatherer* GetNecessaryDataFromInputFile(char *filename)
-{
-  CompilerInstance *TheCompInst = MakeCompilerInstance(filename);
-
-  // Parse the file to AST, gather labelstmts, goto stmts, 
-  // scalar constants, string literals. 
-  InformationGatherer *TheGatherer = new InformationGatherer(TheCompInst);
-
-  ParseAST(TheCompInst->getPreprocessor(), TheGatherer, 
-           TheCompInst->getASTContext());
-
-  return TheGatherer;
-}
 
 void AddMutantOperator(string mutant_name, 
                        set<string> &domain, set<string> &range, 
@@ -386,6 +261,7 @@ void AddMutantOperator(string mutant_name,
       new_expr_operator->setRange(range);
 
     expr_operator_list.push_back(new_expr_operator);
+    cout << "added " << mutant_name << endl;
   }
 }
 
@@ -416,404 +292,514 @@ void AddAllMutantOperator(vector<StmtMutantOperator*> &stmt_operator_list,
                       expr_operator_list);
 }
 
-// Wrap up currently-entering mutant operator (if can)
-// before change the state to kNonAOrBOption.
-void ClearState(UserInputAnalyzingState &state, string mutant_name, 
-                set<string> &domain, set<string> &range,
-                vector<StmtMutantOperator*> &stmt_operator_list,
-                vector<ExprMutantOperator*> &expr_operator_list)
-{
-  switch (state)
-  {
-    case UserInputAnalyzingState::kAnyOptionAndMutantName:
-    case UserInputAnalyzingState::kNonAOptionAndMutantName:
-    case UserInputAnalyzingState::kNonAOrBOptionAndMutantName:
-    {
-      AddMutantOperator(mutant_name, domain, range, 
-                        stmt_operator_list, expr_operator_list);
+/*namespace {
+class ArgumentsAdjustingCompilations : public tooling::CompilationDatabase {
+public:
+  ArgumentsAdjustingCompilations(
+      unique_ptr<tooling::CompilationDatabase> Compilations)
+      : Compilations(move(Compilations)) {}
 
-      domain.clear();
-      range.clear();
+  void appendArgumentsAdjuster(tooling::ArgumentsAdjuster Adjuster) {
+    Adjusters.push_back(move(Adjuster));
+  }
 
-      break;
-    }
-    case UserInputAnalyzingState::kNonAOrBOption:
-      break;
-    default:
-      PrintUsageErrorMsg();
-      exit(1);
-  };
+  vector<tooling::CompileCommand>
+  getCompileCommands(StringRef FilePath) const override {
+    return adjustCommands(Compilations->getCompileCommands(FilePath));
+  }
 
-  state = UserInputAnalyzingState::kNonAOrBOption;
+  vector<string> getAllFiles() const override {
+    return Compilations->getAllFiles();
+  }
+
+  vector<tooling::CompileCommand> getAllCompileCommands() const override {
+    return adjustCommands(Compilations->getAllCompileCommands());
+  }
+
+private:
+  unique_ptr<tooling::CompilationDatabase> Compilations;
+  vector<tooling::ArgumentsAdjuster> Adjusters;
+
+  vector<tooling::CompileCommand>
+  adjustCommands(vector<tooling::CompileCommand> Commands) const {
+    for (tooling::CompileCommand &Command : Commands)
+      for (const auto &Adjuster : Adjusters)
+        Command.CommandLine = Adjuster(Command.CommandLine, Command.Filename);
+    return Commands;
+  }
+};
 }
 
-void HandleInputArgument(string input, UserInputAnalyzingState &state, 
-                         string &mutant_name, set<string> &domain,
-                         set<string> &range, string &output_dir, int &limit, 
-                         SourceLocation *start_loc, SourceLocation *end_loc, 
-                         int &line_num, int &col_num, SourceManager &src_mgr, 
-                         vector<StmtMutantOperator*> &stmt_operator_list,
-                         vector<ExprMutantOperator*> &expr_operator_list)
-{
-  switch (state)
+class MusicOptionsParser {
+public:
+  /// \brief Parses command-line, initializes a compilation database.
+  ///
+  /// This constructor can change argc and argv contents, e.g. consume
+  /// command-line options used for creating FixedCompilationDatabase.
+  ///
+  /// All options not belonging to \p Category become hidden.
+  ///
+  /// This constructor exits program in case of error.
+  MusicOptionsParser(int &argc, const char **argv,
+                      llvm::cl::OptionCategory &Category,
+                      const char *Overview = nullptr)
+      : MusicOptionsParser(argc, argv, Category, llvm::cl::Optional,
+                            Overview) {}
+
+  /// \brief Parses command-line, initializes a compilation database.
+  ///
+  /// This constructor can change argc and argv contents, e.g. consume
+  /// command-line options used for creating FixedCompilationDatabase.
+  ///
+  /// All options not belonging to \p Category become hidden.
+  ///
+  /// I also allows calls to set the required number of positional parameters.
+  ///
+  /// This constructor exits program in case of error.
+  MusicOptionsParser(int &argc, const char **argv,
+                     llvm::cl::OptionCategory &Category,
+                     llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+                     const char *Overview = nullptr)
   {
-    case UserInputAnalyzingState::kNonAOrBOption:
-      PrintUsageErrorMsg();
-      exit(1);
+    static llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"), llvm::cl::Hidden);
 
-    case UserInputAnalyzingState::kMutantName:
-      for (int i = 0; i < input.length() ; ++i)
-      {
-        if (input[i] >= 'a' && input[i] <= 'z')
-          input[i] -= 32;
+    static llvm::cl::opt<std::string> BuildPath("p", llvm::cl::desc("Build path"),
+                                          llvm::cl::Optional, llvm::cl::cat(Category));
+
+    static llvm::cl::list<std::string> SourcePaths(
+        "c", llvm::cl::desc("<source0> [... <sourceN>]"), OccurrencesFlag,
+        llvm::cl::cat(Category));
+
+    static llvm::cl::list<std::string> ArgsAfter(
+        "extra-arg",
+        llvm::cl::desc("Additional argument to append to the compiler command line"),
+        llvm::cl::cat(Category));
+
+    static llvm::cl::list<std::string> ArgsBefore(
+        "extra-arg-before",
+        llvm::cl::desc("Additional argument to prepend to the compiler command line"),
+        llvm::cl::cat(Category));
+
+    llvm::cl::HideUnrelatedOptions(Category);
+
+    Compilations.reset(tooling::FixedCompilationDatabase::loadFromCommandLine(argc, argv));
+    llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
+    llvm::cl::PrintOptionValues();
+
+    SourcePathList = SourcePaths;
+    if ((OccurrencesFlag == llvm::cl::ZeroOrMore || OccurrencesFlag == llvm::cl::Optional) &&
+        SourcePathList.empty())
+      return;
+    if (!Compilations) {
+      std::string ErrorMessage;
+      if (!BuildPath.empty()) {
+        Compilations =
+            tooling::CompilationDatabase::autoDetectFromDirectory(BuildPath, ErrorMessage);
+      } else {
+        Compilations = tooling::CompilationDatabase::autoDetectFromSource(SourcePaths[0],
+                                                                 ErrorMessage);
       }
-
-      mutant_name.clear();
-      mutant_name = input;
-
-      state = UserInputAnalyzingState::kAnyOptionAndMutantName;
-      break;
-
-    case UserInputAnalyzingState::kOutputDir:
-      output_dir.clear();
-      output_dir = input + "/";
-      
-      if (!DirectoryExists(output_dir)) 
-      {
-        cout << "Invalid directory for -o option: " << output_dir << endl;
-        exit(1);
+      if (!Compilations) {
+        llvm::errs() << "Error while trying to load a compilation database:\n"
+                     << ErrorMessage << "Running without flags.\n";
+        Compilations.reset(
+            new tooling::FixedCompilationDatabase(".", std::vector<std::string>()));
       }
-
-      state = UserInputAnalyzingState::kNonAOrBOption;
-      break;
-
-    case UserInputAnalyzingState::kRsLine:
-      if (NumIsFloat(input) || !ConvertStringToInt(input, line_num))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      if (line_num <= 0)
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      state = UserInputAnalyzingState::kRsColumn;
-      break;
-
-    case UserInputAnalyzingState::kRsColumn:
-      if (NumIsFloat(input) || !ConvertStringToInt(input, col_num))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      *start_loc = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
-                                            line_num, col_num);
-
-      if (col_num <= 0 || GetLineNumber(src_mgr, *start_loc) < line_num ||
-          GetColumnNumber(src_mgr, *start_loc) < col_num)
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      state = UserInputAnalyzingState::kNonAOrBOption;
-      break;
-
-    case UserInputAnalyzingState::kReLine:
-      if (NumIsFloat(input) || !ConvertStringToInt(input, line_num))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      if (line_num <= 0)
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      state = UserInputAnalyzingState::kReColumn;
-      break;
-
-    case UserInputAnalyzingState::kReColumn:
-      if (NumIsFloat(input) || !ConvertStringToInt(input, col_num))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      *end_loc = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
-                                          line_num, col_num);
-
-      if (col_num <= 0 || GetLineNumber(src_mgr, *end_loc) < line_num ||
-          GetColumnNumber(src_mgr, *end_loc) < col_num)
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      state = UserInputAnalyzingState::kNonAOrBOption;
-      break;
-
-    case UserInputAnalyzingState::kLimitNumOfMutant:
-      if (NumIsFloat(input) || !ConvertStringToInt(input, limit))
-      {
-        cout << "Invalid input for -l option, must be an positive integer smaller than 2147483648\n";
-        cout << "Usage: -l <max>\n";
-        exit(1);
-      }
-
-      if (limit <= 0)
-      {
-        cout << "Invalid input for -l option, must be an positive integer smaller than 2147483648\n";
-        cout << "Usage: -l <max>\n";
-        exit(1);
-      }      
-
-      state = UserInputAnalyzingState::kNonAOrBOption;
-      break;
-
-    case UserInputAnalyzingState::kAnyOptionAndMutantName:
-    case UserInputAnalyzingState::kNonAOptionAndMutantName:
-    case UserInputAnalyzingState::kNonAOrBOptionAndMutantName:
-    {
-      AddMutantOperator(mutant_name, domain, range, 
-                        stmt_operator_list, expr_operator_list);
-
-      state = UserInputAnalyzingState::kMutantName;
-      domain.clear();
-      range.clear();
-
-      HandleInputArgument(input, state, mutant_name, domain, range, 
-                          output_dir, limit, start_loc, end_loc, line_num, 
-                          col_num, src_mgr, stmt_operator_list,
-                          expr_operator_list);
-      break;
     }
+    auto AdjustingCompilations =
+        llvm::make_unique<ArgumentsAdjustingCompilations>(
+            std::move(Compilations));
+    AdjustingCompilations->appendArgumentsAdjuster(
+        getInsertArgumentAdjuster(ArgsBefore, tooling::ArgumentInsertPosition::BEGIN));
+    AdjustingCompilations->appendArgumentsAdjuster(
+        getInsertArgumentAdjuster(ArgsAfter, tooling::ArgumentInsertPosition::END));
+    Compilations = std::move(AdjustingCompilations);
+  }
 
-    case UserInputAnalyzingState::kDomainOfMutantOperator:
-      SplitStringIntoSet(input, domain, string(","));
-      // ValidateDomainOfMutantOperator(mutant_name, domain);
-      state = UserInputAnalyzingState::kNonAOptionAndMutantName;
-      break;
+  /// Returns a reference to the loaded compilations database.
+  tooling::CompilationDatabase &getCompilations() {
+    return *Compilations;
+  }
 
-    case UserInputAnalyzingState::kRangeOfMutantOperator:
-      SplitStringIntoSet(input, range, string(","));
-      // ValidateRangeOfMutantOperator(mutant_name, range);
-      state = UserInputAnalyzingState::kNonAOrBOptionAndMutantName;
-      break;
+  /// Returns a list of source file paths to process.
+  const std::vector<std::string> &getSourcePathList() const {
+    return SourcePathList;
+  }
 
-    default:
-      // cout << "unknown state: " << state << endl;
-      exit(1);
-  };
+  static const char *const HelpMessage;
+
+private:
+  std::unique_ptr<tooling::CompilationDatabase> Compilations;
+  std::vector<std::string> SourcePathList;
+  std::vector<std::string> ExtraArgsBefore;
+  std::vector<std::string> ExtraArgsAfter;
+};*/
+
+static llvm::cl::OptionCategory ComutOptions("COMUT options");
+static llvm::cl::extrahelp CommonHelp(tooling::CommonOptionsParser::HelpMessage);
+
+// static llvm::cl::extrahelp MoreHelp("\nMore help text...");
+
+static llvm::cl::list<string> OptionM(
+    "m", llvm::cl::desc("Specify mutant operator name to use"), 
+    llvm::cl::value_desc("mutantname"),
+    llvm::cl::cat(ComutOptions));
+
+static llvm::cl::opt<string> OptionO("o", llvm::cl::cat(ComutOptions));
+
+static llvm::cl::opt<unsigned int> OptionL(
+    "l", llvm::cl::init(UINT_MAX), llvm::cl::cat(ComutOptions));
+
+static llvm::cl::list<unsigned int> OptionRS(
+    "rs", llvm::cl::multi_val(2),
+    llvm::cl::cat(ComutOptions));
+static llvm::cl::list<unsigned int> OptionRE(
+    "re", llvm::cl::multi_val(2),
+    llvm::cl::cat(ComutOptions));
+
+static llvm::cl::opt<string> OptionA("A", llvm::cl::cat(ComutOptions));
+static llvm::cl::opt<string> OptionB("B", llvm::cl::cat(ComutOptions));
+
+InformationGatherer *g_gatherer;
+CompilerInstance *g_CI;
+Configuration *g_config;
+MutantDatabase *g_mutant_database;
+ComutContext *g_comut_context;
+vector<ExprMutantOperator*> g_expr_mutant_operator_list;
+vector<StmtMutantOperator*> g_stmt_mutant_operator_list;
+tooling::CommonOptionsParser *g_option_parser;
+
+// default output directory is current directory.
+string g_output_dir = "./";
+
+/* By default, as many mutants will be generated 
+     at a location per mutant operator as possible. */
+int g_limit = UINT_MAX;
+
+string g_inputfile_name, g_mutdbfile_name;
+string g_current_inputfile_path;
+SourceLocation g_mutation_range_start;
+SourceLocation g_mutation_range_end;
+
+inline bool exists_test3 (const std::string& name) {
+  struct stat buffer;   
+  return (stat (name.c_str(), &buffer) == 0); 
 }
 
-void AnalyzeUserInput(int argc, char *argv[], UserInputAnalyzingState &state,
-                      string &mutant_name, set<string> &domain,
-                      set<string> &range, string &output_dir, int &limit, 
-                      SourceLocation *start_loc, SourceLocation *end_loc, 
-                      int &line_num, int &col_num, SourceManager &src_mgr, 
-                      vector<StmtMutantOperator*> &stmt_operator_list,
-                      vector<ExprMutantOperator*> &expr_operator_list)
+class GenerateMutantAction : public ASTFrontendAction
 {
-  // Analyze each user command argument from left to right
-  for (int i = 2; i < argc; ++i)
+protected:
+  void ExecuteAction() override
   {
-    string option = argv[i];
-    cout << "handling " << option << endl;
+    CompilerInstance &CI = getCompilerInstance();
+    CI.getPreprocessor().createPreprocessingRecord();
+    
+    cout << "executing action from GenerateMutantAction\n";
+    ASTFrontendAction::ExecuteAction();
+    cout << "done execute action\n";
 
-    /* Option -m signals that the next input should be 
-       a mutant operator name. User might have used option -m
-       before, so we should call ClearState to add previously stored 
-       mutant operator (if exists) and clear temporary storing variable. */
-    if (option.compare("-m") == 0)
+    //=================================================
+    //==================== OUTPUT =====================
+    //=================================================
+    /* Open the file with mode TRUNC to create the file if not existed
+    or delete content if existed. */
+    string filename{"/home/duyloc1503/comut-libtool/src/" + g_mutdbfile_name};
+
+    ofstream out_mutDb(g_mutdbfile_name.data(), ios::trunc);
+
+    if (!out_mutDb.is_open())
+      std::cerr<<"Failed to open file : "<<strerror(errno)<<std::endl;
+    else
+      cout << "opened file name " << g_mutdbfile_name << endl;
+
+    out_mutDb.close();
+
+    g_mutant_database->ExportAllEntries();
+    // g_mutant_database->WriteAllEntriesToDatabaseFile();
+  }
+
+public:
+  virtual unique_ptr<ASTConsumer> CreateASTConsumer(
+      CompilerInstance &CI, llvm::StringRef InFile)
+  {
+    // Parse rs and re option.
+    SourceManager &sm = CI.getSourceManager();
+    g_mutation_range_start = sm.getLocForStartOfFile(sm.getMainFileID());
+    g_mutation_range_end = sm.getLocForEndOfFile(sm.getMainFileID());
+
+    if (!OptionRS.empty())
     {
-      ClearState(state, mutant_name, domain, range, 
-                 stmt_operator_list, expr_operator_list);
-      
-      mutant_name.clear();
-      domain.clear();
-      range.clear();
-      
-      // Signals expectation of a mutant operator name
-      state = UserInputAnalyzingState::kMutantName;
-    }
-    // 
-    else if (option.compare("-l") == 0)
-    {
-      ClearState(state, mutant_name, domain, range, 
-                 stmt_operator_list, expr_operator_list);
-      state = UserInputAnalyzingState::kLimitNumOfMutant;
-    }
-    else if (option.compare("-rs") == 0)
-    {
-      ClearState(state, mutant_name, domain, range, 
-                 stmt_operator_list, expr_operator_list);
-      state = UserInputAnalyzingState::kRsLine;
-    }
-    else if (option.compare("-re") == 0)
-    {
-      ClearState(state, mutant_name, domain, range, 
-                 stmt_operator_list, expr_operator_list);
-      state = UserInputAnalyzingState::kReLine;
-    }
-    else if (option.compare("-o") == 0)
-    {
-      ClearState(state, mutant_name, domain, range, 
-                 stmt_operator_list, expr_operator_list);
-      state = UserInputAnalyzingState::kOutputDir;
-    }
-    else if (option.compare("-A") == 0)
-    {
-      if (state != UserInputAnalyzingState::kAnyOptionAndMutantName)
+      if (OptionRS[0] == 0 || OptionRE[0] == 0)
       {
-        // not expecting -A at this position
-        PrintUsageErrorMsg();
+        PrintLineColNumberErrorMsg();
         exit(1);
       }
-      else
-        state = UserInputAnalyzingState::kDomainOfMutantOperator;
-    }
-    else if (option.compare("-B") == 0)
-    {
-      if (state != UserInputAnalyzingState::kNonAOptionAndMutantName && 
-          state != UserInputAnalyzingState::kAnyOptionAndMutantName)
+
+      SourceLocation interpreted_loc = sm.translateLineCol(
+          sm.getMainFileID(), OptionRS[0], OptionRS[1]);
+
+      if (OptionRS[0] != GetLineNumber(sm, interpreted_loc) ||
+          OptionRS[1] != GetColumnNumber(sm, interpreted_loc))
       {
-        // not expecting -B at this position
-        PrintUsageErrorMsg();
+        PrintLineColNumberErrorMsg();
         exit(1);
       }
-      else
-        state = UserInputAnalyzingState::kRangeOfMutantOperator;
+
+      g_mutation_range_start = sm.translateLineCol(
+          sm.getMainFileID(), OptionRS[0], OptionRS[1]);
     }
+
+    cout << "done parsing rs\n";
+
+    if (!OptionRE.empty())
+    {
+      if (OptionRE[0] == 0 || OptionRE[1] == 0)
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      SourceLocation interpreted_loc = sm.translateLineCol(
+          sm.getMainFileID(), OptionRE[0], OptionRE[1]);
+
+      if (OptionRE[0] != GetLineNumber(sm, interpreted_loc) ||
+          OptionRE[1] != GetColumnNumber(sm, interpreted_loc))
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      g_mutation_range_end = sm.translateLineCol(
+          sm.getMainFileID(), OptionRE[0], OptionRE[1]);
+    }
+
+    /* Create Configuration object pointer to pass as attribute 
+       for ComutASTConsumer. */
+    g_config = new Configuration(
+        g_inputfile_name, g_mutdbfile_name, g_mutation_range_start, 
+        g_mutation_range_end, g_output_dir, g_limit);
+
+    g_mutant_database = new MutantDatabase(
+        &CI, g_config->getInputFilename(),
+        g_config->getOutputDir());
+
+    g_comut_context = new ComutContext(
+        &CI, g_config, g_gatherer->getLabelToGotoListMap(),
+        g_gatherer->getSymbolTable(), *g_mutant_database);
+
+    return unique_ptr<ASTConsumer>(new ComutASTConsumer(
+        &CI, g_gatherer->getLabelToGotoListMap(),
+        g_stmt_mutant_operator_list,
+        g_expr_mutant_operator_list, *g_comut_context));
+  }
+};
+
+class GatherDataAction : public ASTFrontendAction
+{
+protected:
+  void ExecuteAction() override
+  {
+    CompilerInstance &CI = getCompilerInstance();
+    CI.getPreprocessor().createPreprocessingRecord();
+
+    HeaderSearchOptions &hso = CI.getHeaderSearchOpts();
+
+    cout << "executing action from GatherDataAction\n";
+    ASTFrontendAction::ExecuteAction();
+
+    cout << g_gatherer->getLabelToGotoListMap()->size() << endl;
+
+    vector<string> source{g_current_inputfile_path};
+
+    tooling::ClangTool Tool2(g_option_parser->getCompilations(),
+                             source);
+
+    Tool2.run(tooling::newFrontendActionFactory<GenerateMutantAction>().get());
+  }
+
+public:  
+  virtual unique_ptr<ASTConsumer> CreateASTConsumer(
+      CompilerInstance &CI, llvm::StringRef InFile)
+  {
+    g_CI = &CI;
+    g_gatherer = new InformationGatherer(&CI);
+    return unique_ptr<ASTConsumer>(g_gatherer);
+  }
+};
+
+int main(int argc, const char *argv[])
+{
+  // cout << OptionL << endl;
+
+  g_option_parser = new tooling::CommonOptionsParser(
+      argc, argv, ComutOptions);
+
+  // Parse option -o (if provided)
+  // Terminate tool if given output directory does not exist.
+  if (!OptionO.empty())
+  {
+    if (DirectoryExists(OptionO))
+      g_output_dir = OptionO;
     else
     {
-      HandleInputArgument(option, state, mutant_name, domain, range,
-                          output_dir, limit, start_loc, end_loc, line_num, 
-                          col_num, src_mgr, stmt_operator_list, 
-                          expr_operator_list);
+      cout << "Invalid directory for -o option: " << OptionO << endl;
+      exit(1);
     }
   }
 
-  ClearState(state, mutant_name, domain, range, 
-             stmt_operator_list, expr_operator_list);
-}
+  if (g_output_dir.back() != '/')
+    g_output_dir += "/";
 
-int main(int argc, char *argv[])
-{
-  if (argc < 2) 
+  cout << "done with option o: " << g_output_dir << "\n";
+
+  // Parse option -l (if provided)
+  // Given input should be a positive integer.
+  if (OptionL != UINT_MAX)
   {
-    PrintUsageErrorMsg();
-    return 1;
+    if (OptionL != 0)
+      g_limit = OptionL;
+    else
+    {
+      cout << "Invalid input for -l option, must be an positive integer smaller than 4294967296\n";
+      cout << "Usage: -l <max>\n";
+      exit(1);
+    }
   }
 
-  srand(time(NULL));
+  cout << "done with option l: " << g_limit << "\n";
 
-  CompilerInstance *TheCompInst = MakeCompilerInstance(argv[1]);
-  SourceManager &SourceMgr = TheCompInst->getSourceManager();
+  // Parse option -m (if provided)
+  if (OptionM.empty())
+    AddAllMutantOperator(g_stmt_mutant_operator_list, 
+                         g_expr_mutant_operator_list);
+  else
+    for (auto e: OptionM)
+    {
+      set<string> domain, range;
 
-  //=======================================================
-  //================ USER INPUT ANALYSIS ==================
-  //=======================================================
+      cout << "analyzing " << e << endl;
+      vector<string> mutant_operator;
+
+      // Split input into mutant operator name, domain, range (if specified)
+      SplitStringIntoVector(e, mutant_operator, string(":"));
+
+      for (auto it: mutant_operator)
+        cout << it << endl;
+
+      // Capitalize mutant operator name.
+      for (int i = 0; i < mutant_operator[0].length() ; ++i)
+      {
+        if (mutant_operator[0][i] >= 'a' && 
+            mutant_operator[0][i] <= 'z')
+          mutant_operator[0][i] -= 32;
+      }
+
+      // Gather domain if specified.
+      if (mutant_operator.size() > 1)
+      {
+        SplitStringIntoSet(mutant_operator[1], domain, string(","));
+
+        // Remove 
+        for (auto it = domain.begin(); it != domain.end(); )
+        {
+          if ((*it).empty())
+            it = domain.erase(it);
+          else
+            ++it;
+        }
+      }
+
+      // Gather range if specified.
+      if (mutant_operator.size() > 2)
+      {
+        SplitStringIntoSet(mutant_operator[2], range, string(","));
+        for (auto it = range.begin(); it != range.end(); )
+        {
+          if ((*it).empty())
+            it = range.erase(it);
+          else
+            ++it;
+        }
+      }
+
+      AddMutantOperator(mutant_operator[0], domain, range,
+                        g_stmt_mutant_operator_list,
+                        g_expr_mutant_operator_list);
+    }
+
+  // return 0;
+  cout << "done with option m\n";
+
+  ofstream my_file("/home/duyloc1503/comut-libtool/multiple-compile-command-files.txt", ios::trunc);    
+
+  /* Run tool separately for each input file. */
+  for (auto file: g_option_parser->getSourcePathList())
+  { 
+    // cout << "Running COMUT on " << file << endl;
+
+    if (g_option_parser->getCompilations().getCompileCommands(file).size() > 1)
+    {
+      cout << "This file has more than 1 compile commands\n" << file << endl;
+
+      for (auto e: g_option_parser->getCompilations().getCompileCommands(file))
+      {
+        for (auto command: e.CommandLine)
+          cout << command << " ";
+        cout << endl;
+      } 
+
+      getchar();
+      continue;
+    }
+
+    // Print all compilation for this file
+    // int counter = 0;
+    // for (auto e: g_option_parser->getCompilations().getCompileCommands(file))
+    // {
+    //   counter++;
+    //   cout << "==========" << counter << "==========\n";
+    //   cout << e.Directory << endl;
+    //   cout << e.Filename << endl;
+    //   for (auto command: e.CommandLine)
+    //     cout << command << " ";
+    //   cout << endl;
+    //   cout << "=====================\n";
+    // }
+
+    // getchar();  // pause the program 
+    g_current_inputfile_path = file;
+
+    // inputfile name is the string after the last slash (/)
+    // in the provided path to inputfile. 
+    string inputfile_path = file;
+    vector<string> path;
+    SplitStringIntoVector(inputfile_path, path, string("/"));
+    g_inputfile_name = path.back();
+
+    // Make mutation database file named <inputfilename>_mut_db.out
+    g_mutdbfile_name = g_output_dir;
+
+    if (g_mutdbfile_name.back() != '/')
+      g_mutdbfile_name += "/";
+
+    g_mutdbfile_name.append(g_inputfile_name, 0, g_inputfile_name.length()-2);
+    g_mutdbfile_name += "_mut_db.out";
+
+    cout << "g_inputfile_name = " << g_inputfile_name << endl;
+    cout << "g_mutdbfile_name = " << g_mutdbfile_name << endl;
+
+    vector<string> source{g_current_inputfile_path};
   
-  // default output directory is current directory.
-  string output_dir = "./";
+    // Run tool
+    tooling::ClangTool Tool1(g_option_parser->getCompilations(),
+                             source);
 
-  /* By default, as many mutants will be generated 
-     at a location per mutant operator as possible. */
-  int limit = INT_MAX;
+    Tool1.run(tooling::newFrontendActionFactory<GatherDataAction>().get());
 
-  /* start_loc and end_loc of mutation range by default is 
-     start and end of file. */
-  SourceLocation start_of_mutation_range = SourceMgr.getLocForStartOfFile(
-      SourceMgr.getMainFileID());
-  SourceLocation end_of_mutation_range = SourceMgr.getLocForEndOfFile(
-      SourceMgr.getMainFileID());
-
-  // if -m option is specified, apply only specified operators to input file.
-  bool apply_all_mutant_operators = true;
-
-  // Validate and analyze user's inputs.
-  UserInputAnalyzingState state = UserInputAnalyzingState::kNonAOrBOption;
-  string mutantOpName{""};
-  set<string> domain;
-  set<string> range;
-  int line_num{0};
-  int col_num{0};
-
-  vector<ExprMutantOperator*> expr_mutant_operator_list;
-  vector<StmtMutantOperator*> stmt_mutant_operator_list;
-
-  AnalyzeUserInput(argc, argv, state, mutantOpName, domain, range,
-                  output_dir, limit, &start_of_mutation_range, 
-                  &end_of_mutation_range, line_num, col_num, SourceMgr,
-                  stmt_mutant_operator_list, expr_mutant_operator_list);
-
-  if (stmt_mutant_operator_list.empty() && expr_mutant_operator_list.empty()) 
-  {
-    AddAllMutantOperator(stmt_mutant_operator_list, expr_mutant_operator_list);
+    cout << "done tooling on " << file << endl;
   }
 
-  // Make mutation database file named <inputfilename>_mut_db.out
-  vector<string> path;
-  SplitStringIntoVector(string(argv[1]), path, string("/"));
-
-  /* inputfile name is the string after the last slash (/)
-     in the provided path to inputfile. */
-  string inputFilename = path.back();
-
-  string mutDbFilename(output_dir);
-  mutDbFilename.append(inputFilename, 0, inputFilename.length()-2);
-  mutDbFilename += "_mut_db.out";
-
-  /* Create Configuration object pointer to pass as attribute 
-     for ComutASTConsumer. */
-  Configuration *config = new Configuration(
-      inputFilename, mutDbFilename, start_of_mutation_range, 
-      end_of_mutation_range, output_dir, limit);
-
-  //=======================================================
-  //==================== FIRST PARSE ======================
-  //=======================================================
-  /* Parse the file to AST, gather labelstmts, goto stmts, 
-     scalar constants, string literals. */
-  InformationGatherer *TheGatherer = GetNecessaryDataFromInputFile(argv[1]);
-
-  MutantDatabase mutant_database(TheCompInst, inputFilename, output_dir);
-
-  ComutContext context(
-      TheCompInst, config, TheGatherer->getLabelToGotoListMap(),
-      TheGatherer->getSymbolTable(), mutant_database);
-
-  //=======================================================
-  //==================== SECOND PARSE =====================
-  //=======================================================
-  // Create an AST consumer instance which is going to get called by ParseAST.
-  ComutASTConsumer TheConsumer(
-      TheCompInst, TheGatherer->getLabelToGotoListMap(), 
-      stmt_mutant_operator_list, expr_mutant_operator_list, context);
-
-  Sema sema(TheCompInst->getPreprocessor(), TheCompInst->getASTContext(), 
-            TheConsumer);
-
-  // Parse the file to AST, registering our consumer as the AST consumer.
-  ParseAST(sema);
-
-  //=================================================
-  //==================== OUTPUT =====================
-  //=================================================
-  /* Open the file with mode TRUNC to create the file if not existed
-  or delete content if existed. */
-  ofstream out_mutDb(mutDbFilename.data(), ios::trunc);   
-  out_mutDb.close();
-
-  mutant_database.ExportAllEntries();
-  // mutant_database.WriteAllEntriesToDatabaseFile();
+  my_file.close();
 
   return 0;
 }

@@ -48,6 +48,8 @@ bool OEAA::CanMutate(clang::Expr *e, ComutContext *context)
 		string binary_operator{bo->getOpcodeStr()};
 		SourceLocation start_loc = bo->getOperatorLoc();
 		SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+
+		// cout << "cp oeaa\n";
 		SourceLocation end_loc = src_mgr.translateLineCol(
 				src_mgr.getMainFileID(),
 				GetLineNumber(src_mgr, start_loc),
@@ -84,6 +86,8 @@ void OEAA::Mutate(clang::Expr *e, ComutContext *context)
 	string token{bo->getOpcodeStr()};
 	SourceLocation start_loc = bo->getOperatorLoc();
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+	
+	// cout << "cp oeaa\n";
 	SourceLocation end_loc = src_mgr.translateLineCol(
 			src_mgr.getMainFileID(),
 			GetLineNumber(src_mgr, start_loc),
@@ -126,7 +130,13 @@ void OEAA::Mutate(clang::Expr *e, ComutContext *context)
 	only_plus_minus_ = false;
 }
 
+bool IsPointerToIncompleteType(QualType type)
+{
+	QualType pointee_type = cast<PointerType>(
+			type.getCanonicalType().getTypePtr())->getPointeeType();
 
+	return pointee_type.getCanonicalType().getTypePtr()->isIncompleteType();
+}
 
 bool OEAA::CanMutate(clang::BinaryOperator * const bo, 
 										 CompilerInstance *comp_inst)
@@ -154,8 +164,14 @@ bool OEAA::CanMutate(clang::BinaryOperator * const bo,
 			// 		pointer = (void *) pointer
 			// only subtraction between same-type ptr is allowed
 			if (rhs_type_str.compare("void *") == 0 ||
-					rhs_type_str.compare(lhs_type_str) != 0)
+					rhs_type_str.compare(lhs_type_str) != 0 ||
+					IsPointerToIncompleteType(rhs->getType()))
 				return false;
+
+			// cout << ConvertToString(lhs, comp_inst->getLangOpts()) << endl;
+			// cout << lhs_type_str << endl;
+			// cout << ConvertToString(rhs, comp_inst->getLangOpts()) << endl;
+			// cout << rhs_type_str << endl;
 
 			only_minus_ = true;
 			return true;

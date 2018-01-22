@@ -11,6 +11,7 @@ class InformationVisitor : public clang::RecursiveASTVisitor<InformationVisitor>
 {
 public:
   InformationVisitor(clang::CompilerInstance *CI);
+  ~InformationVisitor();
 
   // Add a new Goto statement location to LabelStmtToGotoStmtListMap.
   // Add the label to the map if map does not contain label.

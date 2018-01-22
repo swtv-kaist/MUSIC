@@ -27,6 +27,8 @@ public:
   clang::SourceLocation getMutatedTokenEndLocation() const;
   clang::SourceRange getMutatedTokenRange() const;
 
+  bool operator==(const MutantEntry &rhs) const;
+
 private:
   int proteum_style_line_num_;
   std::string token_;

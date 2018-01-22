@@ -9,6 +9,7 @@ MutantEntry::MutantEntry(
 start_location_(start_loc), end_location_before_mutation_(end_loc),
 proteum_style_line_num_(proteum_style_line_num), src_mgr_(src_mgr)
 {
+  // cout << "cp MutantEntry\n";
   end_location_after_mutation_ = src_mgr.translateLineCol(
       src_mgr.getMainFileID(), GetLineNumber(src_mgr, start_loc),
       GetColumnNumber(src_mgr, start_loc) + \
@@ -48,3 +49,10 @@ clang::SourceRange MutantEntry::getMutatedTokenRange() const
 {
   return SourceRange(start_location_, end_location_after_mutation_);
 }
+
+bool MutantEntry::operator==(const MutantEntry &rhs) const
+{
+  return (token_.compare(rhs.getToken()) == 0 &&
+          mutated_token_.compare(rhs.getMutatedToken()) == 0);
+}
+

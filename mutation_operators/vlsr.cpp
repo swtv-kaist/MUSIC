@@ -55,6 +55,9 @@ void VLSR::Mutate(clang::Expr *e, ComutContext *context)
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
+  // cout << start_loc.printToString(context->comp_inst_->getSourceManager()) << endl;
+  // cout << e->getLocEnd().printToString(context->comp_inst_->getSourceManager()) << endl;
+
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
@@ -71,7 +74,9 @@ void VLSR::Mutate(clang::Expr *e, ComutContext *context)
   {
   	string mutated_token{GetVarDeclName(vardecl)};
 
-  	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+  	context->mutant_database_.AddMutantEntry(
+        name_, start_loc, end_loc, token, mutated_token, 
+        context->getStmtContext().getProteumStyleLineNum());
   }
 }
 
@@ -86,7 +91,8 @@ void VLSR::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
   StmtContext &stmt_context = context->getStmtContext();
 
 	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = stmt_context.IsInSwitchStmtConditionRange(e);
+  bool skip_float_vardecl = stmt_context.IsInSwitchStmtConditionRange(e) ||
+                            stmt_context.IsInArraySubscriptRange(e);
 
   // cannot mutate a variable in lhs of assignment to a const variable
   bool skip_const_vardecl = stmt_context.IsInLhsOfAssignmentRange(e);

@@ -14,6 +14,9 @@ bool SANL::ValidateRange(const std::set<std::string> &range)
 // Return True if the mutant operator can mutate this expression
 bool SANL::CanMutate(clang::Expr *e, ComutContext *context)
 {
+  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
+  //   cout << "SANL can mutate?\n";
+
 	if (StringLiteral *sl = dyn_cast<StringLiteral>(e))
 	{
 		SourceLocation start_loc = sl->getLocStart();
@@ -29,6 +32,9 @@ bool SANL::CanMutate(clang::Expr *e, ComutContext *context)
     			 !stmt_context.IsInFieldDeclRange(e);
 	}
 
+  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
+  //   cout << "not a string literal: " << e->getStmtClassName() << endl;
+
 	return false;
 }
 
@@ -36,6 +42,9 @@ bool SANL::CanMutate(clang::Expr *e, ComutContext *context)
 
 void SANL::Mutate(clang::Expr *e, ComutContext *context)
 {
+  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
+  //   cout << "mutating\n";
+
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
