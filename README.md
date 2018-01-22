@@ -1,16 +1,42 @@
 # MUtation analySIs tool with high Configurability and extensibility MUSIC
 
+## Install Clang/LLVM 4.0
+
+MUSIC is built on top of Clang/LLVM so the first step is to get a working LLVM 
+installation. See 
+[Getting Started with the LLVM System](http://llvm.org/docs/GettingStarted.html)
+ for more information.
+
+If you are using a recent Ubuntu (≥ 14.04 and ≤ 17.10, e.g. 14.04 LTS), we 
+recommend you to use the LLVM packages provided by LLVM itself. Use 
+[LLVM Package Repository](http://apt.llvm.org/) to add the appropriate line to 
+your /etc/apt/sources.list. As an example, for Ubuntu 14.04, the following 
+lines should be added:
+
+```
+deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
+deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main
+```
+
+Then add the repository key and install the 4.0 packages:
+
+```
+$ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+$ sudo apt-get update 
+$ sudo apt-get install clang-4.0 libclang-common-4.0-dev libclang-4.0-dev libclang1-4.0 libllvm4.0 llvm-4.0 llvm-4.0-dev llvm-4.0-runtime
+```
+
 ## Compile
 
 Before compilation of tool, clang v4.0 should be installed.
 
-The current version of the tool has only been tested to compile and run successfully on clang v4.0.
+The current version of the tool has only been tested to compile and run successfully on clang v4.0, Linux x86-64.
 
-After install and build clang, you have to edit llvm source and build directory specification in the following 3 lines of Makefile
+After install and build clang, if necessary, you can edit llvm source and build directory specification in the following 3 lines of Makefile
 
 ```
-LLVM_SRC_PATH := $$HOME/llvm
-LLVM_BUILD_PATH := $$HOME/build-clang
+LLVM_SRC_PATH := /usr/lib/llvm-4.0
+LLVM_BUILD_PATH := /usr/lib/llvm-4.0
 LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 ```
 
@@ -20,18 +46,18 @@ LLVM_BIN_PATH is directory containing executables (ex. clang-4.0, llvm-config, .
 
 In short, according to the current Makefile:
 
-	$$HOME/llvm` is the directory of llvm source.
+	/usr/lib/llvm-4.0 is the directory of llvm source.
 
-	$$HOME/build-clang/ is the directory of the llvm build.
+	/usr/lib/llvm-4.0 is the directory of the llvm build.
 
-	$(LLVM_BUILD_PATH)/bin is the directory containing bin folder with all the executables.
+	/usr/lib/llvm-4.0/bin is the directory containing bin folder with all the executables.
 
 Compile the tool using make to produce tool executable.
 
 ## Tool Options
 
 ```
-./tool inputfilename [option ...]
+./tool inputfilename1 [inputfilename2 ...] [option ...]
 ```
 
 ### -o option
@@ -43,6 +69,16 @@ Usage:
 Used to specify output directory. The directory must exist.
 
 Default is current directory.
+
+### -p option
+
+Usage: 
+```
+-p <path-to-compile_commands.json>
+```
+Used to specify the compilation database file.
+
+Default is none so target file will be compiled with macro definitions, include directories, and so on
 
 ### -l option
 

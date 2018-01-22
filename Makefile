@@ -1,7 +1,7 @@
 # Edit these variables based on where you put your llvm source file
 # and build file.
-LLVM_SRC_PATH := $$HOME/llvm
-LLVM_BUILD_PATH := $$HOME/build-clang
+LLVM_SRC_PATH := /usr/lib/llvm-4.0
+LLVM_BUILD_PATH := /usr/lib/llvm-4.0
 LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 
 SRCS=tool.cpp configuration.cpp comut_utility.cpp mutant_entry.cpp\
@@ -62,7 +62,7 @@ OBJS=tool.o configuration.o comut_utility.o symbol_table.o\
 		 oeba.o oesa.o oaaa.o oaba.o oasa.o oaln.o oaan.o oarn.o \
 		 oabn.o oasn.o olan.o oran.o olbn.o olsn.o orbn.o orsn.o
 
-TARGET=	tool
+TARGET=	music
 
 ################
 LLVM_LIBS := core mc all
