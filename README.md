@@ -1,31 +1,30 @@
-# COfigurable MUtation Tool for C programs COMUT
+# MUtation analySIs tool with high Configurability and extensibility MUSIC
 
 ## Compile
 
-Before compilation of tool, clang v3.4 should be installed.
+Before compilation of tool, clang v4.0 should be installed.
 
-The current version of the tool has only been tested to compile and run successfully on clang v3.4.
+The current version of the tool has only been tested to compile and run successfully on clang v4.0.
 
-After install and build clang, you have to edit llvm source and build directory specification in the first 4 lines of Makefile
+After install and build clang, you have to edit llvm source and build directory specification in the following 3 lines of Makefile
 
 ```
-LLVM_BASE_PATH=/CS453/
-LLVM_SRC_DIRECTORY_NAME=llvm
-LLVM_BUILD_DIRECTORY_NAME=llvm_build
-LLVM_BUILD_MODE=Debug+Asserts
+LLVM_SRC_PATH := $$HOME/llvm
+LLVM_BUILD_PATH := $$HOME/build-clang
+LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 ```
 
-LLVM_BASE_PATH is the directory where your llvm source and build directory is.
+LLVM_SRC_PATH & LLVM_BUILD_PATH are directories containing llvm source and build respectively.
 
-LLVM_SRC_DIRECTORY_NAME & LLVM_BUILD_DIRECTORY_NAME are the name of folder containing llvm source and build respectively.
+LLVM_BIN_PATH is directory containing executables (ex. clang-4.0, llvm-config, ...)
 
 In short, according to the current Makefile:
 
-	/CS453/llvm/ is the directory of llvm source.
+	$$HOME/llvm` is the directory of llvm source.
 
-	/CS453/llvm_build/ is the directory of the llvm build.
+	$$HOME/build-clang/ is the directory of the llvm build.
 
-	/CS453/llvm_build/Debug+Asserts is the directory containing bin folder with all the executables.
+	$(LLVM_BUILD_PATH)/bin is the directory containing bin folder with all the executables.
 
 Compile the tool using make to produce tool executable.
 
@@ -59,7 +58,7 @@ Default is generate all mutants possible.
 
 Usage:
 ```
--rs <line> <col> -re <line> <col>
+-rs <line>[ <col>] -re <line>[ <col>]
 ```
 Used to specify the range where mutation operators can be applied. 
 
@@ -71,24 +70,24 @@ They do not have to go together and can be used separately
 
 Usage:
 ```
--m <mutant operator 1> [-A <domain>] [-B <range>] [<mutant operator 2> [-A <domain>] [-B <range>] ...]
+-m mutation_operator_name[:domain[:range]]
 ```
-Used to specify the mutant operator(s) to apply. 
+Used to specify the mutation operator(s) to apply. 
 
-Elements in domain, range must be separated by comma,  and written inside double quotes. 
+Can be specified multiple times.
 
-–A, -B order cannot be swapped.
+Elements in domain, range must be separated by comma.
 
 ## Output
 
-In the output directory, there will be mutant files for each mutant and and mutant database file named inputfilename_mut_db
+In the output directory, there will be mutant files for each mutant and mutant database file named inputfilename_mut_db.
 
 ## Examples
 
 ```
-./tool test.c
-./tool test.c -o mutant_test/ -rs 3 1 -re 15 5
-./tool test.c -o mutant_test/ -l 3 -m ssdl OAAN -A "+, -" -B "*,/" crcr -B "3.5,3"
+./music test.c --
+./music test.c -o mutant_test/ -rs 3 1 -re 15 5 --
+./music test.c -o mutant_test/ -l 3 -m ssdl -m OAAN:+,-:*,/ -p compile_commands.json
 ```
 
 

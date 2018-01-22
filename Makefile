@@ -72,7 +72,7 @@ CLANG_BUILD_FLAGS := -I$(LLVM_SRC_PATH)/tools/clang/include \
 					-I$(LLVM_BUILD_PATH)/tools/clang/include
 
 CLANG_LIBS := \
-	-lclangFrontendTool -lclangFrontend -lclangDriver \
+	-lclangTooling -lclangFrontendTool -lclangFrontend -lclangDriver \
 	-lclangSerialization -lclangCodeGen -lclangParse \
 	-lclangSema -lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore \
@@ -86,7 +86,7 @@ CLANG_INCLUDES := \
 	-I$(LLVM_SRC_PATH)/include \
 	-I$(LLVM_BUILD_PATH)/include
 
-CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl
+CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fexceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl
 		
 all: $(TARGET)
 
