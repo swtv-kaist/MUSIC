@@ -1,7 +1,7 @@
-#include "comut_ast_consumer.h"
-#include "comut_utility.h"
+#include "music_ast_consumer.h"
+#include "music_utility.h"
 
-void ComutASTVisitor::UpdateAddressOfRange(
+void MusicASTVisitor::UpdateAddressOfRange(
     UnaryOperator *uo, SourceLocation *start_loc, SourceLocation *end_loc)
 {
   // cout << "UpdateAddressOfRange called\n";
@@ -29,7 +29,7 @@ void ComutASTVisitor::UpdateAddressOfRange(
   @return True if reference name is not in the prohibited list
       False otherwise
 */
-bool ComutASTVisitor::IsScalarRefMutatableByVtwd(string scalarref_name)
+bool MusicASTVisitor::IsScalarRefMutatableByVtwd(string scalarref_name)
 {
   // cout << "IsScalarRefMutatableByVtwd called\n";
   // if reference name is in the nonMutatableList then it is not mutatable
@@ -56,7 +56,7 @@ bool ComutASTVisitor::IsScalarRefMutatableByVtwd(string scalarref_name)
       (VTWD can apply to that ref)
       False otherwise
 */
-bool ComutASTVisitor::CollectNonVtwdMutatableScalarRef(
+bool MusicASTVisitor::CollectNonVtwdMutatableScalarRef(
     Expr *e, bool exclude_last_scalarref)
 {
   // cout << "CollectNonVtwdMutatableScalarRef called\n";
@@ -146,7 +146,7 @@ bool ComutASTVisitor::CollectNonVtwdMutatableScalarRef(
   return scalarref_excluded;
 }
 
-void ComutASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
+void MusicASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
 {
   // cout << "HandleUnaryOperatorExpr called\n";
   SourceLocation start_loc = uo->getLocStart();
@@ -166,7 +166,7 @@ void ComutASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
   }
 }
 
-void ComutASTVisitor::HandleBinaryOperatorExpr(Expr *e)
+void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
 {
   // cout << "HandleBinaryOperatorExpr called\n";
   BinaryOperator *bo = cast<BinaryOperator>(e);
@@ -196,7 +196,7 @@ void ComutASTVisitor::HandleBinaryOperatorExpr(Expr *e)
   // if A and B are both scalar reference then
   // (A+B) should only be mutated to (A+B+1),
   // not both (A+B+1) and (A+1+B).
-  // Store the name of A so that COMUT do not mutate it.
+  // Store the name of A so that MUSIC do not mutate it.
   if (bo->isAdditiveOp())
     CollectNonVtwdMutatableScalarRef(e, true);
 
@@ -230,12 +230,12 @@ void ComutASTVisitor::HandleBinaryOperatorExpr(Expr *e)
   }
 }
 
-ComutASTVisitor::ComutASTVisitor(
+MusicASTVisitor::MusicASTVisitor(
     clang::CompilerInstance *CI, 
     LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
     std::vector<StmtMutantOperator*> &stmt_operator_list,
     std::vector<ExprMutantOperator*> &expr_operator_list,
-    ComutContext &context) 
+    MusicContext &context) 
   : src_mgr_(CI->getSourceManager()),
     comp_inst_(CI), context_(context), stmt_context_(context.getStmtContext()),
     stmt_mutant_operator_list_(stmt_operator_list),
@@ -260,7 +260,7 @@ ComutASTVisitor::ComutASTVisitor(
   context_.scope_list_ = &scope_list_;
 }
 
-bool ComutASTVisitor::VisitStmt(clang::Stmt *s)
+bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
 {
   SourceLocation start_loc = s->getLocStart();
   SourceLocation end_loc = s->getLocEnd();
@@ -323,13 +323,13 @@ bool ComutASTVisitor::VisitStmt(clang::Stmt *s)
   // cout << "mutating\n";
 
   for (auto mutant_operator: stmt_mutant_operator_list_)
-    if (mutant_operator->CanMutate(s, &context_))
+    if (mutant_operator->IsMutationTarget(s, &context_))
       mutant_operator->Mutate(s, &context_);
 
   return true;
 }
 
-bool ComutASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
+bool MusicASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
 {
   SourceLocation start_spelling_loc = \
       src_mgr_.getSpellingLoc(c->getLocStart());
@@ -353,7 +353,7 @@ bool ComutASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
   return true;
 }
 
-bool ComutASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
+bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
 {
   SourceLocation start_spelling_loc = \
       src_mgr_.getSpellingLoc(ss->getLocStart());
@@ -425,7 +425,7 @@ bool ComutASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
   return true;
 }
 
-bool ComutASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
+bool MusicASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
 {
   SourceLocation start_spelling_loc = \
       src_mgr_.getSpellingLoc(sc->getLocStart());
@@ -454,7 +454,7 @@ bool ComutASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
   return true;
 }
 
-bool ComutASTVisitor::VisitExpr(clang::Expr *e)
+bool MusicASTVisitor::VisitExpr(clang::Expr *e)
 {
   // cout << "VisitExpr\n" << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
   // PrintLocation(src_mgr_, e->getLocStart());
@@ -488,7 +488,7 @@ bool ComutASTVisitor::VisitExpr(clang::Expr *e)
     return true;
 
   for (auto mutant_operator: expr_mutant_operator_list_)
-    if (mutant_operator->CanMutate(e, &context_))
+    if (mutant_operator->IsMutationTarget(e, &context_))
     {
       // if (GetLineNumber(src_mgr_, e->getLocStart()) == 49)
       //   cout << "yes\n";
@@ -516,13 +516,13 @@ bool ComutASTVisitor::VisitExpr(clang::Expr *e)
   return true;
 }
 
-bool ComutASTVisitor::VisitEnumDecl(clang::EnumDecl *ed)
+bool MusicASTVisitor::VisitEnumDecl(clang::EnumDecl *ed)
 {
   stmt_context_.setIsInEnumDecl(true);
   return true;
 }
 
-bool ComutASTVisitor::VisitTypedefDecl(clang::TypedefDecl *td)
+bool MusicASTVisitor::VisitTypedefDecl(clang::TypedefDecl *td)
 {
   stmt_context_.setTypedefDeclRange(
       new SourceRange(td->getLocStart(), td->getLocEnd()));
@@ -530,7 +530,7 @@ bool ComutASTVisitor::VisitTypedefDecl(clang::TypedefDecl *td)
   return true;
 }
 
-bool ComutASTVisitor::VisitFieldDecl(clang::FieldDecl *fd)
+bool MusicASTVisitor::VisitFieldDecl(clang::FieldDecl *fd)
 {
   SourceLocation start_loc = fd->getLocStart();
   SourceLocation end_loc = fd->getLocEnd();
@@ -546,7 +546,7 @@ bool ComutASTVisitor::VisitFieldDecl(clang::FieldDecl *fd)
   return true;
 }
 
-bool ComutASTVisitor::VisitVarDecl(clang::VarDecl *vd)
+bool MusicASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 {
   SourceLocation start_loc = vd->getLocStart();
   SourceLocation end_loc = vd->getLocEnd();
@@ -589,7 +589,7 @@ bool ComutASTVisitor::VisitVarDecl(clang::VarDecl *vd)
   return true;
 }
 
-bool ComutASTVisitor::VisitFunctionDecl(clang::FunctionDecl *f) 
+bool MusicASTVisitor::VisitFunctionDecl(clang::FunctionDecl *f) 
 {   
   // Function with nobody, and function declaration within 
   // another function is function prototype.
@@ -623,18 +623,18 @@ bool ComutASTVisitor::VisitFunctionDecl(clang::FunctionDecl *f)
   return true;
 }
 
-ComutASTConsumer::ComutASTConsumer(
+MusicASTConsumer::MusicASTConsumer(
     clang::CompilerInstance *CI, 
     LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
     std::vector<StmtMutantOperator*> &stmt_operator_list,
     std::vector<ExprMutantOperator*> &expr_operator_list,
-    ComutContext &context)
+    MusicContext &context)
   : Visitor(CI, label_to_gotolist_map, stmt_operator_list, 
             expr_operator_list, context) 
 { 
 }
 
-void ComutASTConsumer::HandleTranslationUnit(clang::ASTContext &Context)
+void MusicASTConsumer::HandleTranslationUnit(clang::ASTContext &Context)
 {
   /* we can use ASTContext to get the TranslationUnitDecl, which is
   a single Decl that collectively represents the entire source file */

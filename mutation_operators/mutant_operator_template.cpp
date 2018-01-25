@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "mutant_operator_template.h"
 
 #include <fstream>
@@ -14,7 +14,7 @@ void MutantOperatorTemplate::setRange(set<string> &range)
 }
 
 /*void MutantOperatorTemplate::GenerateMutantFile(
-	ComutContext *context, const SourceLocation &start_loc,
+	MusicContext *context, const SourceLocation &start_loc,
 	const SourceLocation &end_loc, const string &mutated_token)
 {
 	Rewriter rewriter;
@@ -41,7 +41,7 @@ void MutantOperatorTemplate::setRange(set<string> &range)
 
 // Return the name of the next mutated code file
 string MutantOperatorTemplate::GetNextMutantFilename(
-    const ComutContext *context)
+    const MusicContext *context)
 {
   string ret{context->getConfiguration()->getOutputDir()};
   ret += context->mutant_filename;
@@ -51,7 +51,7 @@ string MutantOperatorTemplate::GetNextMutantFilename(
 }
 
 void MutantOperatorTemplate::WriteMutantInfoToMutantDbFile(
-    ComutContext *context, const clang::SourceLocation &start_loc, 
+    MusicContext *context, const clang::SourceLocation &start_loc, 
     const clang::SourceLocation &end_loc, const std::string &token, 
     const std::string &mutated_token)
 {

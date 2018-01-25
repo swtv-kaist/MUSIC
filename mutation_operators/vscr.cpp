@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vscr.h"
 
 bool VSCR::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool VSCR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VSCR::CanMutate(clang::Expr *e, ComutContext *context)
+bool VSCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (MemberExpr *me = dyn_cast<MemberExpr>(e))
 	{
@@ -27,7 +27,7 @@ bool VSCR::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-void VSCR::Mutate(clang::Expr *e, ComutContext *context)
+void VSCR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	MemberExpr *me;
 	if (!(me = dyn_cast<MemberExpr>(e)))

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oeaa.h"
 
 bool OEAA::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OEAA::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OEAA::CanMutate(clang::Expr *e, ComutContext *context)
+bool OEAA::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -68,7 +68,7 @@ bool OEAA::CanMutate(clang::Expr *e, ComutContext *context)
 		// 		- left and right side are both scalar
 		// 		- only subtraction between same-type pointers is allowed
 		// 		- only ptr+int and ptr-int are allowed
-		if (CanMutate(bo, context->comp_inst_))
+		if (IsMutationTarget(bo, context->comp_inst_))
 			return true;
 	}
 
@@ -77,7 +77,7 @@ bool OEAA::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OEAA::Mutate(clang::Expr *e, ComutContext *context)
+void OEAA::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))
@@ -138,7 +138,7 @@ bool IsPointerToIncompleteType(QualType type)
 	return pointee_type.getCanonicalType().getTypePtr()->isIncompleteType();
 }
 
-bool OEAA::CanMutate(clang::BinaryOperator * const bo, 
+bool OEAA::IsMutationTarget(clang::BinaryOperator * const bo, 
 										 CompilerInstance *comp_inst)
 {
 	Expr *lhs = bo->getLHS()->IgnoreImpCasts();

@@ -38,13 +38,13 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Sema/Sema.h"
 
-#include "comut_utility.h"
+#include "music_utility.h"
 #include "configuration.h"
-#include "comut_context.h"
+#include "music_context.h"
 #include "information_visitor.h"
 #include "information_gatherer.h"
 #include "mutant_database.h"
-#include "comut_ast_consumer.h"
+#include "music_ast_consumer.h"
 #include "all_mutant_operators.h"
 
 // #include <cstring>
@@ -435,7 +435,7 @@ private:
   std::vector<std::string> ExtraArgsAfter;
 };*/
 
-static llvm::cl::OptionCategory ComutOptions("COMUT options");
+static llvm::cl::OptionCategory MusicOptions("MUSIC options");
 static llvm::cl::extrahelp CommonHelp(tooling::CommonOptionsParser::HelpMessage);
 
 // static llvm::cl::extrahelp MoreHelp("\nMore help text...");
@@ -443,28 +443,28 @@ static llvm::cl::extrahelp CommonHelp(tooling::CommonOptionsParser::HelpMessage)
 static llvm::cl::list<string> OptionM(
     "m", llvm::cl::desc("Specify mutant operator name to use"), 
     llvm::cl::value_desc("mutantname"),
-    llvm::cl::cat(ComutOptions));
+    llvm::cl::cat(MusicOptions));
 
-static llvm::cl::opt<string> OptionO("o", llvm::cl::cat(ComutOptions));
+static llvm::cl::opt<string> OptionO("o", llvm::cl::cat(MusicOptions));
 
 static llvm::cl::opt<unsigned int> OptionL(
-    "l", llvm::cl::init(UINT_MAX), llvm::cl::cat(ComutOptions));
+    "l", llvm::cl::init(UINT_MAX), llvm::cl::cat(MusicOptions));
 
 static llvm::cl::list<unsigned int> OptionRS(
     "rs", llvm::cl::multi_val(2),
-    llvm::cl::cat(ComutOptions));
+    llvm::cl::cat(MusicOptions));
 static llvm::cl::list<unsigned int> OptionRE(
     "re", llvm::cl::multi_val(2),
-    llvm::cl::cat(ComutOptions));
+    llvm::cl::cat(MusicOptions));
 
-static llvm::cl::opt<string> OptionA("A", llvm::cl::cat(ComutOptions));
-static llvm::cl::opt<string> OptionB("B", llvm::cl::cat(ComutOptions));
+static llvm::cl::opt<string> OptionA("A", llvm::cl::cat(MusicOptions));
+static llvm::cl::opt<string> OptionB("B", llvm::cl::cat(MusicOptions));
 
 InformationGatherer *g_gatherer;
 CompilerInstance *g_CI;
 Configuration *g_config;
 MutantDatabase *g_mutant_database;
-ComutContext *g_comut_context;
+MusicContext *g_music_context;
 vector<ExprMutantOperator*> g_expr_mutant_operator_list;
 vector<StmtMutantOperator*> g_stmt_mutant_operator_list;
 tooling::CommonOptionsParser *g_option_parser;
@@ -574,7 +574,7 @@ public:
     }
 
     /* Create Configuration object pointer to pass as attribute 
-       for ComutASTConsumer. */
+       for MusicASTConsumer. */
     g_config = new Configuration(
         g_inputfile_name, g_mutdbfile_name, g_mutation_range_start, 
         g_mutation_range_end, g_output_dir, g_limit);
@@ -583,14 +583,14 @@ public:
         &CI, g_config->getInputFilename(),
         g_config->getOutputDir());
 
-    g_comut_context = new ComutContext(
+    g_music_context = new MusicContext(
         &CI, g_config, g_gatherer->getLabelToGotoListMap(),
         g_gatherer->getSymbolTable(), *g_mutant_database);
 
-    return unique_ptr<ASTConsumer>(new ComutASTConsumer(
+    return unique_ptr<ASTConsumer>(new MusicASTConsumer(
         &CI, g_gatherer->getLabelToGotoListMap(),
         g_stmt_mutant_operator_list,
-        g_expr_mutant_operator_list, *g_comut_context));
+        g_expr_mutant_operator_list, *g_music_context));
   }
 };
 
@@ -632,7 +632,7 @@ int main(int argc, const char *argv[])
   // cout << OptionL << endl;
 
   g_option_parser = new tooling::CommonOptionsParser(
-      argc, argv, ComutOptions);
+      argc, argv, MusicOptions);
 
   // Parse option -o (if provided)
   // Terminate tool if given output directory does not exist.
@@ -735,7 +735,7 @@ int main(int argc, const char *argv[])
   /* Run tool separately for each input file. */
   for (auto file: g_option_parser->getSourcePathList())
   { 
-    // cout << "Running COMUT on " << file << endl;
+    // cout << "Running MUSIC on " << file << endl;
 
     if (g_option_parser->getCompilations().getCompileCommands(file).size() > 1)
     {

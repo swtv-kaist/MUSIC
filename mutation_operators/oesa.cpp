@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oesa.h"
 
 bool OESA::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OESA::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OESA::CanMutate(clang::Expr *e, ComutContext *context)
+bool OESA::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -78,7 +78,7 @@ bool OESA::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OESA::Mutate(clang::Expr *e, ComutContext *context)
+void OESA::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))

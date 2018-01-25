@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oaaa.h"
 
 bool OAAA::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OAAA::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OAAA::CanMutate(clang::Expr *e, ComutContext *context)
+bool OAAA::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -68,14 +68,14 @@ bool OAAA::CanMutate(clang::Expr *e, ComutContext *context)
 		// 		- left and right side are both scalar
 		// 		- only subtraction between pointers is allowed
 		// 		- only ptr+int and ptr-int are allowed
-		if (CanMutate(bo))
+		if (IsMutationTarget(bo))
 			return true;
 	}
 
 	return false;
 }
 
-void OAAA::Mutate(clang::Expr *e, ComutContext *context)
+void OAAA::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))
@@ -118,7 +118,7 @@ void OAAA::Mutate(clang::Expr *e, ComutContext *context)
 	only_plus_minus_ = false;
 }
 
-bool OAAA::CanMutate(clang::BinaryOperator * const bo)
+bool OAAA::IsMutationTarget(clang::BinaryOperator * const bo)
 {
 	Expr *lhs = bo->getLHS()->IgnoreImpCasts();
 	Expr *rhs = bo->getRHS()->IgnoreImpCasts();

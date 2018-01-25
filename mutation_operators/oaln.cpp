@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oaln.h"
 
 bool OALN::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OALN::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OALN::CanMutate(clang::Expr *e, ComutContext *context)
+bool OALN::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	// cout << name_ << " is mutating\n";
 	
@@ -76,7 +76,7 @@ bool OALN::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OALN::Mutate(clang::Expr *e, ComutContext *context)
+void OALN::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))

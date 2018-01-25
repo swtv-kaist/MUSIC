@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "scsr.h"
 
 bool SCSR::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool SCSR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool SCSR::CanMutate(clang::Expr *e, ComutContext *context)
+bool SCSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (StringLiteral *sl = dyn_cast<StringLiteral>(e))
 	{
@@ -34,7 +34,7 @@ bool SCSR::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void SCSR::Mutate(clang::Expr *e, ComutContext *context)
+void SCSR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	// use to prevent duplicate mutants from local/global string literals
 	set<string> stringCache;
@@ -44,7 +44,7 @@ void SCSR::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-void SCSR::GenerateGlobalMutants(Expr *e, ComutContext *context,
+void SCSR::GenerateGlobalMutants(Expr *e, MusicContext *context,
 																 set<string> *stringCache)
 {
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -70,7 +70,7 @@ void SCSR::GenerateGlobalMutants(Expr *e, ComutContext *context,
   }
 }
 
-void SCSR::GenerateLocalMutants(Expr *e, ComutContext *context,
+void SCSR::GenerateLocalMutants(Expr *e, MusicContext *context,
 															  set<string> *stringCache)
 {
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();

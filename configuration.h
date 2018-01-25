@@ -1,5 +1,5 @@
-#ifndef COMUT_USER_INPUT_H_
-#define COMUT_USER_INPUT_H_
+#ifndef CONFIGURATION_H_
+#define CONFIGURATION_H_
 
 #include <string>
 #include "clang/Basic/SourceLocation.h"
@@ -39,4 +39,4 @@ public:
 	int getLimitNumOfMutants();
 };
 
-#endif	// COMUT_USER_INPUT_H_
+#endif	// CONFIGURATION_H_

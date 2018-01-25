@@ -1,11 +1,11 @@
-#ifndef COMUT_INFORMATION_VISITOR_H_
-#define COMUT_INFORMATION_VISITOR_H_
+#ifndef MUSIC_INFORMATION_VISITOR_H_
+#define MUSIC_INFORMATION_VISITOR_H_
 
 #include <set>
 
 #include "clang/Rewrite/Core/Rewriter.h"
 
-#include "comut_context.h"
+#include "music_context.h"
 
 class InformationVisitor : public clang::RecursiveASTVisitor<InformationVisitor>
 {
@@ -37,7 +37,7 @@ private:
 
   clang::Rewriter rewriter_;
 
-  // Last (or current) range of the function COMUT is traversing
+  // Last (or current) range of the function MUSIC is traversing
   clang::SourceRange *currently_parsed_function_range_;
 
   clang::SourceRange *typedefdecl_range_;
@@ -89,4 +89,4 @@ private:
   void CollectStringLiteral(clang::Expr *e);
 };
 
-#endif	// COMUT_INFORMATION_VISITOR_H_
+#endif	// MUSIC_INFORMATION_VISITOR_H_

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "ossn.h"
 
 bool OSSN::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OSSN::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OSSN::CanMutate(clang::Expr *e, ComutContext *context)
+bool OSSN::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -69,7 +69,7 @@ bool OSSN::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OSSN::Mutate(clang::Expr *e, ComutContext *context)
+void OSSN::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))

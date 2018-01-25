@@ -1,5 +1,5 @@
-#ifndef COMUT_SSDL_H_
-#define COMUT_SSDL_H_ 
+#ifndef MUSIC_SSDL_H_
+#define MUSIC_SSDL_H_ 
 
 #include "stmt_mutant_operator.h"
 #include <iostream>
@@ -12,14 +12,14 @@ public:
 	{}
 
 	// option -A and -B are not available for SSDL
-	// using them for SSDL terminates COMUT
+	// using them for SSDL terminates MUSIC
 	virtual bool ValidateDomain(const std::set<std::string> &domain);
 	virtual bool ValidateRange(const std::set<std::string> &range);
 
-	virtual bool CanMutate(clang::Stmt *s, ComutContext *context);
-	virtual void Mutate(clang::Stmt *s, ComutContext *context);
+	virtual bool IsMutationTarget(clang::Stmt *s, MusicContext *context);
+	virtual void Mutate(clang::Stmt *s, MusicContext *context);
 
-	void DeleteStatement(Stmt *s, ComutContext *context);
+	void DeleteStatement(Stmt *s, MusicContext *context);
 
 	// an unremovable label is a label defined inside range stmtRange,
 	// but goto-ed outside of range stmtRange.
@@ -28,11 +28,11 @@ public:
 	bool NoUnremovableLabelInsideRange(SourceManager &src_mgr, SourceRange range, 
 																		 LabelStmtToGotoStmtListMap *label_map);
 
-	bool HandleStmtWithSubStmt(Stmt *s, ComutContext *context);
+	bool HandleStmtWithSubStmt(Stmt *s, MusicContext *context);
 
-	void HandleStmtWithBody(Stmt *s, ComutContext *context);
+	void HandleStmtWithBody(Stmt *s, MusicContext *context);
 
-	void DeleteCompoundStmtContent(CompoundStmt *c, ComutContext *context);
+	void DeleteCompoundStmtContent(CompoundStmt *c, MusicContext *context);
 };
 
-#endif	// COMUT_SSDL_H_
+#endif	// MUSIC_SSDL_H_

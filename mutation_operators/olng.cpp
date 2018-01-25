@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "olng.h"
 
 bool OLNG::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool OLNG::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool OLNG::CanMutate(clang::Expr *e, ComutContext *context)
+bool OLNG::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -33,7 +33,7 @@ bool OLNG::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OLNG::Mutate(clang::Expr *e, ComutContext *context)
+void OLNG::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))
@@ -51,7 +51,7 @@ void OLNG::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OLNG::GenerateMutantByNegation(Expr *e, ComutContext *context)
+void OLNG::GenerateMutantByNegation(Expr *e, MusicContext *context)
 {
   SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 

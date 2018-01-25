@@ -1,5 +1,5 @@
-#ifndef COMUT_OBBA_H_
-#define COMUT_OBBA_H_
+#ifndef MUSIC_OBBA_H_
+#define MUSIC_OBBA_H_
 
 #include "expr_mutant_operator.h"
 
@@ -17,9 +17,9 @@ public:
   virtual void setRange(std::set<std::string> &range);
 
 	// Return True if the mutant operator can mutate this expression
-	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
+	virtual bool IsMutationTarget(clang::Expr *e, MusicContext *context);
 
-	virtual void Mutate(clang::Expr *e, ComutContext *context);
+	virtual void Mutate(clang::Expr *e, MusicContext *context);
 };
 
-#endif	// COMUT_OBBA_H_
+#endif	// MUSIC_OBBA_H_

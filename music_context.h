@@ -1,5 +1,5 @@
-#ifndef COMUT_CONTEXT_H_
-#define COMUT_CONTEXT_H_ 
+#ifndef MUSIC_CONTEXT_H_
+#define MUSIC_CONTEXT_H_ 
 
 #include <vector>
 #include <string>
@@ -29,7 +29,7 @@ typedef std::vector<std::string> ScalarReferenceNameList;
 // }
 typedef std::vector<clang::SourceRange> ScopeRangeList;  
 
-class ComutContext
+class MusicContext
 {
 public:
   clang::CompilerInstance *comp_inst_;
@@ -43,7 +43,7 @@ public:
 
   MutantDatabase &mutant_database_;
 
-  ComutContext(
+  MusicContext(
       clang::CompilerInstance *CI, Configuration *config,
       LabelStmtToGotoStmtListMap *label_map, 
       SymbolTable* symbol_table, MutantDatabase &mutant_database);
@@ -65,4 +65,4 @@ private:
   Configuration *config_;
 };
 
-#endif	// COMUT_CONTEXT_H_
+#endif	// MUSIC_CONTEXT_H_

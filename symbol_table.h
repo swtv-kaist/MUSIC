@@ -1,5 +1,5 @@
-#ifndef COMUT_SYMBOL_TABLE
-#define COMUT_SYMBOL_TABLE
+#ifndef MUSIC_SYMBOL_TABLE
+#define MUSIC_SYMBOL_TABLE
 
 #include <vector>
 #include <string>
@@ -111,4 +111,4 @@ private:
   std::vector<VarDeclList> *local_pointer_vardecl_list_;
 };
 
-#endif	// COMUT_SYMBOL_TABLE
+#endif	// MUSIC_SYMBOL_TABLE

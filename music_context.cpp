@@ -1,7 +1,7 @@
-#include "comut_utility.h"
-#include "comut_context.h"
+#include "music_utility.h"
+#include "music_context.h"
 
-ComutContext::ComutContext(
+MusicContext::MusicContext(
     clang::CompilerInstance *CI, Configuration *config,
     LabelStmtToGotoStmtListMap *label_map, 
     SymbolTable *symbol_table, MutantDatabase &mutant_database)
@@ -15,7 +15,7 @@ ComutContext::ComutContext(
 	mutant_filename += ".MUT";*/
 }
 
-bool ComutContext::IsRangeInMutationRange(clang::SourceRange range)
+bool MusicContext::IsRangeInMutationRange(clang::SourceRange range)
 {
 	SourceRange mutation_range(*(config_->getStartOfMutationRange()),
 														 *(config_->getEndOfMutationRange()));
@@ -23,27 +23,27 @@ bool ComutContext::IsRangeInMutationRange(clang::SourceRange range)
 	return Range1IsPartOfRange2(range, mutation_range);
 }
 
-int ComutContext::getFunctionId()
+int MusicContext::getFunctionId()
 {
   return function_id_;
 }
 
-SymbolTable* ComutContext::getSymbolTable()
+SymbolTable* MusicContext::getSymbolTable()
 {
 	return symbol_table_;
 }
 
-StmtContext& ComutContext::getStmtContext()
+StmtContext& MusicContext::getStmtContext()
 {
 	return stmt_context_;
 }
 
-Configuration* ComutContext::getConfiguration() const
+Configuration* MusicContext::getConfiguration() const
 {
   return config_;
 }
 
-void ComutContext::IncrementFunctionId()
+void MusicContext::IncrementFunctionId()
 {
   function_id_++;
 }

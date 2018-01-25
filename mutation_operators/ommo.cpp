@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "ommo.h"
 
 bool OMMO::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool OMMO::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool OMMO::CanMutate(clang::Expr *e, ComutContext *context)
+bool OMMO::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
 		if (uo->getOpcode() == UO_PostDec || uo->getOpcode() == UO_PreDec)
@@ -28,7 +28,7 @@ bool OMMO::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OMMO::Mutate(clang::Expr *e, ComutContext *context)
+void OMMO::Mutate(clang::Expr *e, MusicContext *context)
 {
 	UnaryOperator *uo;
 	if (!(uo = dyn_cast<UnaryOperator>(e)))
@@ -42,7 +42,7 @@ void OMMO::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, ComutContext *context)
+void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, MusicContext *context)
 {
 	SourceLocation start_loc = uo->getLocStart();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
@@ -69,7 +69,7 @@ void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, ComutContext *context)
   uo->setOpcode(UO_PostDec);
 }
 
-void OMMO::GenerateMutantForPreDec(UnaryOperator *uo, ComutContext *context)
+void OMMO::GenerateMutantForPreDec(UnaryOperator *uo, MusicContext *context)
 {
 	SourceLocation start_loc = uo->getLocStart();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);

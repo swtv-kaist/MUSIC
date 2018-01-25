@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "olan.h"
 
 bool OLAN::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OLAN::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OLAN::CanMutate(clang::Expr *e, ComutContext *context)
+bool OLAN::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -73,7 +73,7 @@ bool OLAN::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OLAN::Mutate(clang::Expr *e, ComutContext *context)
+void OLAN::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e))) return;
@@ -96,7 +96,7 @@ void OLAN::Mutate(clang::Expr *e, ComutContext *context)
 		if (token.compare(mutated_token) == 0)
 			continue;
 
-		if (!CanMutate(bo, mutated_token, context))
+		if (!IsMutationTarget(bo, mutated_token, context))
 			continue;
 
 		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
@@ -105,8 +105,8 @@ void OLAN::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-bool OLAN::CanMutate(BinaryOperator *bo, string mutated_token,
-										 ComutContext *context)
+bool OLAN::IsMutationTarget(BinaryOperator *bo, string mutated_token,
+										 MusicContext *context)
 {
 	Expr *lhs = GetLeftOperandAfterMutation(
 			bo->getLHS()->IgnoreImpCasts(), TranslateToOpcode(mutated_token));

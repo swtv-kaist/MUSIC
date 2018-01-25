@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "cgcr.h"
 
 bool CGCR::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool CGCR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool CGCR::CanMutate(clang::Expr *e, ComutContext *context)
+bool CGCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!isa<CharacterLiteral>(e) && !isa<FloatingLiteral>(e) &&
 			!isa<IntegerLiteral>(e))
@@ -32,7 +32,7 @@ bool CGCR::CanMutate(clang::Expr *e, ComutContext *context)
 				 !stmt_context.IsInFieldDeclRange(e);
 }
 
-void CGCR::Mutate(clang::Expr *e, ComutContext *context)
+void CGCR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oppo.h"
 
 bool OPPO::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool OPPO::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool OPPO::CanMutate(clang::Expr *e, ComutContext *context)
+bool OPPO::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
 		if (uo->getOpcode() == UO_PostInc || uo->getOpcode() == UO_PreInc)
@@ -28,7 +28,7 @@ bool OPPO::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OPPO::Mutate(clang::Expr *e, ComutContext *context)
+void OPPO::Mutate(clang::Expr *e, MusicContext *context)
 {
 	UnaryOperator *uo;
 	if (!(uo = dyn_cast<UnaryOperator>(e)))
@@ -42,7 +42,7 @@ void OPPO::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, ComutContext *context)
+void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, MusicContext *context)
 {
 	SourceLocation start_loc = uo->getLocStart();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
@@ -69,7 +69,7 @@ void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, ComutContext *context)
   uo->setOpcode(UO_PostInc);
 }
 
-void OPPO::GenerateMutantForPreInc(UnaryOperator *uo, ComutContext *context)
+void OPPO::GenerateMutantForPreInc(UnaryOperator *uo, MusicContext *context)
 {
 	SourceLocation start_loc = uo->getLocStart();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);

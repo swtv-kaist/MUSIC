@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oipm.h"
 
 bool OIPM::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool OIPM::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool OIPM::CanMutate(clang::Expr *e, ComutContext *context)
+bool OIPM::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
 	{
@@ -78,7 +78,7 @@ bool OIPM::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OIPM::Mutate(clang::Expr *e, ComutContext *context)
+void OIPM::Mutate(clang::Expr *e, MusicContext *context)
 {
 	UnaryOperator *uo;
 	if (!(uo = dyn_cast<UnaryOperator>(e)))
@@ -140,7 +140,7 @@ SourceLocation OIPM::GetLeftBracketOfArraySubscript(
 void OIPM::MutateArraySubscriptSubExpr(
 		Expr *subexpr, const SourceLocation start_loc,
 		const SourceLocation end_loc, const string token, 
-		ComutContext *context)
+		MusicContext *context)
 {
 	ArraySubscriptExpr *ase;
 	if (!(ase = dyn_cast<ArraySubscriptExpr>(subexpr)))
@@ -169,7 +169,7 @@ void OIPM::MutateArraySubscriptSubExpr(
 void OIPM::MutatePointerSubExpr(
 		Expr *subexpr, const SourceLocation start_loc,
 		const SourceLocation end_loc, const string token, 
-		ComutContext *context)
+		MusicContext *context)
 {
 	UnaryOperator *uo;
 	if (!(uo = dyn_cast<UnaryOperator>(subexpr)))

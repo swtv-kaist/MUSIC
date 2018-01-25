@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vtwf.h"
 
 bool VTWF::ValidateDomain(const std::set<std::string> &domain)
@@ -13,7 +13,7 @@ bool VTWF::ValidateRange(const std::set<std::string> &range)
 
 
 // Return True if the mutant operator can mutate this expression
-bool VTWF::CanMutate(clang::Expr *e, ComutContext *context)
+bool VTWF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
@@ -43,7 +43,7 @@ bool VTWF::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-void VTWF::Mutate(clang::Expr *e, ComutContext *context)
+void VTWF::Mutate(clang::Expr *e, MusicContext *context)
 {
 	CallExpr *ce;
 	if (!(ce = dyn_cast<CallExpr>(e)))

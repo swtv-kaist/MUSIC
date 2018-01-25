@@ -1,5 +1,5 @@
-#ifndef COMUT_AST_CONSUMER_H_
-#define COMUT_AST_CONSUMER_H_  
+#ifndef MUSIC_AST_CONSUMER_H_
+#define MUSIC_AST_CONSUMER_H_  
 
 #include <vector>
 #include <string>
@@ -14,9 +14,9 @@
 
 #include "mutation_operators/expr_mutant_operator.h"
 #include "mutation_operators/stmt_mutant_operator.h"
-#include "comut_context.h"
+#include "music_context.h"
 
-class ComutASTVisitor : public clang::RecursiveASTVisitor<ComutASTVisitor>
+class MusicASTVisitor : public clang::RecursiveASTVisitor<MusicASTVisitor>
 {
 private:
   clang::SourceManager &src_mgr_;
@@ -37,7 +37,7 @@ private:
 
   ScalarReferenceNameList non_VTWD_mutatable_scalarref_list_;
 
-  ComutContext &context_;
+  MusicContext &context_;
   StmtContext &stmt_context_;
   std::vector<StmtMutantOperator*> &stmt_mutant_operator_list_;
   std::vector<ExprMutantOperator*> &expr_mutant_operator_list_;
@@ -73,11 +73,11 @@ private:
   void HandleBinaryOperatorExpr(clang::Expr *e);
 
 public:
-  ComutASTVisitor(clang::CompilerInstance *CI, 
+  MusicASTVisitor(clang::CompilerInstance *CI, 
                   LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
                   std::vector<StmtMutantOperator*> &stmt_operator_list,
                   std::vector<ExprMutantOperator*> &expr_operator_list,
-                  ComutContext &context);
+                  MusicContext &context);
 
   bool VisitStmt(clang::Stmt *s);
   bool VisitCompoundStmt(clang::CompoundStmt *c);
@@ -91,19 +91,19 @@ public:
   bool VisitFunctionDecl(clang::FunctionDecl *f);
 };
 
-class ComutASTConsumer : public clang::ASTConsumer
+class MusicASTConsumer : public clang::ASTConsumer
 {
 public:
-  ComutASTConsumer(clang::CompilerInstance *CI, 
+  MusicASTConsumer(clang::CompilerInstance *CI, 
                    LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
                    std::vector<StmtMutantOperator*> &stmt_operator_list,
                    std::vector<ExprMutantOperator*> &expr_operator_list,
-                   ComutContext &context);
+                   MusicContext &context);
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context);
 
 private:
-  ComutASTVisitor Visitor;
+  MusicASTVisitor Visitor;
 };
 
-#endif    // COMUT_AST_CONSUMER_H_  
+#endif    // MUSIC_AST_CONSUMER_H_  

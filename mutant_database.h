@@ -1,5 +1,5 @@
-#ifndef COMUT_MUTANT_DATABASE_H_
-#define COMUT_MUTANT_DATABASE_H_
+#ifndef MUSIC_MUTANT_DATABASE_H_
+#define MUSIC_MUTANT_DATABASE_H_
 
 #include <string>
 #include <map>
@@ -53,4 +53,4 @@ private:
   void IncrementNextMutantfileId();
 };
 
-#endif  // COMUT_MUTANT_DATABASE_H_
+#endif  // MUSIC_MUTANT_DATABASE_H_

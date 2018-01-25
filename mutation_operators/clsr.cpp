@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "clsr.h"
 
 bool CLSR::ValidateDomain(const std::set<std::string> &domain)
@@ -16,7 +16,7 @@ bool CLSR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool CLSR::CanMutate(clang::Expr *e, ComutContext *context)
+bool CLSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsDeclRefExpr(e) || !ExprIsScalar(e))
 		return false;
@@ -48,7 +48,7 @@ bool CLSR::CanMutate(clang::Expr *e, ComutContext *context)
          is_in_domain;
 }
 
-void CLSR::Mutate(clang::Expr *e, ComutContext *context)
+void CLSR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);

@@ -1,5 +1,5 @@
-#ifndef COMUT_VLTF_H_
-#define COMUT_VLTF_H_
+#ifndef MUSIC_VLTF_H_
+#define MUSIC_VLTF_H_
 
 #include "expr_mutant_operator.h"
 
@@ -14,12 +14,12 @@ public:
 	virtual bool ValidateRange(const std::set<std::string> &range);
 
 	// Return True if the mutant operator can mutate this expression
-	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
+	virtual bool IsMutationTarget(clang::Expr *e, MusicContext *context);
 
-	virtual void Mutate(clang::Expr *e, ComutContext *context);
+	virtual void Mutate(clang::Expr *e, MusicContext *context);
 
 private:
-	void GetRange(clang::Expr *e, ComutContext *context, VarDeclList *range);
+	void GetRange(clang::Expr *e, MusicContext *context, VarDeclList *range);
 };
 	
-#endif	// COMUT_VLTF_H_
+#endif	// MUSIC_VLTF_H_

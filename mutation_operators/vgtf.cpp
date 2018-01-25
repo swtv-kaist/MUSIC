@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vgtf.h"
 
 bool VGTF::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool VGTF::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VGTF::CanMutate(clang::Expr *e, ComutContext *context)
+bool VGTF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
@@ -34,7 +34,7 @@ bool VGTF::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void VGTF::Mutate(clang::Expr *e, ComutContext *context)
+void VGTF::Mutate(clang::Expr *e, MusicContext *context)
 {
 	CallExpr *ce;
 	if (!(ce = dyn_cast<CallExpr>(e)))

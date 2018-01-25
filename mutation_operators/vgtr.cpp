@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vgtr.h"
 
 bool VGTR::ValidateDomain(const std::set<std::string> &domain)
@@ -24,7 +24,7 @@ bool VGTR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VGTR::CanMutate(clang::Expr *e, ComutContext *context)
+bool VGTR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsStructReference(e))
 		return false;
@@ -50,7 +50,7 @@ bool VGTR::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void VGTR::Mutate(clang::Expr *e, ComutContext *context)
+void VGTR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oaan.h"
 
 bool OAAN::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OAAN::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OAAN::CanMutate(clang::Expr *e, ComutContext *context)
+bool OAAN::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -71,7 +71,7 @@ bool OAAN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-void OAAN::Mutate(clang::Expr *e, ComutContext *context)
+void OAAN::Mutate(clang::Expr *e, MusicContext *context)
 {
 	// cout << name_ << " is mutating\n";
 	
@@ -96,15 +96,15 @@ void OAAN::Mutate(clang::Expr *e, ComutContext *context)
 		if (token.compare(mutated_token) == 0)
 			continue;
 
-		if (!CanMutate(bo, mutated_token, context))
+		if (!IsMutationTarget(bo, mutated_token, context))
 			continue;
 
 		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
 	}
 }
 
-bool OAAN::CanMutate(BinaryOperator *bo, string mutated_token,
-										 ComutContext *context)
+bool OAAN::IsMutationTarget(BinaryOperator *bo, string mutated_token,
+										 MusicContext *context)
 {
 	Expr *lhs = bo->getLHS()->IgnoreImpCasts();
 	Expr *rhs = bo->getRHS()->IgnoreImpCasts();

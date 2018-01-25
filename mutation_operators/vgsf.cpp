@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vgsf.h"
 
 /* The domain for VGSF must be names of functions whose
@@ -18,7 +18,7 @@ bool VGSF::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VGSF::CanMutate(clang::Expr *e, ComutContext *context)
+bool VGSF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
@@ -46,7 +46,7 @@ bool VGSF::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-void VGSF::Mutate(clang::Expr *e, ComutContext *context)
+void VGSF::Mutate(clang::Expr *e, MusicContext *context)
 {
 	CallExpr *ce;
 	if (!(ce = dyn_cast<CallExpr>(e)))

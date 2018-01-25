@@ -1,5 +1,5 @@
-#ifndef COMUT_OCOR_H_
-#define COMUT_OCOR_H_
+#ifndef MUSIC_OCOR_H_
+#define MUSIC_OCOR_H_
 
 #include "expr_mutant_operator.h"
 
@@ -12,9 +12,9 @@ public:
 	virtual bool ValidateRange(const std::set<std::string> &range);
 
 	// Return True if the mutant operator can mutate this expression
-	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
+	virtual bool IsMutationTarget(clang::Expr *e, MusicContext *context);
 
-	virtual void Mutate(clang::Expr *e, ComutContext *context);
+	virtual void Mutate(clang::Expr *e, MusicContext *context);
 
 private:
 	std::vector<std::string> integral_type_list_;
@@ -23,11 +23,11 @@ private:
   void MutateToIntegralType(
 			const string &type_str, const string &token,
 			const SourceLocation &start_loc, const SourceLocation &end_loc, 
-			ComutContext *context);
+			MusicContext *context);
 	void MutateToFloatingType(
 			const string &type_str, const string &token,
 			const SourceLocation &start_loc, const SourceLocation &end_loc, 
-			ComutContext *context);
+			MusicContext *context);
 };
 
-#endif	// COMUT_OCOR_H_
+#endif	// MUSIC_OCOR_H_

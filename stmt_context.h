@@ -1,5 +1,5 @@
-#ifndef COMUT_STMT_CONTEXT_H_
-#define COMUT_STMT_CONTEXT_H_ 
+#ifndef MUSIC_STMT_CONTEXT_H_
+#define MUSIC_STMT_CONTEXT_H_ 
 
 #include <vector>
 #include <string>
@@ -76,4 +76,4 @@ public:
   bool IsInTypedefRange(clang::SourceLocation loc);
 };
 
-#endif	// COMUT_STMT_CONTEXT_H_
+#endif	// MUSIC_STMT_CONTEXT_H_

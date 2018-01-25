@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vgpf.h"
 
 bool VGPF::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool VGPF::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VGPF::CanMutate(clang::Expr *e, ComutContext *context)
+bool VGPF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
@@ -32,7 +32,7 @@ bool VGPF::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-void VGPF::Mutate(clang::Expr *e, ComutContext *context)
+void VGPF::Mutate(clang::Expr *e, MusicContext *context)
 {
 	CallExpr *ce;
 	if (!(ce = dyn_cast<CallExpr>(e)))

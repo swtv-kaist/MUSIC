@@ -1,5 +1,5 @@
-#ifndef COMUT_MUTANT_ENTRY_H_
-#define COMUT_MUTANT_ENTRY_H_ 
+#ifndef MUSIC_MUTANT_ENTRY_H_
+#define MUSIC_MUTANT_ENTRY_H_ 
 
 #include <string>
 #include <iostream>
@@ -38,4 +38,4 @@ private:
   clang::SourceLocation end_location_after_mutation_;
 };
 
-#endif  // COMUT_MUTANT_ENTRY_H_
+#endif  // MUSIC_MUTANT_ENTRY_H_

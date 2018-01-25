@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "ssdl.h"
 
 #include "clang/Lex/PreprocessingRecord.h"
@@ -41,7 +41,7 @@ const Stmt *GetSecondLevelParent(Stmt *s, CompilerInstance *comp_inst)
   return stmt_ptr;
 }
 
-bool SSDL::CanMutate(Stmt *s, ComutContext *context)
+bool SSDL::IsMutationTarget(Stmt *s, MusicContext *context)
 {
   // Do NOT delete declaration statement.
   // Deleting null statement causes equivalent mutants.
@@ -86,7 +86,7 @@ bool SSDL::CanMutate(Stmt *s, ComutContext *context)
   return true;
 }
 
-void SSDL::Mutate(Stmt *s, ComutContext *context)
+void SSDL::Mutate(Stmt *s, MusicContext *context)
 {
   // llvm::iterator_range<PreprocessingRecord::iterator> directive_list = \
   //     context->comp_inst_->getPreprocessor().getPreprocessingRecord()->getPreprocessedEntitiesInRange(
@@ -109,7 +109,7 @@ void SSDL::Mutate(Stmt *s, ComutContext *context)
   DeleteStatement(s, context);
 }
 
-void SSDL::DeleteStatement(Stmt *s, ComutContext *context)
+void SSDL::DeleteStatement(Stmt *s, MusicContext *context)
 {
   // cout << "DeleteStatement called\n";
 
@@ -205,7 +205,7 @@ bool SSDL::NoUnremovableLabelInsideRange(
   return true;
 }
 
-bool SSDL::HandleStmtWithSubStmt(Stmt *s, ComutContext *context)
+bool SSDL::HandleStmtWithSubStmt(Stmt *s, MusicContext *context)
 {
   if (SwitchCase *sc = dyn_cast<SwitchCase>(s))
   {
@@ -226,7 +226,7 @@ bool SSDL::HandleStmtWithSubStmt(Stmt *s, ComutContext *context)
   return false;
 }
 
-void SSDL::HandleStmtWithBody(Stmt *s, ComutContext *context)
+void SSDL::HandleStmtWithBody(Stmt *s, MusicContext *context)
 {
 	Stmt *body = 0;
 
@@ -254,7 +254,7 @@ void SSDL::HandleStmtWithBody(Stmt *s, ComutContext *context)
 			DeleteStatement(body, context);
 }
 
-void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, ComutContext *context)
+void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, MusicContext *context)
 {
 	// No point deleting a CompoundStmt full of NullStmt
   // If there is only 1 non-NullStmt, then this mutant is equivalent to deleting that single statement.

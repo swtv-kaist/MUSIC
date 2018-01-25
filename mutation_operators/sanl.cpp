@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "sanl.h"
 
 bool SANL::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool SANL::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool SANL::CanMutate(clang::Expr *e, ComutContext *context)
+bool SANL::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
   // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
   //   cout << "SANL can mutate?\n";
@@ -40,7 +40,7 @@ bool SANL::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void SANL::Mutate(clang::Expr *e, ComutContext *context)
+void SANL::Mutate(clang::Expr *e, MusicContext *context)
 {
   // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
   //   cout << "mutating\n";

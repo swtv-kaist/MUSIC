@@ -1,5 +1,5 @@
-#ifndef COMUT_MUTANT_OPERATOR_TEMPLATE_H_
-#define COMUT_MUTANT_OPERATOR_TEMPLATE_H_	
+#ifndef MUSIC_MUTANT_OPERATOR_TEMPLATE_H_
+#define MUSIC_MUTANT_OPERATOR_TEMPLATE_H_	
 
 #include <string>
 #include <set>
@@ -23,7 +23,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Frontend/Utils.h"
 
-#include "../comut_context.h"
+#include "../music_context.h"
 
 class MutantOperatorTemplate
 {
@@ -45,18 +45,18 @@ public:
   virtual void setRange(std::set<std::string> &range);
 	
 protected:
-	/*void GenerateMutantFile(ComutContext *context, 
+	/*void GenerateMutantFile(MusicContext *context, 
 													const clang::SourceLocation &start_loc,
 													const clang::SourceLocation &end_loc, 
 													const std::string &mutated_token);
 
 	// Return the name of the next mutated code file
-  std::string GetNextMutantFilename(const ComutContext *context);
+  std::string GetNextMutantFilename(const MusicContext *context);
 
   void WriteMutantInfoToMutantDbFile(
-		ComutContext *context, const clang::SourceLocation &start_loc, 
+		MusicContext *context, const clang::SourceLocation &start_loc, 
 		const clang::SourceLocation &end_loc, const std::string &token, 
 		const std::string &mutated_token);*/
 };
 
-#endif	// COMUT_MUTANT_OPERATOR_TEMPLATE_H_
+#endif	// MUSIC_MUTANT_OPERATOR_TEMPLATE_H_

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "obaa.h"
 
 bool OBAA::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OBAA::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OBAA::CanMutate(clang::Expr *e, ComutContext *context)
+bool OBAA::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -70,7 +70,7 @@ bool OBAA::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OBAA::Mutate(clang::Expr *e, ComutContext *context)
+void OBAA::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))

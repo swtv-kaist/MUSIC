@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vlpr.h"
 
 bool VLPR::ValidateDomain(const std::set<std::string> &domain)
@@ -20,7 +20,7 @@ bool VLPR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VLPR::CanMutate(clang::Expr *e, ComutContext *context)
+bool VLPR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsPointerReference(e))
 		return false;
@@ -46,7 +46,7 @@ bool VLPR::CanMutate(clang::Expr *e, ComutContext *context)
          is_in_domain;
 }
 
-void VLPR::Mutate(clang::Expr *e, ComutContext *context)
+void VLPR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
@@ -79,7 +79,7 @@ void VLPR::Mutate(clang::Expr *e, ComutContext *context)
   }
 }
 
-void VLPR::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
+void VLPR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
   SourceLocation start_loc = e->getLocStart();
   Rewriter rewriter;

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "ocng.h"
 
 bool OCNG::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool OCNG::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this statement
-bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
+bool OCNG::IsMutationTarget(clang::Stmt *s, MusicContext *context)
 {
 	SourceLocation start_loc, end_loc;
 	Expr *condition{nullptr};
@@ -100,7 +100,7 @@ bool OCNG::CanMutate(clang::Stmt *s, ComutContext *context)
 	return false;
 }
 
-void OCNG::Mutate(clang::Stmt *s, ComutContext *context)
+void OCNG::Mutate(clang::Stmt *s, MusicContext *context)
 {
 	Expr *condition{nullptr};
 
@@ -122,7 +122,7 @@ void OCNG::Mutate(clang::Stmt *s, ComutContext *context)
 		GenerateMutantByNegation(condition, context);
 }
 
-void OCNG::GenerateMutantByNegation(Expr *e, ComutContext *context)
+void OCNG::GenerateMutantByNegation(Expr *e, MusicContext *context)
 {
   SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 

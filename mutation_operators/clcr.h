@@ -1,5 +1,5 @@
-#ifndef COMUT_CLCR_H_
-#define COMUT_CLCR_H_	
+#ifndef MUSIC_CLCR_H_
+#define MUSIC_CLCR_H_	
 
 #include "expr_mutant_operator.h"
 
@@ -16,9 +16,9 @@ public:
 	virtual bool ValidateRange(const std::set<std::string> &range);
 
 	// Return True if the mutant operator can mutate this expression
-	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
+	virtual bool IsMutationTarget(clang::Expr *e, MusicContext *context);
 
-	virtual void Mutate(clang::Expr *e, ComutContext *context);
+	virtual void Mutate(clang::Expr *e, MusicContext *context);
 
 private:
 	bool choose_max_;
@@ -29,7 +29,7 @@ private:
 
 	bool IsDuplicateCaseLabel(string new_label, 
 														SwitchStmtInfoList *switchstmt_list);
-	void GetRange(clang::Expr *e, ComutContext *context, std::vector<std::string> *range);
+	void GetRange(clang::Expr *e, MusicContext *context, std::vector<std::string> *range);
 };
 
-#endif	// COMUT_CLCR_H_
+#endif	// MUSIC_CLCR_H_

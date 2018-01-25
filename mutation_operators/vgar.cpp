@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vgar.h"
 
 bool VGAR::ValidateDomain(const std::set<std::string> &domain)
@@ -23,7 +23,7 @@ bool VGAR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VGAR::CanMutate(clang::Expr *e, ComutContext *context)
+bool VGAR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsArrayReference(e))
 		return false;
@@ -53,7 +53,7 @@ string newGetArrayTypeFunction(QualType type)
   		type.getCanonicalType().getTypePtr())->getElementType().getCanonicalType().getAsString();
 }
 
-void VGAR::Mutate(clang::Expr *e, ComutContext *context)
+void VGAR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);

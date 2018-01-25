@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "crcr.h"
 
 bool CRCR::ValidateDomain(const std::set<std::string> &domain)
@@ -29,7 +29,7 @@ void CRCR::setRange(std::set<std::string> &range)
 
 
 // Return True if the mutant operator can mutate this expression
-bool CRCR::CanMutate(clang::Expr *e, ComutContext *context)
+bool CRCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsScalarReference(e))
 		return false;
@@ -47,7 +47,7 @@ bool CRCR::CanMutate(clang::Expr *e, ComutContext *context)
 				 !stmt_context.IsInUnaryIncrementDecrementRange(e);
 }
 
-void CRCR::Mutate(clang::Expr *e, ComutContext *context)
+void CRCR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	Rewriter rewriter;
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "obrn.h"
 
 bool OBRN::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OBRN::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OBRN::CanMutate(clang::Expr *e, ComutContext *context)
+bool OBRN::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -68,7 +68,7 @@ bool OBRN::CanMutate(clang::Expr *e, ComutContext *context)
 	return false;
 }
 
-void OBRN::Mutate(clang::Expr *e, ComutContext *context)
+void OBRN::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))

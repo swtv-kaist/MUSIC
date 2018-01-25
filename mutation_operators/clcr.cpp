@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "clcr.h"
 
 #include <algorithm>
@@ -14,7 +14,7 @@ bool CLCR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool CLCR::CanMutate(clang::Expr *e, ComutContext *context)
+bool CLCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!isa<CharacterLiteral>(e) && !isa<FloatingLiteral>(e) &&
 			!isa<IntegerLiteral>(e))
@@ -34,7 +34,7 @@ bool CLCR::CanMutate(clang::Expr *e, ComutContext *context)
 				 stmt_context.IsInCurrentlyParsedFunctionRange(e);
 }
 
-void CLCR::Mutate(clang::Expr *e, ComutContext *context)
+void CLCR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
@@ -73,7 +73,7 @@ bool SortFunction (long long i,long long j) { return (i<j); }
 
 // Do not mutate constants to floating type in this case
 // (ptr_cast) <target_constant>
-bool IsTargetOfConversionToPointer(Expr *e, ComutContext *context)
+bool IsTargetOfConversionToPointer(Expr *e, MusicContext *context)
 {
   const Stmt* parent = GetParentOfStmt(e, context->comp_inst_);
 
@@ -91,7 +91,7 @@ bool IsTargetOfConversionToPointer(Expr *e, ComutContext *context)
 }
 
 void CLCR::GetRange(
-    Expr *e, ComutContext *context, vector<string> *range)
+    Expr *e, MusicContext *context, vector<string> *range)
 {
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 

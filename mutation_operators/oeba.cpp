@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "oeba.h"
 
 bool OEBA::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OEBA::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OEBA::CanMutate(clang::Expr *e, ComutContext *context)
+bool OEBA::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -77,7 +77,7 @@ bool OEBA::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OEBA::Mutate(clang::Expr *e, ComutContext *context)
+void OEBA::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e)))

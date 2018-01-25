@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vtwd.h"
 
 bool VTWD::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool VTWD::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VTWD::CanMutate(clang::Expr *e, ComutContext *context)
+bool VTWD::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsScalarReference(e))
 		return false;
@@ -36,12 +36,12 @@ bool VTWD::CanMutate(clang::Expr *e, ComutContext *context)
 				 !stmt_context.IsInLhsOfAssignmentRange(e) &&
 				 !stmt_context.IsInAddressOpRange(e) &&
 				 !stmt_context.IsInUnaryIncrementDecrementRange(e) &&
-				 CanMutate(ConvertToString(e, context->comp_inst_->getLangOpts()), context);
+				 IsMutationTarget(ConvertToString(e, context->comp_inst_->getLangOpts()), context);
 }
 
 
 
-void VTWD::Mutate(clang::Expr *e, ComutContext *context)
+void VTWD::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
@@ -62,7 +62,7 @@ void VTWD::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-bool VTWD::CanMutate(std::string scalarref_name, ComutContext *context)
+bool VTWD::IsMutationTarget(std::string scalarref_name, MusicContext *context)
 {
 	// if reference name is in the nonMutatableList then it is not mutatable
 	ScalarReferenceNameList *scalarref_list = \

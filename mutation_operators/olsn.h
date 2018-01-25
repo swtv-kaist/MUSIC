@@ -1,5 +1,5 @@
-#ifndef COMUT_OLSN_H_
-#define COMUT_OLSN_H_
+#ifndef MUSIC_OLSN_H_
+#define MUSIC_OLSN_H_
 
 #include "expr_mutant_operator.h"
 
@@ -17,13 +17,13 @@ public:
   virtual void setRange(std::set<std::string> &range);
 
 	// Return True if the mutant operator can mutate this expression
-	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
+	virtual bool IsMutationTarget(clang::Expr *e, MusicContext *context);
 
-	virtual void Mutate(clang::Expr *e, ComutContext *context);
+	virtual void Mutate(clang::Expr *e, MusicContext *context);
 
 private:
-	bool CanMutate(BinaryOperator *bo, string mutated_token,
-								 ComutContext *context);
+	bool IsMutationTarget(BinaryOperator *bo, string mutated_token,
+								 MusicContext *context);
 };
 
-#endif	// COMUT_OLSN_H_
+#endif	// MUSIC_OLSN_H_

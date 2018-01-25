@@ -1,5 +1,5 @@
-#ifndef COMUT_INFORMATION_GATHERER_H_
-#define COMUT_INFORMATION_GATHERER_H_ 
+#ifndef MUSIC_INFORMATION_GATHERER_H_
+#define MUSIC_INFORMATION_GATHERER_H_ 
 
 #include "information_visitor.h"
 
@@ -20,4 +20,4 @@ private:
   InformationVisitor Visitor;
 };
 
-#endif	// COMUT_INFORMATION_GATHERER_H_
+#endif	// MUSIC_INFORMATION_GATHERER_H_

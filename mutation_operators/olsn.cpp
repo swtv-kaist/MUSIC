@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "olsn.h"
 
 bool OLSN::ValidateDomain(const std::set<std::string> &domain)
@@ -41,7 +41,7 @@ void OLSN::setRange(std::set<std::string> &range)
 		range_ = range;
 }
 
-bool OLSN::CanMutate(clang::Expr *e, ComutContext *context)
+bool OLSN::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
@@ -72,7 +72,7 @@ bool OLSN::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OLSN::Mutate(clang::Expr *e, ComutContext *context)
+void OLSN::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
 	if (!(bo = dyn_cast<BinaryOperator>(e))) return;
@@ -94,7 +94,7 @@ void OLSN::Mutate(clang::Expr *e, ComutContext *context)
 		if (token.compare(mutated_token) == 0)
 			continue;
 
-		if (!CanMutate(bo, mutated_token, context))
+		if (!IsMutationTarget(bo, mutated_token, context))
 			continue;
 
 		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
@@ -103,8 +103,8 @@ void OLSN::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-bool OLSN::CanMutate(BinaryOperator *bo, string mutated_token,
-										 ComutContext *context)
+bool OLSN::IsMutationTarget(BinaryOperator *bo, string mutated_token,
+										 MusicContext *context)
 {
 	Expr *lhs = GetLeftOperandAfterMutation(
 			bo->getLHS()->IgnoreImpCasts(), TranslateToOpcode(mutated_token));

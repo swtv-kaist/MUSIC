@@ -1,5 +1,5 @@
-#ifndef COMUT_UTILITY_H_
-#define COMUT_UTILITY_H_
+#ifndef MUSIC_UTILITY_H_
+#define MUSIC_UTILITY_H_
 
 #include <cstdio>
 #include <set>
@@ -243,4 +243,4 @@ ostream& operator<<(ostream &stream, const MutantDatabase &database);
 
 Expr* IgnoreParenExpr(Expr *e);
 
-#endif
+#endif  // MUSIC_UTILITY_H_

@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "ocor.h"
 
 OCOR::OCOR(const string name)
@@ -22,7 +22,7 @@ bool OCOR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool OCOR::CanMutate(clang::Expr *e, ComutContext *context)
+bool OCOR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CStyleCastExpr *csce = dyn_cast<CStyleCastExpr>(e))
 	{
@@ -45,7 +45,7 @@ bool OCOR::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void OCOR::Mutate(clang::Expr *e, ComutContext *context)
+void OCOR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	CStyleCastExpr *csce;
 	if (!(csce = dyn_cast<CStyleCastExpr>(e)))
@@ -96,7 +96,7 @@ void OCOR::Mutate(clang::Expr *e, ComutContext *context)
 void OCOR::MutateToIntegralType(
 		const string &type_str, const string &token,
 		const SourceLocation &start_loc, const SourceLocation &end_loc, 
-		ComutContext *context)
+		MusicContext *context)
 {
 	for (auto it: integral_type_list_)
   {
@@ -112,7 +112,7 @@ void OCOR::MutateToIntegralType(
 void OCOR::MutateToFloatingType(
 		const string &type_str, const string &token,
 		const SourceLocation &start_loc, const SourceLocation &end_loc, 
-		ComutContext *context)
+		MusicContext *context)
 {
 	for (auto it: floating_type_list_)
   {

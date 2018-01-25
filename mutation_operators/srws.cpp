@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "srws.h"
 
 bool SRWS::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool SRWS::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool SRWS::CanMutate(clang::Expr *e, ComutContext *context)
+bool SRWS::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (StringLiteral *sl = dyn_cast<StringLiteral>(e))
 	{
@@ -34,7 +34,7 @@ bool SRWS::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void SRWS::Mutate(clang::Expr *e, ComutContext *context)
+void SRWS::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	SourceLocation start_loc = e->getLocStart();

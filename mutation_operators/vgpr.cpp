@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vgpr.h"
 
 bool VGPR::ValidateDomain(const std::set<std::string> &domain)
@@ -20,7 +20,7 @@ bool VGPR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VGPR::CanMutate(clang::Expr *e, ComutContext *context)
+bool VGPR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsPointerReference(e))
 		return false;
@@ -46,7 +46,7 @@ bool VGPR::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void VGPR::Mutate(clang::Expr *e, ComutContext *context)
+void VGPR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);

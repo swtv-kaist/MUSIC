@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vltf.h"
 
 bool VLTF::ValidateDomain(const std::set<std::string> &domain)
@@ -12,7 +12,7 @@ bool VLTF::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VLTF::CanMutate(clang::Expr *e, ComutContext *context)
+bool VLTF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
@@ -34,7 +34,7 @@ bool VLTF::CanMutate(clang::Expr *e, ComutContext *context)
 
 
 
-void VLTF::Mutate(clang::Expr *e, ComutContext *context)
+void VLTF::Mutate(clang::Expr *e, MusicContext *context)
 {
 	CallExpr *ce;
 	if (!(ce = dyn_cast<CallExpr>(e)))
@@ -75,7 +75,7 @@ void VLTF::Mutate(clang::Expr *e, ComutContext *context)
 
 
 
-void VLTF::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
+void VLTF::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
   SourceLocation start_loc = e->getLocStart();
   Rewriter rewriter;

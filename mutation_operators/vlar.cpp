@@ -1,4 +1,4 @@
-#include "../comut_utility.h"
+#include "../music_utility.h"
 #include "vlar.h"
 
 bool VLAR::ValidateDomain(const std::set<std::string> &domain)
@@ -20,7 +20,7 @@ bool VLAR::ValidateRange(const std::set<std::string> &range)
 }
 
 // Return True if the mutant operator can mutate this expression
-bool VLAR::CanMutate(clang::Expr *e, ComutContext *context)
+bool VLAR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (!ExprIsArrayReference(e))
 		return false;
@@ -46,7 +46,7 @@ bool VLAR::CanMutate(clang::Expr *e, ComutContext *context)
          is_in_domain;
 }
 
-void VLAR::Mutate(clang::Expr *e, ComutContext *context)
+void VLAR::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
@@ -74,7 +74,7 @@ void VLAR::Mutate(clang::Expr *e, ComutContext *context)
   }
 }
 
-void VLAR::GetRange(Expr *e, ComutContext *context, VarDeclList *range)
+void VLAR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
   SourceLocation start_loc = e->getLocStart();
   Rewriter rewriter;

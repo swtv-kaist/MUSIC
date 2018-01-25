@@ -1,5 +1,5 @@
-#ifndef COMUT_OIPM_H_
-#define COMUT_OIPM_H_
+#ifndef MUSIC_OIPM_H_
+#define MUSIC_OIPM_H_
 
 #include "expr_mutant_operator.h"
 
@@ -15,9 +15,9 @@ public:
 	virtual bool ValidateRange(const std::set<std::string> &range);
 
 	// Return True if the mutant operator can mutate this expression
-	virtual bool CanMutate(clang::Expr *e, ComutContext *context);
+	virtual bool IsMutationTarget(clang::Expr *e, MusicContext *context);
 
-	virtual void Mutate(clang::Expr *e, ComutContext *context);
+	virtual void Mutate(clang::Expr *e, MusicContext *context);
 
 private:
 	bool is_subexpr_arraysubscript;
@@ -29,12 +29,12 @@ private:
 	void MutateArraySubscriptSubExpr(
 			Expr *subexpr, const SourceLocation start_loc,
 			const SourceLocation end_loc, const string token, 
-			ComutContext *context);
+			MusicContext *context);
 
 	void MutatePointerSubExpr(
 			Expr *subexpr, const SourceLocation start_loc,
 			const SourceLocation end_loc, const string token, 
-			ComutContext *context);
+			MusicContext *context);
 };
 
-#endif	// 	COMUT_OIPM_H_
+#endif	// 	MUSIC_OIPM_H_
