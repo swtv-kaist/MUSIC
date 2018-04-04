@@ -13,12 +13,12 @@ OCOR::OCOR(const string name)
 
 bool OCOR::ValidateDomain(const std::set<std::string> &domain)
 {
-	return domain.empty();
+	return true;
 }
 
 bool OCOR::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -31,19 +31,21 @@ bool OCOR::IsMutationTarget(clang::Expr *e, MusicContext *context)
     const Type *type{csce->getTypeAsWritten().getCanonicalType().getTypePtr()};
     StmtContext &stmt_context = context->getStmtContext();
 
+    string type_str{csce->getTypeAsWritten().getCanonicalType().getAsString()};
+    bool is_in_domain = domain_.empty() ? true : 
+                        IsStringElementOfSet(type_str, domain_);
+
     // OCOR mutates expression with C-style cast (Ex. (int) x)
     // These expr should be in mutation range, outside field decl
     // and the type of cast should be integral (int, char, float)
     return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
 					 !stmt_context.IsInFieldDeclRange(e) &&
 					 (type->isIntegerType() || type->isCharType() || 
-            type->isFloatingType());
+            type->isFloatingType()) && is_in_domain;
 	}
 
 	return false;
 }
-
-
 
 void OCOR::Mutate(clang::Expr *e, MusicContext *context)
 {
@@ -56,10 +58,7 @@ void OCOR::Mutate(clang::Expr *e, MusicContext *context)
   SourceLocation end_loc = csce->getRParenLoc();
   end_loc = end_loc.getLocWithOffset(1);
 
-  string type_str{csce->getTypeAsWritten().getCanonicalType().getAsString()};
-
-  if (type_str.compare("unsigned int") == 0)
-    type_str = "unsigned";
+  string type_str{csce->getTypeAsWritten().getCanonicalType().getAsString()};  
 
   // retrieve exact type written in inputfile for database record
   string token;
@@ -71,6 +70,15 @@ void OCOR::Mutate(clang::Expr *e, MusicContext *context)
     		context->comp_inst_->getSourceManager().getCharacterData(walk));
     walk = walk.getLocWithOffset(1);           
   }
+
+  if (!range_.empty())
+  {
+    MutateToSpecifiedRange(type_str, token, start_loc, end_loc, context);
+    return;
+  }
+
+  if (type_str.compare("unsigned int") == 0)
+    type_str = "unsigned";
 
   MutateToIntegralType(type_str, token, start_loc, end_loc, context);
 
@@ -91,8 +99,6 @@ void OCOR::Mutate(clang::Expr *e, MusicContext *context)
   MutateToFloatingType(type_str, token, start_loc, end_loc, context);
 }
 
-
-
 void OCOR::MutateToIntegralType(
 		const string &type_str, const string &token,
 		const SourceLocation &start_loc, const SourceLocation &end_loc, 
@@ -104,7 +110,9 @@ void OCOR::MutateToIntegralType(
     {
       string mutated_token = "(" + it + ")";
       
-      context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+      context->mutant_database_.AddMutantEntry(
+          name_, start_loc, end_loc, token, mutated_token, 
+          context->getStmtContext().getProteumStyleLineNum());
     }
   }
 }
@@ -120,7 +128,26 @@ void OCOR::MutateToFloatingType(
     {
       string mutated_token = "(" + it + ")";
       
-      context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+      context->mutant_database_.AddMutantEntry(
+          name_, start_loc, end_loc, token, mutated_token, 
+          context->getStmtContext().getProteumStyleLineNum());
+    }
+  }
+}
+
+void OCOR::MutateToSpecifiedRange(
+    const string &type_str, const string &token,
+    const SourceLocation &start_loc, const SourceLocation &end_loc, 
+    MusicContext *context)
+{
+  for (auto e: range_)
+  {
+    if (e.compare(type_str) != 0)
+    {
+      string mutated_token = "(" + e + ")";
+      context->mutant_database_.AddMutantEntry(
+          name_, start_loc, end_loc, token, mutated_token, 
+          context->getStmtContext().getProteumStyleLineNum());
     }
   }
 }

@@ -12,6 +12,8 @@ bool CLSR::ValidateDomain(const std::set<std::string> &domain)
 
 bool CLSR::ValidateRange(const std::set<std::string> &range)
 {
+  // validation check might improve runtime if user specifies a lot.
+  // However, currently not necessary.
 	return true;
 }
 
@@ -81,6 +83,8 @@ void CLSR::Mutate(clang::Expr *e, MusicContext *context)
     	mutated_token = ConvertCharStringToIntString(mutated_token);
 
 
-    context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+    context->mutant_database_.AddMutantEntry(
+        name_, start_loc, end_loc, token, mutated_token, 
+        context->getStmtContext().getProteumStyleLineNum());
   }
 }

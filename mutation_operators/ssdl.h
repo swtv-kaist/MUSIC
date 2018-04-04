@@ -33,6 +33,10 @@ public:
 	void HandleStmtWithBody(Stmt *s, MusicContext *context);
 
 	void DeleteCompoundStmtContent(CompoundStmt *c, MusicContext *context);
+
+	bool IsInSpecifiedDomain(SourceManager &src_mgr,
+													clang::SourceLocation start_loc,
+													clang::SourceLocation end_loc);
 };
 
 #endif	// MUSIC_SSDL_H_

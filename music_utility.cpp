@@ -734,7 +734,8 @@ SourceLocation GetLocationAfterSemicolon(SourceManager &src_mgr,
 {
   // cout << "cp GetLocationAfterSemicolon\n";
   // PrintLocation(src_mgr, loc);
-  if (loc.isInvalid() || GetColumnNumber(src_mgr, loc) == 1)
+  if (loc.isInvalid() || GetColumnNumber(src_mgr, loc) == 1 ||
+      GetLineNumber(src_mgr, loc) == 0)
     return loc;
   // cout << "passed\n";
 
@@ -881,6 +882,9 @@ SourceLocation GetEndLocOfStringLiteral(
   int line_num = GetLineNumber(src_mgr, start_loc);
   int col_num = GetColumnNumber(src_mgr, start_loc) + 1;
 
+  if (line_num == 0 || col_num == 0)
+    return start_loc;
+
   // cout << "cp GetEndLocOfStringLiteral\n";
   // Get the location right AFTER the first double quote
   SourceLocation ret = src_mgr.translateLineCol(src_mgr.getMainFileID(), 
@@ -910,6 +914,9 @@ SourceLocation GetEndLocOfConstantLiteral(
 {
   int line_num = GetLineNumber(src_mgr, start_loc);
   int col_num = GetColumnNumber(src_mgr, start_loc);
+
+  if (line_num == 0 || col_num == 0)
+    return start_loc;
 
   // cout << "cp GetEndLocOfConstantLiteral\n";
   SourceLocation ret = src_mgr.translateLineCol(
@@ -1115,11 +1122,19 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
     int length = ConvertToString(e, comp_inst->getLangOpts()).length();
     SourceLocation start_loc = e->getLocStart();
 
+    if (GetLineNumber(src_mgr, start_loc) == 0 ||
+        GetColumnNumber(src_mgr, start_loc) + length == 0)
+      goto done;
+
     // cout << "cp GetEndLocOfExpr\n";
     ret = src_mgr.translateLineCol(
         src_mgr.getMainFileID(), 
         GetLineNumber(src_mgr, start_loc),
         GetColumnNumber(src_mgr, start_loc) + length);
+
+    if (GetLineNumber(src_mgr, ret) == 0 ||
+        GetColumnNumber(src_mgr, ret) - 1 == 0)
+      goto done;
 
     SourceLocation prevLoc = src_mgr.translateLineCol(
         src_mgr.getMainFileID(),
@@ -1189,7 +1204,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
     if (ret.isInvalid())
       ret = e->getLocEnd();
 
-    if (GetColumnNumber(src_mgr, ret) == 1)
+    if (GetColumnNumber(src_mgr, ret) == 1 || GetLineNumber(src_mgr, ret) == 0)
       goto done;
 
     // cout << "cp GetEndLocOfExpr2\n";

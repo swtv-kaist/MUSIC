@@ -8,7 +8,7 @@ bool SRWS::ValidateDomain(const std::set<std::string> &domain)
 
 bool SRWS::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -32,8 +32,6 @@ bool SRWS::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	return false;
 }
 
-
-
 void SRWS::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -49,22 +47,31 @@ void SRWS::Mutate(clang::Expr *e, MusicContext *context)
 
   // Generate mutant by removing whitespaces
   // only when there is some whitespace in front
-  if (first_non_whitespace != 1)
+  if (first_non_whitespace != 1 &&
+      (range_.empty() || range_.find("trimfront") != range_.end()))
   {
     string mutated_token = "\"" + token.substr(first_non_whitespace);
     
-    context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+    context->mutant_database_.AddMutantEntry(
+        name_, start_loc, end_loc, token, mutated_token, 
+        context->getStmtContext().getProteumStyleLineNum());
   }
 
   // Generate mutant by removing trailing whitespaces
   // only when there is whitespace in the back
   if (last_non_whitespace < token.length()-2)
   {
-    string mutated_token = token.substr(0, last_non_whitespace+1) + "\"";
-    context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+    if (range_.empty() || range_.find("trimback") != range_.end())
+    {
+      string mutated_token = token.substr(0, last_non_whitespace+1) + "\"";
+      context->mutant_database_.AddMutantEntry(
+          name_, start_loc, end_loc, token, mutated_token, 
+          context->getStmtContext().getProteumStyleLineNum());
+    }
 
     // Generate mutant by removing whitespaces in the front and back
-    if (first_non_whitespace != 1)
+    if (first_non_whitespace != 1 &&
+        (range_.empty() || range_.find("trimboth") != range_.end()))
     {
       string mutated_token = "\"";
       int str_length = last_non_whitespace - first_non_whitespace + 1;
@@ -72,7 +79,9 @@ void SRWS::Mutate(clang::Expr *e, MusicContext *context)
       mutated_token += token.substr(first_non_whitespace, str_length);
       mutated_token += "\"";
 
-      context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+      context->mutant_database_.AddMutantEntry(
+          name_, start_loc, end_loc, token, mutated_token, 
+          context->getStmtContext().getProteumStyleLineNum());
     }
   }
 }

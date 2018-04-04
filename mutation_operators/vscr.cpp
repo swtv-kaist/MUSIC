@@ -3,12 +3,12 @@
 
 bool VSCR::ValidateDomain(const std::set<std::string> &domain)
 {
-	return domain.empty();
+	return true;
 }
 
 bool VSCR::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -19,9 +19,18 @@ bool VSCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 		SourceLocation start_loc = e->getLocStart();
 		SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
+    SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+    Rewriter rewriter;
+    rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
+
+    string token{
+        ConvertToString(me->getBase(), context->comp_inst_->getLangOpts())};
+    bool is_in_domain = domain_.empty() ? true : 
+                        IsStringElementOfSet(token, domain_);
+
 		return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
            !context->getStmtContext().IsInEnumDecl() &&
-				   !context->getStmtContext().IsInArrayDeclSize();
+				   !context->getStmtContext().IsInArrayDeclSize() && is_in_domain;
 	}
 
 	return false;
@@ -56,7 +65,8 @@ void VSCR::Mutate(clang::Expr *e, MusicContext *context)
   if (start_loc.isMacroID())
   {
     start_loc = src_mgr.getExpansionLoc(start_loc);
-    end_loc = Lexer::getLocForEndOfToken(start_loc, 0, src_mgr, context->comp_inst_->getLangOpts());
+    end_loc = Lexer::getLocForEndOfToken(start_loc, 0, src_mgr, 
+                                         context->comp_inst_->getLangOpts());
     string temp_member = string(
         src_mgr.getCharacterData(start_loc),
         src_mgr.getCharacterData(end_loc)-src_mgr.getCharacterData(start_loc));
@@ -68,7 +78,8 @@ void VSCR::Mutate(clang::Expr *e, MusicContext *context)
   if (end_loc.isInvalid() || end_loc < start_loc ||
       end_loc == start_loc)
   {
-    end_loc = Lexer::getLocForEndOfToken(start_loc, 0, src_mgr, context->comp_inst_->getLangOpts());
+    end_loc = Lexer::getLocForEndOfToken(start_loc, 0, src_mgr, 
+                                         context->comp_inst_->getLangOpts());
   }
 
   StmtContext &stmt_context = context->getStmtContext();
@@ -87,11 +98,16 @@ void VSCR::Mutate(clang::Expr *e, MusicContext *context)
 
   		string mutated_token{field->getNameAsString()};
 
+      if (!range_.empty() && range_.find(mutated_token) == range_.end())
+        continue;
+
   		if (token.compare(mutated_token) != 0 &&
   				IsSameType(me/*->getMemberDecl()*/->getType().getCanonicalType(),
   									 field->getType().getCanonicalType()))
   		{
-  			context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, stmt_context.getProteumStyleLineNum());
+  			context->mutant_database_.AddMutantEntry(
+            name_, start_loc, end_loc, token, mutated_token, 
+            stmt_context.getProteumStyleLineNum());
   		}
   	}
   }
@@ -135,6 +151,8 @@ bool VSCR::IsSameType(const QualType type1, const QualType type2)
 	{
 		string struct_type1 = type1.getAsString();
 		string struct_type2 = type2.getAsString();
+
+    // cout << struct_type1 << " " << struct_type2 << endl;
 		return struct_type1.compare(struct_type2) == 0;
 	}
 

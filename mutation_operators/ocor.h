@@ -28,6 +28,10 @@ private:
 			const string &type_str, const string &token,
 			const SourceLocation &start_loc, const SourceLocation &end_loc, 
 			MusicContext *context);
+	void MutateToSpecifiedRange(
+			const string &type_str, const string &token,
+			const SourceLocation &start_loc, const SourceLocation &end_loc, 
+			MusicContext *context);
 };
 
 #endif	// MUSIC_OCOR_H_

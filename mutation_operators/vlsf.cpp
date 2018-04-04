@@ -3,12 +3,12 @@
 
 bool VLSF::ValidateDomain(const std::set<std::string> &domain)
 {
-	return domain.empty();
+	return true;
 }
 
 bool VLSF::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -22,17 +22,20 @@ bool VLSF::IsMutationTarget(clang::Expr *e, MusicContext *context)
     SourceLocation end_loc = ce->getRParenLoc();
     end_loc = end_loc.getLocWithOffset(1);
 
+    string token{
+    		ConvertToString(ce->getCallee(), context->comp_inst_->getLangOpts())};
+    bool is_in_domain = domain_.empty() ? true : 
+                      	IsStringElementOfSet(token, domain_);
+
     // Return True if expr is in mutation range, NOT inside enum decl
     // and is scalar type.
 		return (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
             !context->getStmtContext().IsInEnumDecl() &&
-						ExprIsScalar(e));
+						ExprIsScalar(e)) && is_in_domain;
 	}
 
 	return false;
 }
-
-
 
 void VLSF::Mutate(clang::Expr *e, MusicContext *context)
 {
@@ -62,11 +65,15 @@ void VLSF::Mutate(clang::Expr *e, MusicContext *context)
   {
   	string mutated_token{GetVarDeclName(vardecl)};
 
-  	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+  	// Mutated token is not inside user-specified range.
+  	if (!range_.empty() && range_.find(mutated_token) == range_.end())
+  		continue;
+
+  	context->mutant_database_.AddMutantEntry(
+  			name_, start_loc, end_loc, token, mutated_token, 
+  			context->getStmtContext().getProteumStyleLineNum());
   }
 }
-
-
 
 void VLSF::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {

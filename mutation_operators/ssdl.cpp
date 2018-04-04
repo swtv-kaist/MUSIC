@@ -1,22 +1,23 @@
 #include "../music_utility.h"
 #include "ssdl.h"
 
+#include <sstream>
+
 #include "clang/Lex/PreprocessingRecord.h"
 
 bool SSDL::ValidateDomain(const set<string> &domain)
 {
-  if (domain.empty())
-    return true;
+  for (auto e: domain)
+    if (e.empty() || e.find_first_not_of("0123456789-") != string::npos ||
+        e.find("-") == string::npos)
+      return false;
 
-  return false;
+  return true;
 }
 
 bool SSDL::ValidateRange(const set<string> &range)
 {
-  if (range.empty())
-    return true;
-
-  return false;
+  return range.empty();
 }
 
 const Stmt *GetSecondLevelParent(Stmt *s, CompilerInstance *comp_inst)
@@ -153,11 +154,14 @@ void SSDL::DeleteStatement(Stmt *s, MusicContext *context)
 	  '\n');
 	
 	if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+      IsInSpecifiedDomain(src_mgr, start_loc, end_loc) &&
       NoUnremovableLabelInsideRange(src_mgr,
       															SourceRange(start_loc, end_loc),
       															context->label_to_gotolist_map_))
 	{
-		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+		context->mutant_database_.AddMutantEntry(
+        name_, start_loc, end_loc, token, mutated_token, 
+        context->getStmtContext().getProteumStyleLineNum());
 	}
 
   // cout << "returning fron DeleteStatement\n";
@@ -282,8 +286,45 @@ void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, MusicContext *context)
   mutated_token.append(1, '}');
 
 
-  if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)))
+  if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
+      IsInSpecifiedDomain(src_mgr, start_loc, end_loc))
   {
-  	context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+  	context->mutant_database_.AddMutantEntry(
+        name_, start_loc, end_loc, token, mutated_token, 
+        context->getStmtContext().getProteumStyleLineNum());
   }
+}
+
+bool SSDL::IsInSpecifiedDomain(SourceManager &src_mgr,
+                              clang::SourceLocation start_loc,
+                              clang::SourceLocation end_loc)
+{
+  if (domain_.empty())
+    return true;
+
+  int start_line = GetLineNumber(src_mgr, start_loc);
+  int start_col = GetColumnNumber(src_mgr, start_loc);
+  int end_line = GetLineNumber(src_mgr, end_loc);
+  int end_col = GetColumnNumber(src_mgr, end_loc);
+
+  for (auto e: domain_)
+  {
+    vector<string> range;
+    SplitStringIntoVector(e, range, string("-"));
+
+    int range_start;
+    stringstream(range[0]) >> range_start;
+
+    int range_end;
+    stringstream(range[1]) >> range_end;
+
+    if (start_line < range_start || start_line > range_end ||
+        end_line < range_start || end_line > range_end ||
+        (end_line == range_end && end_col > 1))
+      continue;
+
+    return true;
+  }
+
+  return false;
 }

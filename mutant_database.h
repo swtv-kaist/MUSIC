@@ -25,7 +25,7 @@ class MutantDatabase
 {
 public:
   MutantDatabase(clang::CompilerInstance *comp_inst, 
-                 std::string input_filename, std::string output_dir);
+                 std::string input_filename, std::string output_dir, int limit);
 
   void AddMutantEntry(MutantName name, clang::SourceLocation start_loc,
                       clang::SourceLocation end_loc, std::string token,
@@ -48,6 +48,9 @@ private:
   std::string database_filename_;
   std::string output_dir_;
   int next_mutantfile_id_;
+
+  // maxi number of mutants generated per mutation point per mutation operator
+  int num_mutant_limit_;
 
   std::string GetNextMutantFilename();
   void IncrementNextMutantfileId();

@@ -13,15 +13,15 @@ void GenerateRandomNumbers(set<int> &s, int desired_size, int cap)
 }
 
 MutantDatabase::MutantDatabase(clang::CompilerInstance *comp_inst, 
-               std::string input_filename, std::string output_dir)
+               std::string input_filename, std::string output_dir, int limit)
 : comp_inst_(comp_inst), input_filename_(input_filename),
-output_dir_(output_dir), next_mutantfile_id_(1), 
+output_dir_(output_dir), next_mutantfile_id_(1), num_mutant_limit_(limit),
 src_mgr_(comp_inst->getSourceManager()), lang_opts_(comp_inst->getLangOpts())
 {
   // set database filename with output directory prepended
   database_filename_ = output_dir;
   database_filename_.append(input_filename_, 0, input_filename_.length()-2);
-  database_filename_ += "_mut_db.out";
+  database_filename_ += "_mut_db.csv";
 }
 
 void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start_loc,
@@ -98,27 +98,27 @@ void MutantDatabase::WriteEntryToDatabaseFile(
   ofstream mutant_db_file(database_filename_.data(), ios::app);
 
   // write input file name
-  mutant_db_file << input_filename_ << "\t";
+  // mutant_db_file << input_filename_ << ",";
 
   // write mutant file name
-  mutant_db_file << GetNextMutantFilename() << "\t"; 
+  mutant_db_file << GetNextMutantFilename() << ","; 
 
   // write name of operator  
-  mutant_db_file << mutant_name << "\t";
+  mutant_db_file << mutant_name << ",";
 
   // write information about token BEFORE mutation
-  mutant_db_file << entry.getProteumStyleLineNum() << "\t";
-  mutant_db_file << GetLineNumber(src_mgr_, entry.getStartLocation()) << "\t";
-  mutant_db_file << GetColumnNumber(src_mgr_, entry.getStartLocation()) << "\t";
-  mutant_db_file << GetLineNumber(src_mgr_, entry.getTokenEndLocation()) << "\t";
-  mutant_db_file << GetColumnNumber(src_mgr_, entry.getTokenEndLocation()) << "\t";
-  mutant_db_file << entry.getToken() << "\t";
+  mutant_db_file << entry.getProteumStyleLineNum() << ",";
+  mutant_db_file << GetLineNumber(src_mgr_, entry.getStartLocation()) << ",";
+  mutant_db_file << GetColumnNumber(src_mgr_, entry.getStartLocation()) << ",";
+  mutant_db_file << GetLineNumber(src_mgr_, entry.getTokenEndLocation()) << ",";
+  mutant_db_file << GetColumnNumber(src_mgr_, entry.getTokenEndLocation()) << ",";
+  mutant_db_file << entry.getToken() << ",";
 
   // write information about token AFTER mutation
-  mutant_db_file << GetLineNumber(src_mgr_, entry.getStartLocation()) << "\t";
-  mutant_db_file << GetColumnNumber(src_mgr_, entry.getStartLocation()) << "\t";
-  mutant_db_file << GetLineNumber(src_mgr_, entry.getMutatedTokenEndLocation()) << "\t";
-  mutant_db_file << GetColumnNumber(src_mgr_, entry.getMutatedTokenEndLocation()) << "\t";
+  mutant_db_file << GetLineNumber(src_mgr_, entry.getStartLocation()) << ",";
+  mutant_db_file << GetColumnNumber(src_mgr_, entry.getStartLocation()) << ",";
+  mutant_db_file << GetLineNumber(src_mgr_, entry.getMutatedTokenEndLocation()) << ",";
+  mutant_db_file << GetColumnNumber(src_mgr_, entry.getMutatedTokenEndLocation()) << ",";
   mutant_db_file << entry.getMutatedToken() << endl;
 
   // close database file
@@ -220,13 +220,39 @@ void MutantDatabase::ExportAllEntries()
     for (auto column_map_iter: line_map_iter.second)
       for (auto mutantname_map_iter: column_map_iter.second)
       {
-        for (auto entry: mutantname_map_iter.second)
+        // Generate all mutants of this mutation operator at this mutation 
+        // point if number of to-be-generated mutants is <= given limit.
+        if (mutantname_map_iter.second.size() <= num_mutant_limit_)
         {
-          WriteEntryToDatabaseFile(mutantname_map_iter.first, entry);
-          WriteEntryToMutantFile(entry);
-          IncrementNextMutantfileId();
+          for (auto entry: mutantname_map_iter.second)
+          {
+            WriteEntryToDatabaseFile(mutantname_map_iter.first, entry);
+            WriteEntryToMutantFile(entry);
+            IncrementNextMutantfileId();
 
-          mutant_count[mutantname_map_iter.first] += 1;
+            mutant_count[mutantname_map_iter.first] += 1;
+          }
+        }
+        // Otherwise, randomly generate LIMIT number of mutants.
+        else
+        {
+          // Generate a list of LIMIT distinct numbers/indexes, each less than  
+          // number of supposed-to-be-generated mutants.
+          // Generate mutants from mutant entries at those indexes.
+
+          set<int> random_nums;
+          GenerateRandomNumbers(random_nums, num_mutant_limit_, 
+                                mutantname_map_iter.second.size());
+
+          for (auto idx: random_nums)
+          {
+            WriteEntryToDatabaseFile(mutantname_map_iter.first, 
+                                     mutantname_map_iter.second[idx]);
+            WriteEntryToMutantFile(mutantname_map_iter.second[idx]);
+            IncrementNextMutantfileId();
+
+            mutant_count[mutantname_map_iter.first] += 1;
+          }
         } 
       }
 

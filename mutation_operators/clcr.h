@@ -15,6 +15,8 @@ public:
 	virtual bool ValidateDomain(const std::set<std::string> &domain);
 	virtual bool ValidateRange(const std::set<std::string> &range);
 
+	virtual void setRange(std::set<std::string> &range);
+
 	// Return True if the mutant operator can mutate this expression
 	virtual bool IsMutationTarget(clang::Expr *e, MusicContext *context);
 

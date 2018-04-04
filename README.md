@@ -94,7 +94,7 @@ Default is generate all mutants possible.
 
 Usage:
 ```
--rs <line>[ <col>] -re <line>[ <col>]
+-rs <filename>:<line>[:<col>] -re <filename>:<line>[:<col>]			
 ```
 Used to specify the range where mutation operators can be applied. 
 

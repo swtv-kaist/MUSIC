@@ -177,11 +177,11 @@ void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
   // Retrieve the location and the operator of the expression
   string binary_operator = static_cast<string>(bo->getOpcodeStr());
   SourceLocation start_loc = bo->getOperatorLoc();
-  SourceLocation end_loc = src_mgr_.translateLineCol(
-      src_mgr_.getMainFileID(),
-      GetLineNumber(src_mgr_, start_loc),
-      GetColumnNumber(src_mgr_, start_loc) + binary_operator.length());
-  // cout << "cp consumer\n";
+
+  // SourceLocation end_loc = src_mgr_.translateLineCol(
+  //     src_mgr_.getMainFileID(),
+  //     GetLineNumber(src_mgr_, start_loc),
+  //     GetColumnNumber(src_mgr_, start_loc) + binary_operator.length());
 
   // Certain mutations are NOT syntactically correct for left side of 
   // assignment. Store location for prevention of generating 

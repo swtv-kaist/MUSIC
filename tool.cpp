@@ -292,6 +292,11 @@ void AddAllMutantOperator(vector<StmtMutantOperator*> &stmt_operator_list,
                       expr_operator_list);
 }
 
+bool IsAllDigits(const string s)
+{
+  return !s.empty() && s.find_first_not_of("0123456789") == string::npos;
+}
+
 /*namespace {
 class ArgumentsAdjustingCompilations : public tooling::CompilationDatabase {
 public:
@@ -442,23 +447,34 @@ static llvm::cl::extrahelp CommonHelp(tooling::CommonOptionsParser::HelpMessage)
 
 static llvm::cl::list<string> OptionM(
     "m", llvm::cl::desc("Specify mutant operator name to use"), 
-    llvm::cl::value_desc("mutantname"),
+    llvm::cl::value_desc("mutantname[:domain[:range1]]"),
     llvm::cl::cat(MusicOptions));
 
-static llvm::cl::opt<string> OptionO("o", llvm::cl::cat(MusicOptions));
+static llvm::cl::opt<string> OptionO(
+    "o", llvm::cl::desc("Specify output directory for MUSIC. \
+Absolute directory is required."), 
+    llvm::cl::value_desc("outputdir"),
+    llvm::cl::cat(MusicOptions));
 
 static llvm::cl::opt<unsigned int> OptionL(
-    "l", llvm::cl::init(UINT_MAX), llvm::cl::cat(MusicOptions));
+    "l", llvm::cl::desc("Specify maximum number of mutants generated per \
+mutation point & mutation operator"), 
+    llvm::cl::value_desc("maxnum"),
+    llvm::cl::init(UINT_MAX), llvm::cl::cat(MusicOptions));
 
-static llvm::cl::list<unsigned int> OptionRS(
-    "rs", llvm::cl::multi_val(2),
+static llvm::cl::list<string> OptionRS(
+    "rs",
     llvm::cl::cat(MusicOptions));
-static llvm::cl::list<unsigned int> OptionRE(
-    "re", llvm::cl::multi_val(2),
+static llvm::cl::list<string> OptionRE(
+    "re",
     llvm::cl::cat(MusicOptions));
 
-static llvm::cl::opt<string> OptionA("A", llvm::cl::cat(MusicOptions));
-static llvm::cl::opt<string> OptionB("B", llvm::cl::cat(MusicOptions));
+// static llvm::cl::list<unsigned int> OptionRE(
+//     "re", llvm::cl::multi_val(2),
+//     llvm::cl::cat(MusicOptions));
+
+// static llvm::cl::opt<string> OptionA("A", llvm::cl::cat(MusicOptions));
+// static llvm::cl::opt<string> OptionB("B", llvm::cl::cat(MusicOptions));
 
 InformationGatherer *g_gatherer;
 CompilerInstance *g_CI;
@@ -467,6 +483,8 @@ MutantDatabase *g_mutant_database;
 MusicContext *g_music_context;
 vector<ExprMutantOperator*> g_expr_mutant_operator_list;
 vector<StmtMutantOperator*> g_stmt_mutant_operator_list;
+map<string, vector<int>> g_rs_list;
+map<string, vector<int>> g_re_list;
 tooling::CommonOptionsParser *g_option_parser;
 
 // default output directory is current directory.
@@ -481,9 +499,242 @@ string g_current_inputfile_path;
 SourceLocation g_mutation_range_start;
 SourceLocation g_mutation_range_end;
 
-inline bool exists_test3 (const std::string& name) {
+/*inline bool exists_test3 (const std::string& name) {
   struct stat buffer;   
   return (stat (name.c_str(), &buffer) == 0); 
+}*/
+
+void ParseOptionRS()
+{
+  if (OptionRS.empty())
+    return;
+
+  for (auto e: OptionRS)
+  {
+    vector<string> temp;
+    SplitStringIntoVector(e, temp, string(":"));
+
+    if (temp.size() == 1 || temp.size() == 0)
+    {
+      cout << "Range start not specified in " << e << endl;
+      exit(1);
+    }
+
+    if (!IsAllDigits(temp[1]))
+    {
+      PrintLineColNumberErrorMsg();
+      exit(1);
+    }
+
+    int line_num;
+    stringstream(temp[1]) >> line_num;
+
+    if (line_num == 0)
+    {
+      cout << "Option RS specification error: line/col number must be larger than 0." << endl;
+      exit(1);
+    }
+
+    g_rs_list[temp[0]] = vector<int>{line_num};
+
+    if (temp.size() > 2)
+    {
+      if (!IsAllDigits(temp[2]))
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      int col_num;
+      stringstream(temp[2]) >> col_num;
+
+      if (col_num == 0)
+      {
+        cout << "Option RS specification error: line/col number must be larger than 0." << endl;
+        exit(1);
+      }
+      g_rs_list[temp[0]].push_back(col_num);
+    }
+  }
+
+  // for (auto e: g_rs_list)
+  // {
+  //   cout << e.first << " has range start\n";
+  //   for (auto d: e.second)
+  //     cout << d << " ";
+  //   cout << endl;
+  // }
+}
+
+void ParseOptionRE()
+{
+  if (OptionRE.empty())
+    return;
+
+  for (auto e: OptionRE)
+  {
+    vector<string> temp;
+    SplitStringIntoVector(e, temp, string(":"));
+
+    if (temp.size() == 1 || temp.size() == 0)
+    {
+      cout << "Range end not specified in " << e << endl;
+      exit(1);
+    }
+
+    if (!IsAllDigits(temp[1]))
+    {
+      PrintLineColNumberErrorMsg();
+      exit(1);
+    }
+
+    int line_num;
+    stringstream(temp[1]) >> line_num;
+
+    if (line_num == 0)
+    {
+      cout << "Option RE specification error: line/col number must be larger than 0." << endl;
+      exit(1);
+    }
+
+    g_re_list[temp[0]] = vector<int>{line_num};
+
+    if (temp.size() > 2)
+    {
+      if (!IsAllDigits(temp[2]))
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      int col_num;
+      stringstream(temp[2]) >> col_num;
+
+      if (col_num == 0)
+      {
+        cout << "Option RE specification error: line/col number must be larger than 0." << endl;
+        exit(1);
+      }
+      g_re_list[temp[0]].push_back(col_num);
+    }
+  }
+
+  // for (auto e: g_rs_list)
+  // {
+  //   cout << e.first << " has range end\n";
+  //   for (auto d: e.second)
+  //     cout << d << " ";
+  //   cout << endl;
+  // }
+}
+
+void ParseOptionO()
+{
+  // Parse option -o (if provided)
+  // Terminate tool if given output directory does not exist.
+  if (!OptionO.empty())
+  {
+    if (DirectoryExists(OptionO))
+      g_output_dir = OptionO;
+    else
+    {
+      cout << "Invalid directory for -o option: " << OptionO << endl;
+      exit(1);
+    }
+  }
+
+  if (g_output_dir.back() != '/')
+    g_output_dir += "/";
+
+  cout << "done with option o: " << g_output_dir << "\n";
+}
+
+void ParseOptionL()
+{
+  // Parse option -l (if provided)
+  // Given input should be a positive integer.
+  if (OptionL != UINT_MAX)
+  {
+    if (OptionL != 0)
+      g_limit = OptionL;
+    else
+    {
+      cout << "Invalid input for -l option, must be an positive integer smaller than 4294967296\n";
+      cout << "Usage: -l <max>\n";
+      exit(1);
+    }
+  }
+
+  cout << "done with option l: " << g_limit << "\n";
+}
+
+void ParseOptionM() 
+{
+  // Parse option -m (if provided)
+  if (OptionM.empty())
+  {
+    AddAllMutantOperator(g_stmt_mutant_operator_list, 
+                         g_expr_mutant_operator_list);
+    cout << "done with option m\n";
+    return;
+  }
+
+  for (auto e: OptionM)
+  {
+    set<string> domain, range;
+
+    cout << "analyzing " << e << endl;
+    vector<string> mutant_operator;
+
+    // Split input into mutant operator name, domain, range (if specified)
+    SplitStringIntoVector(e, mutant_operator, string(":"));
+
+    for (auto it: mutant_operator)
+      cout << it << endl;
+
+    // Capitalize mutant operator name.
+    for (int i = 0; i < mutant_operator[0].length() ; ++i)
+    {
+      if (mutant_operator[0][i] >= 'a' && 
+          mutant_operator[0][i] <= 'z')
+        mutant_operator[0][i] -= 32;
+    }
+
+    // Gather domain if specified.
+    if (mutant_operator.size() > 1)
+    {
+      SplitStringIntoSet(mutant_operator[1], domain, string(","));
+
+      // Remove empty strings
+      for (auto it = domain.begin(); it != domain.end(); )
+      {
+        if ((*it).empty())
+          it = domain.erase(it);
+        else
+          ++it;
+      }
+    }
+
+    // Gather range if specified.
+    if (mutant_operator.size() > 2)
+    {
+      SplitStringIntoSet(mutant_operator[2], range, string(","));
+      for (auto it = range.begin(); it != range.end(); )
+      {
+        if ((*it).empty())
+          it = range.erase(it);
+        else
+          ++it;
+      }
+    }
+
+    AddMutantOperator(mutant_operator[0], domain, range,
+                      g_stmt_mutant_operator_list,
+                      g_expr_mutant_operator_list);
+  }
+
+  // return 0;
+  cout << "done with option m\n";
 }
 
 class GenerateMutantAction : public ASTFrontendAction
@@ -512,6 +763,7 @@ protected:
     else
       cout << "opened file name " << g_mutdbfile_name << endl;
 
+    out_mutDb << "Input file: " << g_current_inputfile_path << endl;
     out_mutDb.close();
 
     g_mutant_database->ExportAllEntries();
@@ -527,7 +779,54 @@ public:
     g_mutation_range_start = sm.getLocForStartOfFile(sm.getMainFileID());
     g_mutation_range_end = sm.getLocForEndOfFile(sm.getMainFileID());
 
-    if (!OptionRS.empty())
+    // If user specifies range for this input file,
+    // verify that the given input range start is valid before setting 
+    // g_mutation_range_start.
+    if (g_rs_list.count(g_inputfile_name))
+    {
+      int line_num = g_rs_list[g_inputfile_name].front();
+      int col_num = 1;
+
+      if (g_rs_list[g_inputfile_name].size() == 2)
+        col_num = g_rs_list[g_inputfile_name].back();
+
+      SourceLocation interpreted_loc = sm.translateLineCol(
+          sm.getMainFileID(), line_num, col_num);
+
+      if (line_num != GetLineNumber(sm, interpreted_loc) ||
+          col_num != GetColumnNumber(sm, interpreted_loc))
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      g_mutation_range_start = sm.translateLineCol(
+          sm.getMainFileID(), line_num, col_num);
+    }
+
+    if (g_re_list.count(g_inputfile_name))
+    {
+      int line_num = g_re_list[g_inputfile_name].front();
+      int col_num = 1;
+
+      if (g_re_list[g_inputfile_name].size() == 2)
+        col_num = g_re_list[g_inputfile_name].back();
+
+      SourceLocation interpreted_loc = sm.translateLineCol(
+          sm.getMainFileID(), line_num, col_num);
+
+      if (line_num != GetLineNumber(sm, interpreted_loc) ||
+          col_num != GetColumnNumber(sm, interpreted_loc))
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      g_mutation_range_end = sm.translateLineCol(
+          sm.getMainFileID(), line_num, col_num);
+    }
+
+    /*if (!OptionRS.empty())
     {
       if (OptionRS[0] == 0 || OptionRE[0] == 0)
       {
@@ -571,7 +870,11 @@ public:
 
       g_mutation_range_end = sm.translateLineCol(
           sm.getMainFileID(), OptionRE[0], OptionRE[1]);
-    }
+    }*/
+
+    cout << g_inputfile_name << endl;
+    PrintLocation(sm, g_mutation_range_start);
+    PrintLocation(sm, g_mutation_range_end);
 
     /* Create Configuration object pointer to pass as attribute 
        for MusicASTConsumer. */
@@ -581,7 +884,7 @@ public:
 
     g_mutant_database = new MutantDatabase(
         &CI, g_config->getInputFilename(),
-        g_config->getOutputDir());
+        g_config->getOutputDir(), g_limit);
 
     g_music_context = new MusicContext(
         &CI, g_config, g_gatherer->getLabelToGotoListMap(),
@@ -629,108 +932,19 @@ public:
 
 int main(int argc, const char *argv[])
 {
-  // cout << OptionL << endl;
-
   g_option_parser = new tooling::CommonOptionsParser(
-      argc, argv, MusicOptions);
+      argc, argv, MusicOptions/*, llvm::cl::Optional*/);
 
-  // Parse option -o (if provided)
-  // Terminate tool if given output directory does not exist.
-  if (!OptionO.empty())
-  {
-    if (DirectoryExists(OptionO))
-      g_output_dir = OptionO;
-    else
-    {
-      cout << "Invalid directory for -o option: " << OptionO << endl;
-      exit(1);
-    }
-  }
+  // Randomization for option -l.
+  srand (time(NULL));
 
-  if (g_output_dir.back() != '/')
-    g_output_dir += "/";
+  ParseOptionRS();
+  ParseOptionRE();
+  ParseOptionO();
+  ParseOptionL();
+  ParseOptionM();
 
-  cout << "done with option o: " << g_output_dir << "\n";
-
-  // Parse option -l (if provided)
-  // Given input should be a positive integer.
-  if (OptionL != UINT_MAX)
-  {
-    if (OptionL != 0)
-      g_limit = OptionL;
-    else
-    {
-      cout << "Invalid input for -l option, must be an positive integer smaller than 4294967296\n";
-      cout << "Usage: -l <max>\n";
-      exit(1);
-    }
-  }
-
-  cout << "done with option l: " << g_limit << "\n";
-
-  // Parse option -m (if provided)
-  if (OptionM.empty())
-    AddAllMutantOperator(g_stmt_mutant_operator_list, 
-                         g_expr_mutant_operator_list);
-  else
-    for (auto e: OptionM)
-    {
-      set<string> domain, range;
-
-      cout << "analyzing " << e << endl;
-      vector<string> mutant_operator;
-
-      // Split input into mutant operator name, domain, range (if specified)
-      SplitStringIntoVector(e, mutant_operator, string(":"));
-
-      for (auto it: mutant_operator)
-        cout << it << endl;
-
-      // Capitalize mutant operator name.
-      for (int i = 0; i < mutant_operator[0].length() ; ++i)
-      {
-        if (mutant_operator[0][i] >= 'a' && 
-            mutant_operator[0][i] <= 'z')
-          mutant_operator[0][i] -= 32;
-      }
-
-      // Gather domain if specified.
-      if (mutant_operator.size() > 1)
-      {
-        SplitStringIntoSet(mutant_operator[1], domain, string(","));
-
-        // Remove 
-        for (auto it = domain.begin(); it != domain.end(); )
-        {
-          if ((*it).empty())
-            it = domain.erase(it);
-          else
-            ++it;
-        }
-      }
-
-      // Gather range if specified.
-      if (mutant_operator.size() > 2)
-      {
-        SplitStringIntoSet(mutant_operator[2], range, string(","));
-        for (auto it = range.begin(); it != range.end(); )
-        {
-          if ((*it).empty())
-            it = range.erase(it);
-          else
-            ++it;
-        }
-      }
-
-      AddMutantOperator(mutant_operator[0], domain, range,
-                        g_stmt_mutant_operator_list,
-                        g_expr_mutant_operator_list);
-    }
-
-  // return 0;
-  cout << "done with option m\n";
-
-  ofstream my_file("/home/duyloc1503/comut-libtool/multiple-compile-command-files.txt", ios::trunc);    
+  // ofstream my_file("/home/duyloc1503/comut-libtool/multiple-compile-command-files.txt", ios::trunc);    
 
   /* Run tool separately for each input file. */
   for (auto file: g_option_parser->getSourcePathList())
@@ -783,7 +997,7 @@ int main(int argc, const char *argv[])
       g_mutdbfile_name += "/";
 
     g_mutdbfile_name.append(g_inputfile_name, 0, g_inputfile_name.length()-2);
-    g_mutdbfile_name += "_mut_db.out";
+    g_mutdbfile_name += "_mut_db.csv";
 
     cout << "g_inputfile_name = " << g_inputfile_name << endl;
     cout << "g_mutdbfile_name = " << g_mutdbfile_name << endl;
@@ -796,10 +1010,10 @@ int main(int argc, const char *argv[])
 
     Tool1.run(tooling::newFrontendActionFactory<GatherDataAction>().get());
 
-    cout << "done tooling on " << file << endl;
+    cout << "Done tooling on " << file << endl;
   }
 
-  my_file.close();
+  // my_file.close();
 
   return 0;
 }

@@ -3,6 +3,42 @@
 
 #include <algorithm>
 
+void CLCR::setRange(std::set<std::string> &range)
+{
+  for (auto it = range.begin(); it != range.end(); )
+  {
+    if (it->compare("MAX") == 0)
+    {
+      choose_max_ = true;
+      it = range.erase(it);
+    }
+    else if (it->compare("MIN") == 0)
+    {
+      choose_min_ = true;
+      it = range.erase(it);
+    }
+    else if (it->compare("MEDIAN") == 0)
+    {
+      choose_median_ = true;
+      it = range.erase(it);
+    }
+    else if (it->compare("CLOSE_LESS") == 0)
+    {
+      close_less_ = true;
+      it = range.erase(it);
+    }
+    else if (it->compare("CLOSE_MORE") == 0)
+    {
+      close_more_ = true;
+      it = range.erase(it);
+    }
+    else
+      ++it;
+  }
+
+  range_ = range;
+}
+
 bool CLCR::ValidateDomain(const std::set<std::string> &domain)
 {
 	return true;
@@ -24,13 +60,21 @@ bool CLCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
+  SourceManager &src_mgr = context->comp_inst_->getSourceManager();
+  Rewriter rewriter;
+  rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
+
+  string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
+  bool is_in_domain = domain_.empty() ? true : 
+                      IsStringElementOfSet(token, domain_);
+
 	// CLCR can mutate this constant literal if it is in mutation range,
 	// outside array decl range, outside enum decl range, outside
 	// field decl range and inside a function (local range)
 	return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
 				 !stmt_context.IsInEnumDecl() &&
 				 !stmt_context.IsInArrayDeclSize() &&
-				 !stmt_context.IsInFieldDeclRange(e) &&
+				 !stmt_context.IsInFieldDeclRange(e) && is_in_domain &&
 				 stmt_context.IsInCurrentlyParsedFunctionRange(e);
 }
 
@@ -69,7 +113,7 @@ bool CLCR::IsDuplicateCaseLabel(
 	return false;
 }
 
-bool SortFunction (long long i,long long j) { return (i<j); }
+bool CLCRSortFunction (long long i,long long j) { return (i<j); }
 
 // Do not mutate constants to floating type in this case
 // (ptr_cast) <target_constant>
@@ -121,6 +165,8 @@ void CLCR::GetRange(
 
     string mutated_token{
         ConvertToString(*it, context->comp_inst_->getLangOpts())};
+    string orig_mutated_token{
+        ConvertToString(*it, context->comp_inst_->getLangOpts())};
 
     if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
       mutated_token = ConvertCharStringToIntString(mutated_token);
@@ -138,7 +184,8 @@ void CLCR::GetRange(
     // If user did not specify range or this mutated token
     // is inside user-specified range, then add it to list 
     // of mutated tokens RANGE for this location
-    if (range_.empty() || range_.find(mutated_token) != range_.end())
+    if (range_.empty() || range_.find(mutated_token) != range_.end() ||
+        range_.find(orig_mutated_token) != range_.end())
       range->push_back(mutated_token);
   }
 
@@ -155,19 +202,19 @@ void CLCR::GetRange(
   // Convert the strings to long long.
   // Ignore those that cannot be converted.
   vector<long long> range_values;
-  for (auto e: *range)
+  for (auto num: *range)
   {
     long long val;
     try 
     {
-      val = stoll(e);
+      val = stoll(num);
     }
     catch(...) { continue; }
 
     range_values.push_back(val);
   }
 
-  sort(range_values.begin(), range_values.end(), SortFunction);
+  sort(range_values.begin(), range_values.end(), CLCRSortFunction);
   range->clear();
 
   if (choose_max_)

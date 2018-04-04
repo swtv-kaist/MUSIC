@@ -8,7 +8,7 @@ bool OBNG::ValidateDomain(const std::set<std::string> &domain)
 
 bool OBNG::ValidateRange(const std::set<std::string> &range)
 {
-	return range.empty();
+	return true;
 }
 
 // Return True if the mutant operator can mutate this expression
@@ -31,8 +31,6 @@ bool OBNG::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	return false;
 }
 
-
-
 void OBNG::Mutate(clang::Expr *e, MusicContext *context)
 {
 	BinaryOperator *bo;
@@ -40,16 +38,20 @@ void OBNG::Mutate(clang::Expr *e, MusicContext *context)
 		return;
 
 	// Generate mutant by negating the whole expression
-	GenerateMutantByNegation(e, context);
+	if (range_.empty() ||
+      (!range_.empty() && range_.find("whole") != range_.end()))
+		GenerateMutantByNegation(e, context);
 
 	// Generate mutant by negating right hand side of expr
-	GenerateMutantByNegation(bo->getRHS()->IgnoreImpCasts(), context);
+	if (range_.empty() ||
+      (!range_.empty() && range_.find("right") != range_.end()))
+		GenerateMutantByNegation(bo->getRHS()->IgnoreImpCasts(), context);
 
 	// Generate mutant by negating left hand side of expr
-	GenerateMutantByNegation(bo->getLHS()->IgnoreImpCasts(), context);
+	if (range_.empty() ||
+      (!range_.empty() && range_.find("left") != range_.end()))
+		GenerateMutantByNegation(bo->getLHS()->IgnoreImpCasts(), context);
 }
-
-
 
 void OBNG::GenerateMutantByNegation(Expr *e, MusicContext *context)
 {
