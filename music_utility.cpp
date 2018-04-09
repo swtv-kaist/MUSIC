@@ -3,6 +3,16 @@
 #include "music_utility.h"
 #include "clang/AST/PrettyPrinter.h"
 
+set<string> arithemtic_operators{"+", "-", "*", "/", "%"};
+set<string> bitwise_operators{"&", "|", "^"};
+set<string> shift_operators{">>", "<<"};
+set<string> logical_operators{"&&", "||"};
+set<string> relational_operators{">", "<", "<=", ">=", "==", "!="};
+set<string> arith_assignment_operators{"+=", "-=", "*=", "/=", "%="};
+set<string> bitwise_assignment_operators{"&=", "|=", "^="};
+set<string> shift_assignment_operators{"<<=", ">>="};
+set<string> assignment_operator{"="};
+
 string ConvertToString(Stmt *from, LangOptions &LangOpts)
 {
   string SStr;
@@ -1034,8 +1044,10 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
     // cout << ConvertToString(e, comp_inst->getLangOpts()) << endl;
 
     pair<SourceLocation, SourceLocation> expansionRange = 
-          rewriter.getSourceMgr().getImmediateExpansionRange(e->getLocEnd());
-    SourceLocation end_macro = Lexer::getLocForEndOfToken(src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, comp_inst->getLangOpts());
+        rewriter.getSourceMgr().getImmediateExpansionRange(e->getLocEnd());
+    SourceLocation end_macro = Lexer::getLocForEndOfToken(
+        src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, 
+        comp_inst->getLangOpts());
     // cout << "macro: " << end_macro.printToString(src_mgr) << endl;
 
     // if (GetLineNumber(src_mgr, end_macro) == 2070)

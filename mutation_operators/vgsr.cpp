@@ -62,10 +62,12 @@ void VGSR::Mutate(clang::Expr *e, MusicContext *context)
 	StmtContext &stmt_context = context->getStmtContext();
 
 	// cannot mutate variable in switch condition to a floating-type variable
-  bool skip_float_vardecl = stmt_context.IsInSwitchStmtConditionRange(e);
+  bool skip_float_vardecl = stmt_context.IsInSwitchStmtConditionRange(e) ||
+                            stmt_context.IsInNonFloatingExprRange(e);
 
   // cannot mutate a variable in lhs of assignment to a const variable
-  bool skip_const_vardecl = stmt_context.IsInLhsOfAssignmentRange(e);
+  bool skip_const_vardecl = stmt_context.IsInLhsOfAssignmentRange(e) ||
+                            stmt_context.IsInUnaryIncrementDecrementRange(e);
 
   for (auto vardecl: *(context->getSymbolTable()->getGlobalScalarVarDeclList()))
   {

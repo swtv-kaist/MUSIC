@@ -1,12 +1,13 @@
 #include "../music_utility.h"
 #include "oasn.h"
 
+extern set<string> arithemtic_operators;
+extern set<string> shift_operators;
+
 bool OASN::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"+", "-", "*", "/", "%"};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (arithemtic_operators.find(it) == arithemtic_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +16,8 @@ bool OASN::ValidateDomain(const std::set<std::string> &domain)
 
 bool OASN::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"<<", ">>"};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (shift_operators.find(it) == shift_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +27,7 @@ bool OASN::ValidateRange(const std::set<std::string> &range)
 void OASN::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"+", "-", "*", "/", "%"};
+		domain_ = arithemtic_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +35,7 @@ void OASN::setDomain(std::set<std::string> &domain)
 void OASN::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"<<", ">>"};
+		range_ = shift_operators;
 	else
 		range_ = range;
 }

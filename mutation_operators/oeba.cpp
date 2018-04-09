@@ -1,12 +1,13 @@
 #include "../music_utility.h"
 #include "oeba.h"
 
+extern set<string> assignment_operator;
+extern set<string> bitwise_assignment_operators;
+
 bool OEBA::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"="};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (assignment_operator.find(it) == assignment_operator.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +16,8 @@ bool OEBA::ValidateDomain(const std::set<std::string> &domain)
 
 bool OEBA::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"&=", "|=", "^="};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (bitwise_assignment_operators.find(it) == bitwise_assignment_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +27,7 @@ bool OEBA::ValidateRange(const std::set<std::string> &range)
 void OEBA::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"="};
+		domain_ = assignment_operator;
 	else
 		domain_ = domain;
 }
@@ -36,7 +35,7 @@ void OEBA::setDomain(std::set<std::string> &domain)
 void OEBA::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"&=", "|=", "^="};
+		range_ = bitwise_assignment_operators;
 	else
 		range_ = range;
 }

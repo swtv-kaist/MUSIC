@@ -1,12 +1,13 @@
 #include "../music_utility.h"
 #include "oasa.h"
 
+extern set<string> arith_assignment_operators;
+extern set<string> shift_assignment_operators;
+
 bool OASA::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"+=", "-=", "*=", "/=", "%="};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (arith_assignment_operators.find(it) == arith_assignment_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +16,8 @@ bool OASA::ValidateDomain(const std::set<std::string> &domain)
 
 bool OASA::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"<<=", ">>="};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (shift_assignment_operators.find(it) == shift_assignment_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +27,7 @@ bool OASA::ValidateRange(const std::set<std::string> &range)
 void OASA::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"+=", "-=", "*=", "/=", "%="};
+		domain_ = arith_assignment_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +35,7 @@ void OASA::setDomain(std::set<std::string> &domain)
 void OASA::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"<<=", ">>="};
+		range_ = shift_assignment_operators;
 	else
 		range_ = range;
 }

@@ -82,7 +82,6 @@ void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start
             return;
         }
 
-
         mutant_entry_table_[line_num][col_num][name].push_back(new_entry);
       }
     }
@@ -163,7 +162,6 @@ void MutantDatabase::WriteEntryToMutantFile(const MutantEntry &entry)
 
   string mutant_filename{output_dir_};
   mutant_filename += GetNextMutantFilename();
-  mutant_filename += ".c";
 
   // Make and write mutated code to output file.
   // cout << "cp 1\n";
@@ -275,6 +273,7 @@ string MutantDatabase::GetNextMutantFilename()
   mutant_filename.assign(input_filename_, 0, input_filename_.length()-2);
   mutant_filename += ".MUT";
   mutant_filename += to_string(next_mutantfile_id_);
+  mutant_filename += ".c";
   return mutant_filename;
 }
 

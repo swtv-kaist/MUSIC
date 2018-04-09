@@ -74,6 +74,9 @@ void VLSR::Mutate(clang::Expr *e, MusicContext *context)
   {
   	string mutated_token{GetVarDeclName(vardecl)};
 
+  	// cout << "mutating " << token << " to " << mutated_token << endl;
+  	// PrintLocation(src_mgr, vardecl->getLocStart());
+
   	context->mutant_database_.AddMutantEntry(
         name_, start_loc, end_loc, token, mutated_token, 
         context->getStmtContext().getProteumStyleLineNum());
@@ -92,16 +95,18 @@ void VLSR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 
 	// cannot mutate variable in switch condition to a floating-type variable
   bool skip_float_vardecl = stmt_context.IsInSwitchStmtConditionRange(e) ||
-                            stmt_context.IsInArraySubscriptRange(e);
+                            stmt_context.IsInArraySubscriptRange(e) ||
+                            stmt_context.IsInNonFloatingExprRange(e);
 
   // cannot mutate a variable in lhs of assignment to a const variable
-  bool skip_const_vardecl = stmt_context.IsInLhsOfAssignmentRange(e);
+  bool skip_const_vardecl = stmt_context.IsInLhsOfAssignmentRange(e) ||
+  													stmt_context.IsInUnaryIncrementDecrementRange(e);
 
   bool skip_register_vardecl = stmt_context.IsInAddressOpRange(e);
 
 	// remove all VarDecl appearing after expr, 
   // const/float/register VarDecl (if necessary) and
-  // VarDecl not inside range (if range is not empty)
+  // VarDecl not inside user-specified range (if range is not empty)
 	for (auto it = range->begin(); it != range->end(); )
 	{
 		if (!((*it)->getLocStart() < start_loc))
@@ -143,6 +148,8 @@ void VLSR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 				if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
 					break;
 
+				// Expr E is not inside this scope so we cannot mutate to any variables
+				// declared inside this scope.
 				if (LocationIsInRange((*it)->getLocStart(), scope))
 				{
 					it = range->erase(it);

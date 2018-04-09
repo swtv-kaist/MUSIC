@@ -204,15 +204,13 @@ void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
   // right hand side <expr> should not be floating
   if (bo->getOpcode() == BO_Add || bo->getOpcode() == BO_Sub)
   {
-    if (ExprIsPointer(bo->getLHS()->IgnoreImpCasts()) &&
+    if ((ExprIsPointer(bo->getLHS()->IgnoreImpCasts()) ||
+         ExprIsArray(bo->getLHS()->IgnoreImpCasts())) &&
         !stmt_context_.IsInNonFloatingExprRange(e))
       stmt_context_.setNonFloatingExprRange(new SourceRange(
           bo->getRHS()->getLocStart(), 
           GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts(), comp_inst_)));
-
   }
-
-
 
   // Modulo, shift and bitwise expressions' values are integral,
   // and they also only take integral operands.
@@ -270,6 +268,13 @@ bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
   if (start_loc.isMacroID() && end_loc.isMacroID())
     return true;
 
+  // FileID start_loc_fileid = src_mgr_.getFileID(start_spelling_loc);
+  // FileID end_loc_fileid = src_mgr_.getFileID(end_spelling_loc);
+
+  // if (start_loc_fileid.isValid() && start_loc_fileid != src_mgr_.getMainFileID() &&
+  //     end_loc_fileid.isValid() && end_loc_fileid != src_mgr_.getMainFileID())
+  //   return true;
+
   /* This stmt is not written inside current target file */
   // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
   //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
@@ -315,12 +320,14 @@ bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
   }
 
   if (stmt_context_.IsInArrayDeclSize() && 
-      !LocationIsInRange(start_loc, *array_decl_range_))
+      ((!start_loc.isMacroID() && !LocationIsInRange(start_loc, *array_decl_range_)) ||
+       (!end_loc.isMacroID() && !LocationIsInRange(end_loc, *array_decl_range_))))
   {
     stmt_context_.setIsInArrayDeclSize(false);
   }
 
-  // cout << "mutating\n";
+  if (isa<ForStmt>(s))
+    scope_list_.push_back(SourceRange(start_loc, end_loc));
 
   for (auto mutant_operator: stmt_mutant_operator_list_)
     if (mutant_operator->IsMutationTarget(s, &context_))
@@ -582,6 +589,8 @@ bool MusicASTVisitor::VisitVarDecl(clang::VarDecl *vd)
     {  
       stmt_context_.setIsInArrayDeclSize(true);
 
+      if ((!start_loc.isMacroID() && !LocationIsInRange(start_loc, *array_decl_range_)) ||
+          (!end_loc.isMacroID() && !LocationIsInRange(end_loc, *array_decl_range_)))
       array_decl_range_ = new SourceRange(start_loc, end_loc);
     }
   }

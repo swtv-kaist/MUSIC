@@ -1,12 +1,12 @@
 #include "../music_utility.h"
 #include "obbn.h"
 
+extern set<string> bitwise_operators;
+
 bool OBBN::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"&", "|", "^"};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (bitwise_operators.find(it) == bitwise_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +15,8 @@ bool OBBN::ValidateDomain(const std::set<std::string> &domain)
 
 bool OBBN::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"&", "|", "^"};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (bitwise_operators.find(it) == bitwise_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +26,7 @@ bool OBBN::ValidateRange(const std::set<std::string> &range)
 void OBBN::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"&", "|", "^"};
+		domain_ = bitwise_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +34,7 @@ void OBBN::setDomain(std::set<std::string> &domain)
 void OBBN::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"&", "|", "^"};
+		range_ = bitwise_operators;
 	else
 		range_ = range;
 }
@@ -88,7 +86,9 @@ void OBBN::Mutate(clang::Expr *e, MusicContext *context)
 	for (auto mutated_token: range_)
 		if (token.compare(mutated_token) != 0)
 		{
-			context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+			context->mutant_database_.AddMutantEntry(
+					name_, start_loc, end_loc, token, mutated_token, 
+					context->getStmtContext().getProteumStyleLineNum());
 		}
 }
 

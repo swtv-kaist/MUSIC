@@ -38,6 +38,16 @@
 using namespace clang;
 using namespace std;
 
+// extern set<string> arithemtic_operators;
+// extern set<string> bitwise_operators;
+// extern set<string> shift_operators;
+// extern set<string> logical_operators;
+// extern set<string> relational_operators;
+// extern set<string> arith_assignment_operators;
+// extern set<string> bitwise_assignment_operators;
+// extern set<string> shift_assignment_operators;
+// extern set<string> assignment_operator;
+
 string ConvertToString(Stmt *from, LangOptions &LangOpts);
 
 // Print out each element of a string set in a single line.

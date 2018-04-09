@@ -66,7 +66,8 @@ void CLSR::Mutate(clang::Expr *e, MusicContext *context)
   StmtContext &stmt_context = context->getStmtContext();
   bool skip_float_literal = stmt_context.IsInArraySubscriptRange(e) ||
                             stmt_context.IsInSwitchStmtConditionRange(e) ||
-                            stmt_context.IsInSwitchCaseRange(e);
+                            stmt_context.IsInSwitchCaseRange(e) ||
+                            stmt_context.IsInNonFloatingExprRange(e);
 
   for (auto it: (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->getFunctionId()])
   {

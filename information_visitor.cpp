@@ -164,9 +164,12 @@ void InformationVisitor::CollectVarDecl(VarDecl *vd)
 {
   SourceLocation start_loc = vd->getLocStart();
   SourceLocation end_loc = vd->getLocEnd();
+  string var_name{GetVarDeclName(vd)};
 
+  // If VD is non-named variable (inside a function prototype), or is not
+  // declared within target input file, then skip.
   if (src_mgr_.getFileID(src_mgr_.getSpellingLoc(start_loc)) != \
-      src_mgr_.getMainFileID())
+      src_mgr_.getMainFileID() || var_name.empty())
     return;
 
   if(vd->isFileVarDecl())

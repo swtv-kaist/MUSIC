@@ -1,12 +1,13 @@
 #include "../music_utility.h"
 #include "olbn.h"
 
+extern set<string> bitwise_operators;
+extern set<string> logical_operators;
+
 bool OLBN::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"&&", "||"};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (logical_operators.find(it) == logical_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +16,8 @@ bool OLBN::ValidateDomain(const std::set<std::string> &domain)
 
 bool OLBN::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"&", "|", "^"};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (bitwise_operators.find(it) == bitwise_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +27,7 @@ bool OLBN::ValidateRange(const std::set<std::string> &range)
 void OLBN::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"&&", "||"};
+		domain_ = logical_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +35,7 @@ void OLBN::setDomain(std::set<std::string> &domain)
 void OLBN::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"&", "|", "^"};
+		range_ = bitwise_operators;
 	else
 		range_ = range;
 }

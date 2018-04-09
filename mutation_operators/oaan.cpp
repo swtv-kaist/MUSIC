@@ -1,12 +1,12 @@
 #include "../music_utility.h"
 #include "oaan.h"
 
+extern set<string> arithemtic_operators;
+
 bool OAAN::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"+", "-", "*", "/", "%"};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (arithemtic_operators.find(it) == arithemtic_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +15,8 @@ bool OAAN::ValidateDomain(const std::set<std::string> &domain)
 
 bool OAAN::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"+", "-", "*", "/", "%"};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (arithemtic_operators.find(it) == arithemtic_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +26,7 @@ bool OAAN::ValidateRange(const std::set<std::string> &range)
 void OAAN::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"+", "-", "*", "/", "%"};
+		domain_ = arithemtic_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +34,7 @@ void OAAN::setDomain(std::set<std::string> &domain)
 void OAAN::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"+", "-", "*", "/", "%"};
+		range_ = arithemtic_operators;
 	else
 		range_ = range;
 }
@@ -145,11 +143,11 @@ bool OAAN::IsMutationTarget(BinaryOperator *bo, string mutated_token,
 
 	// Mutating additive operator to additive operator
 	// If rhs is pointer, then only (int+ptr) and (ptr-ptr) is allowed
-	if (ExprIsPointer(rhs)) return false;
+	if (ExprIsPointer(rhs) || ExprIsArray(rhs)) return false;
 
 	// If lhs is pointer and rhs is not pointer, then only (ptr+-int) is allowed
-	if (ExprIsPointer(lhs) && mutated_token.compare("+") != 0 &&
-			mutated_token.compare("-") != 0)
+	if ((ExprIsPointer(lhs) || ExprIsArray(lhs)) && 
+			mutated_token.compare("+") != 0 && mutated_token.compare("-") != 0)
 		return false;
 
 	return true;

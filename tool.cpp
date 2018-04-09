@@ -763,7 +763,9 @@ protected:
     else
       cout << "opened file name " << g_mutdbfile_name << endl;
 
-    out_mutDb << "Input file: " << g_current_inputfile_path << endl;
+    out_mutDb << "Mutant Filename,Mutation Operator,Line#,Before Mutation,,,,,After Mutation" << endl;
+    out_mutDb << ",,,Start Line#,Start Col#,End Line#,End Col#,Target Token,";
+    out_mutDb << "Start Line#,Start Col#,End Line#,End Col#,Mutated Token" << endl;
     out_mutDb.close();
 
     g_mutant_database->ExportAllEntries();
@@ -962,7 +964,7 @@ int main(int argc, const char *argv[])
         cout << endl;
       } 
 
-      getchar();
+      // getchar();
       continue;
     }
 

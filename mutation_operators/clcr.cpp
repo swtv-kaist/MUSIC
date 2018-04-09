@@ -153,7 +153,8 @@ void CLCR::GetRange(
   bool skip_float_literal = stmt_context.IsInArraySubscriptRange(e) ||
                             stmt_context.IsInSwitchStmtConditionRange(e) ||
                             stmt_context.IsInSwitchCaseRange(e) ||
-                            IsTargetOfConversionToPointer(e, context);
+                            IsTargetOfConversionToPointer(e, context) ||
+                            stmt_context.IsInNonFloatingExprRange(e);
 
   ExprList local_consts(
       (*(context->getSymbolTable()->getLocalScalarConstantList()))[context->getFunctionId()]);

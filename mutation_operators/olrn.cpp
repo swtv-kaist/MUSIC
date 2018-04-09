@@ -1,12 +1,13 @@
 #include "../music_utility.h"
 #include "olrn.h"
 
+extern set<string> logical_operators;
+extern set<string> relational_operators;
+
 bool OLRN::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"&&", "||"};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (logical_operators.find(it) == logical_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +16,8 @@ bool OLRN::ValidateDomain(const std::set<std::string> &domain)
 
 bool OLRN::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{">", "<", "<=", ">=", "==", "!="};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (relational_operators.find(it) == relational_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +27,7 @@ bool OLRN::ValidateRange(const std::set<std::string> &range)
 void OLRN::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"&&", "||"};
+		domain_ = logical_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +35,7 @@ void OLRN::setDomain(std::set<std::string> &domain)
 void OLRN::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {">", "<", "<=", ">=", "==", "!="};
+		range_ = relational_operators;
 	else
 		range_ = range;
 }

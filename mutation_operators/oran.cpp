@@ -1,12 +1,13 @@
 #include "../music_utility.h"
 #include "oran.h"
 
+extern set<string> relational_operators;
+extern set<string> arithemtic_operators;
+
 bool ORAN::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{">", "<", "<=", ">=", "==", "!="};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (relational_operators.find(it) == relational_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +16,8 @@ bool ORAN::ValidateDomain(const std::set<std::string> &domain)
 
 bool ORAN::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"+", "-", "*", "/", "%"};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (arithemtic_operators.find(it) == arithemtic_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +27,7 @@ bool ORAN::ValidateRange(const std::set<std::string> &range)
 void ORAN::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {">", "<", "<=", ">=", "==", "!="};
+		domain_ = relational_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +35,7 @@ void ORAN::setDomain(std::set<std::string> &domain)
 void ORAN::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"+", "-", "*", "/", "%"};
+		range_ = arithemtic_operators;
 	else
 		range_ = range;
 }
@@ -124,12 +123,25 @@ bool ORAN::IsMutationTarget(BinaryOperator *bo, string mutated_token,
 	// for cases that one of operand is pointer, only the followings are allowed
 	// 		(int + ptr), (ptr - ptr), (ptr + int), (ptr - int)
 	// Also, only ptr of same type can subtract each other
-	if (ExprIsPointer(lhs))
+	if (ExprIsPointer(lhs) || ExprIsArray(lhs))
 	{
-		string lhs_type{getPointerType(lhs->getType())};
-		if (ExprIsPointer(rhs) &&
-				lhs_type.compare(getPointerType(rhs->getType())) == 0)
-			return (mutated_token.compare("-") == 0);
+		string lhs_type;
+		if (ExprIsPointer(lhs))
+			lhs_type = getPointerType(lhs->getType());
+		else
+			lhs_type = getArrayElementType(lhs->getType());
+
+		if (ExprIsPointer(rhs) || ExprIsArray(rhs))
+		{
+			string rhs_type;
+			if (ExprIsPointer(rhs))
+				rhs_type = getPointerType(rhs->getType());
+			else
+				rhs_type = getArrayElementType(rhs->getType());
+
+			if (lhs_type.compare(rhs_type) == 0)
+				return mutated_token.compare("-") == 0;
+		}
 
 		if (ExprIsIntegral(context->comp_inst_, rhs))
 			return true;
@@ -138,7 +150,7 @@ bool ORAN::IsMutationTarget(BinaryOperator *bo, string mutated_token,
 		return false;
 	}
 
-	if (ExprIsPointer(rhs))
+	if (ExprIsPointer(rhs) || ExprIsArray(rhs))
 	{
 		if (ExprIsIntegral(context->comp_inst_, lhs))
 			return (mutated_token.compare("+") == 0);

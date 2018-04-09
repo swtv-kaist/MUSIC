@@ -62,7 +62,8 @@ void CGSR::Mutate(clang::Expr *e, MusicContext *context)
   // array subscript to a floating-type variable
   bool skip_float_literal = stmt_context.IsInArraySubscriptRange(e) ||
                             stmt_context.IsInSwitchStmtConditionRange(e) ||
-                            stmt_context.IsInSwitchCaseRange(e);
+                            stmt_context.IsInSwitchCaseRange(e) ||
+                            stmt_context.IsInNonFloatingExprRange(e);
 
   for (auto it: *(context->getSymbolTable()->getGlobalScalarConstantList()))
   {

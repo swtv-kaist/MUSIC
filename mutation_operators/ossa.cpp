@@ -1,12 +1,12 @@
 #include "../music_utility.h"
 #include "ossa.h"
 
+extern set<string> shift_assignment_operators;
+
 bool OSSA::ValidateDomain(const std::set<std::string> &domain)
 {
-	set<string> valid_domain{"<<=", ">>="};
-
 	for (auto it: domain)
-  	if (valid_domain.find(it) == valid_domain.end())
+  	if (shift_assignment_operators.find(it) == shift_assignment_operators.end())
     	// cannot find input domain inside valid domain
       return false;
 
@@ -15,10 +15,8 @@ bool OSSA::ValidateDomain(const std::set<std::string> &domain)
 
 bool OSSA::ValidateRange(const std::set<std::string> &range)
 {
-	set<string> valid_range{"<<=", ">>="};
-
 	for (auto it: range)
-  	if (valid_range.find(it) == valid_range.end())
+  	if (shift_assignment_operators.find(it) == shift_assignment_operators.end())
     	// cannot find input range inside valid range
       return false;
 
@@ -28,7 +26,7 @@ bool OSSA::ValidateRange(const std::set<std::string> &range)
 void OSSA::setDomain(std::set<std::string> &domain)
 {
 	if (domain.empty())
-		domain_ = {"<<=", ">>="};
+		domain_ = shift_assignment_operators;
 	else
 		domain_ = domain;
 }
@@ -36,7 +34,7 @@ void OSSA::setDomain(std::set<std::string> &domain)
 void OSSA::setRange(std::set<std::string> &range)
 {
 	if (range.empty())
-		range_ = {"<<=", ">>="};
+		range_ = shift_assignment_operators;
 	else
 		range_ = range;
 }
