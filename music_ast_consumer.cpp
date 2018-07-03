@@ -416,9 +416,7 @@ bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
     // remove whitespaces at the beginning and end_loc of retrieved string
     case_value = TrimBeginningAndEndingWhitespace(case_value);
 
-    // if case value is char, convert it to int value
-    if (case_value.front() == '\'' && case_value.back() == '\'')
-      case_value = ConvertCharStringToIntString(case_value);
+    ConvertConstIntExprToIntString(cs->getLHS(), comp_inst_, case_value);
 
     case_value_list.push_back(case_value);
 

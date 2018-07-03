@@ -253,4 +253,9 @@ ostream& operator<<(ostream &stream, const MutantDatabase &database);
 
 Expr* IgnoreParenExpr(Expr *e);
 
+void ConvertConstIntExprToIntString(Expr *e, CompilerInstance *comp_inst,
+                                    string &str);
+void ConvertConstFloatExprToFloatString(Expr *e, CompilerInstance *comp_inst,
+                                        string &str);
+
 #endif  // MUSIC_UTILITY_H_

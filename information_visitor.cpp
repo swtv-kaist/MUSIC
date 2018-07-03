@@ -1,6 +1,8 @@
 #include "music_utility.h"
 #include "information_visitor.h"
 
+#include "llvm/ADT/APFloat.h"
+
 InformationVisitor::InformationVisitor(
     CompilerInstance *CI)
   : comp_inst_(CI), 
@@ -220,9 +222,13 @@ void InformationVisitor::CollectScalarConstant(Expr* e)
 
   string token{ConvertToString(e, comp_inst_->getLangOpts())};
 
-  // convert to int value if it is a char literal
-  if (token.front() == '\'' && token.back() == '\'')
-    token = ConvertCharStringToIntString(token);
+  llvm::APSInt int_value;
+
+  // Try to convert floating literal expression into a double value.
+  if (isa<FloatingLiteral>(e))
+    ConvertConstFloatExprToFloatString(e, comp_inst_, token);
+  else
+    ConvertConstIntExprToIntString(e, comp_inst_, token);
 
   // local constants
   if (LocationIsInRange(src_mgr_.getExpansionLoc(e->getLocStart()), 

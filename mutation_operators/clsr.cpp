@@ -80,9 +80,9 @@ void CLSR::Mutate(clang::Expr *e, MusicContext *context)
   	if (skip_float_literal && ExprIsFloat(it))
       continue;
 
+    // This is for same mutant removal procedure during AddMutantEntry
     if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
     	mutated_token = ConvertCharStringToIntString(mutated_token);
-
 
     context->mutant_database_.AddMutantEntry(
         name_, start_loc, end_loc, token, mutated_token, 

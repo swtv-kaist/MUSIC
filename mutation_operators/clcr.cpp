@@ -102,10 +102,6 @@ void CLCR::Mutate(clang::Expr *e, MusicContext *context)
 bool CLCR::IsDuplicateCaseLabel(
 		string new_label, SwitchStmtInfoList *switchstmt_list)
 {
-	// Convert char value to int for precise comparison
-  if (new_label.front() == '\'' && new_label.back() == '\'')
-    new_label = ConvertCharStringToIntString(new_label);
-
   for (auto case_value: (*switchstmt_list).back().second)
     if (new_label.compare(case_value) == 0)
 	    return true;
@@ -143,8 +139,10 @@ void CLCR::GetRange(
   // to avoid mutating to same value constant.
   string int_string{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
-  if (int_string.front() == '\'' && int_string.back() == '\'')
-    int_string = ConvertCharStringToIntString(int_string);
+  if (isa<FloatingLiteral>(e))
+    ConvertConstFloatExprToFloatString(e, context->comp_inst_, int_string);
+  else
+    ConvertConstIntExprToIntString(e, context->comp_inst_, int_string);
 
   // cannot mutate the variable in switch condition, case value, 
   // array subscript to a floating-type variable because
@@ -169,8 +167,10 @@ void CLCR::GetRange(
     string orig_mutated_token{
         ConvertToString(*it, context->comp_inst_->getLangOpts())};
 
-    if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
-      mutated_token = ConvertCharStringToIntString(mutated_token);
+    if (ExprIsFloat(*it))
+      ConvertConstFloatExprToFloatString(*it, context->comp_inst_, mutated_token);
+    else
+      ConvertConstIntExprToIntString(*it, context->comp_inst_, mutated_token);
 
     if (int_string.compare(mutated_token) == 0)
       continue;

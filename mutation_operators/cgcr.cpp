@@ -58,10 +58,6 @@ bool CGCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext& stmt_context = context->getStmtContext();
 
-	// SourceManager &src_mgr = context->comp_inst_->getSourceManager();
- //  Rewriter rewriter;
- //  rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
-
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
   bool is_in_domain = domain_.empty() ? true : 
                       IsStringElementOfSet(token, domain_);
@@ -80,10 +76,6 @@ void CGCR::Mutate(clang::Expr *e, MusicContext *context)
 	SourceLocation start_loc = e->getLocStart();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
-	// SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-	// Rewriter rewriter;
-	// rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
-
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
   vector<string> range;
@@ -98,10 +90,6 @@ void CGCR::Mutate(clang::Expr *e, MusicContext *context)
 bool CGCR::IsDuplicateCaseLabel(
 		string new_label, SwitchStmtInfoList *switchstmt_list)
 {
-	// Convert char value to int for precise comparison
-  if (new_label.front() == '\'' && new_label.back() == '\'')
-    new_label = ConvertCharStringToIntString(new_label);
-
   for (auto case_value: (*switchstmt_list).back().second)
     if (new_label.compare(case_value) == 0)
 	    return true;
@@ -120,8 +108,10 @@ void CGCR::GetRange(
 	// to avoid mutating to same value constant.
 	string int_string{ConvertToString(e, context->comp_inst_->getLangOpts())};
 
-	if (int_string.front() == '\'' && int_string.back() == '\'')
-    int_string = ConvertCharStringToIntString(int_string);
+	if (isa<FloatingLiteral>(e))
+    ConvertConstFloatExprToFloatString(e, context->comp_inst_, int_string);
+  else
+    ConvertConstIntExprToIntString(e, context->comp_inst_, int_string);
 
   // cannot mutate the variable in switch condition, case value, 
   // array subscript to a floating-type variable because
@@ -145,9 +135,10 @@ void CGCR::GetRange(
     string orig_mutated_token{
         ConvertToString(it, context->comp_inst_->getLangOpts())};
 
-    // convert to int value if it is a char literal
-	  if (mutated_token.front() == '\'' && mutated_token.back() == '\'')
-	    mutated_token = ConvertCharStringToIntString(mutated_token);
+    if (ExprIsFloat(it))
+      ConvertConstFloatExprToFloatString(it, context->comp_inst_, mutated_token);
+    else
+      ConvertConstIntExprToIntString(it, context->comp_inst_, mutated_token);
 
 	  // Avoid mutating to the same scalar constant
     // If token is char, then convert it to int string for comparison

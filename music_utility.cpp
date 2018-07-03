@@ -1586,3 +1586,28 @@ Expr* IgnoreParenExpr(Expr *e)
   
   return ret;
 }
+
+void ConvertConstIntExprToIntString(Expr *e, CompilerInstance *comp_inst,
+                                    string &str)
+{
+  llvm::APSInt result;
+  if (e->EvaluateAsInt(result, comp_inst->getASTContext()))
+    str = result.toString(10);
+  
+  // if case value is char, convert it to int value
+  if (str.front() == '\'' && str.back() == '\'')
+    str = ConvertCharStringToIntString(str);
+}
+
+void ConvertConstFloatExprToFloatString(Expr *e, CompilerInstance *comp_inst,
+                                        string &str)
+{
+  llvm::APFloat result(0.0);
+  if (e->EvaluateAsFloat(result, comp_inst->getASTContext()))
+  {
+    double val = result.convertToDouble();
+    stringstream ss;
+    ss << val;
+    str = ss.str();
+  }
+}
