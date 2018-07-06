@@ -243,6 +243,7 @@ void InformationVisitor::CollectScalarConstant(Expr* e)
       local_scalarconstant_list_.back().push_back(e);
     }
   }
+  // global constants
   // If the constant is not in the cache, add this new entity into
   // the cache and the vector storing global consts.
   // Else, do nothing.

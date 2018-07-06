@@ -70,12 +70,15 @@ void MutantDatabase::AddMutantEntry(MutantName name, clang::SourceLocation start
       }
       else
       {
-        // Check if there is already another mutant with the same replacement inside.
+        // Check if there is another mutant with same replacement inside.
         // If yes, then skip. Otherwise push new entry in.
 
         // All these entries will have the same line and column number and
         // mutant name, so if they make the same replacement then they are
         // duplicated.
+
+        // ISSUE: is it possible for duplicate case between different mutation 
+        // operator?
         for (auto entry: mutant_entry_table_[line_num][col_num][name])
         {
           if (new_entry == entry)

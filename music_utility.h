@@ -258,4 +258,8 @@ void ConvertConstIntExprToIntString(Expr *e, CompilerInstance *comp_inst,
 void ConvertConstFloatExprToFloatString(Expr *e, CompilerInstance *comp_inst,
                                         string &str);
 
+bool SortFloatAscending (long double i,long double j);
+bool SortIntAscending (long long i,long long j);
+bool SortStringAscending (string i,string j);
+
 #endif  // MUSIC_UTILITY_H_

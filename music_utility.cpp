@@ -1611,3 +1611,7 @@ void ConvertConstFloatExprToFloatString(Expr *e, CompilerInstance *comp_inst,
     str = ss.str();
   }
 }
+
+bool SortFloatAscending (long double i,long double j) { return (i<j); }
+bool SortIntAscending (long long i,long long j) { return (i<j); }
+bool SortStringAscending (string i,string j) { return (i.compare(j) < 0); }
