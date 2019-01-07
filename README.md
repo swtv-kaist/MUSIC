@@ -66,7 +66,7 @@ Usage:
 ```
 -o <directory>
 ```
-Used to specify output directory. The directory must exist.
+Used to specify output directory (absolute path). The directory must exist.
 
 Default is current directory.
 
@@ -79,6 +79,8 @@ Usage:
 Used to specify the compilation database file.
 
 Default is none so target file will be compiled with macro definitions, include directories, and so on
+
+Add -- at the end of the command if you want to apply MUSIC to target file without compilation database file.
 
 ### -l option
 
@@ -100,7 +102,19 @@ Used to specify the range where mutation operators can be applied.
 
 Default is start of input file for –rs and end of file for -re.
 
-They do not have to go together and can be used separately
+They do not have to go together and can be used separately (i.e. only specify -rs or -re is ok).
+
+### -x option
+
+Usage:
+```
+-x <filename>:<line1>[,<line2>,...]
+```
+Used to specify the lines which will not be mutated in a target file.
+
+Default is null so all lines in target file are subject to mutation.
+
+-x is prioritized over -rs and -re. A line specified by -x option will be excluded even if it is in mutation range.
 
 ### -m option
 
@@ -116,14 +130,14 @@ Elements in domain, range must be separated by comma.
 
 ## Output
 
-In the output directory, there will be mutant files for each mutant and mutant database file named inputfilename_mut_db.
+In the output directory (absolute path), there will be mutant files for each mutant and mutant database file named inputfilename_mut_db.
 
 ## Examples
 
 ```
-./music test.c --
-./music test.c -o mutant_test/ -rs 3 1 -re 15 5 --
-./music test.c -o mutant_test/ -l 3 -m ssdl -m OAAN:+,-:*,/ -p compile_commands.json
+./music /home/music/targets/test.c --
+./music /home/music/targets/test.c -o /home/music/output/ -rs /home/music/targets/test.c:3:1 --
+./music /home/music/targets/test.c -o /home/music/output/ -l 3 -m ssdl -m OAAN:+,-:* -p /home/music/compile_commands.json
 ```
 
 ## License

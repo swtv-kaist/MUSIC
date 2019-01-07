@@ -2,6 +2,7 @@
 #define CONFIGURATION_H_
 
 #include <string>
+#include <vector>
 #include "clang/Basic/SourceLocation.h"
 
 /**
@@ -24,11 +25,13 @@ private:
   clang::SourceLocation mutation_range_end_loc_;
   std::string output_directory_;
   int limit_num_of_mutant_;
+  std::vector<int> excluded_lines_;
 
 public:
   Configuration(std::string inputfile_name, std::string mutation_db_filename, 
-  					clang::SourceLocation start_loc, clang::SourceLocation end_loc, 
-  					std::string directory = "./", int limit = 0);
+  					    clang::SourceLocation start_loc, clang::SourceLocation end_loc, 
+  					    std::vector<int>& excluded_lines, std::string directory = "./", 
+                int limit = 0);
 
   // Getters
   std::string getInputFilename();
@@ -37,6 +40,7 @@ public:
 	clang::SourceLocation* getEndOfMutationRange();
 	std::string getOutputDir();
 	int getLimitNumOfMutants();
+  std::vector<int>& getExcludedLines();
 };
 
 #endif	// CONFIGURATION_H_

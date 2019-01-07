@@ -469,6 +469,10 @@ static llvm::cl::list<string> OptionRE(
     "re",
     llvm::cl::cat(MusicOptions));
 
+static llvm::cl::list<string> OptionX(
+    "x", llvm::cl::desc("Specify list of lines to exclude for mutant generation for each file"),
+    llvm::cl::cat(MusicOptions));
+
 // static llvm::cl::list<unsigned int> OptionRE(
 //     "re", llvm::cl::multi_val(2),
 //     llvm::cl::cat(MusicOptions));
@@ -485,6 +489,7 @@ vector<ExprMutantOperator*> g_expr_mutant_operator_list;
 vector<StmtMutantOperator*> g_stmt_mutant_operator_list;
 map<string, vector<int>> g_rs_list;
 map<string, vector<int>> g_re_list;
+map<string, vector<int>> g_exclude_list;
 tooling::CommonOptionsParser *g_option_parser;
 
 // default output directory is current directory.
@@ -626,6 +631,62 @@ void ParseOptionRE()
   //     cout << d << " ";
   //   cout << endl;
   // }
+}
+
+void ParseOptionX() 
+{
+  if (OptionX.empty())
+    return;
+
+  for (auto e: OptionX)
+  {
+    cout << "parsing " << e << endl;
+    vector<string> temp;
+    SplitStringIntoVector(e, temp, string(":"));
+
+    if (temp.size() != 2)
+    {
+      cout << "Excluded lines not specified in " << e << endl;
+      exit(1);
+    }
+
+    cout << "target is " << temp[0] << endl;
+
+    vector<string> excluded_line_list;
+    SplitStringIntoVector(temp[1], excluded_line_list, string(","));
+
+    if (g_exclude_list.count(temp[0]) == 0)
+      g_exclude_list[temp[0]] = vector<int>{};
+
+    for (auto line_num_str: excluded_line_list) 
+    {
+      if (!IsAllDigits(line_num_str))
+      {
+        cout << "Invalid line number " << line_num_str << "\n";
+        cout << "Usage: [-x <filename>:<line1>[,<line2>,...]]\n";
+        exit(1);
+      }
+
+      int line_num;
+      stringstream(line_num_str) >> line_num;
+
+      if (line_num == 0)
+      {
+        cout << "Option X specification error: line number must be larger than 0." << endl;
+        exit(1);
+      }
+
+      g_exclude_list[temp[0]].push_back(line_num);
+    }
+  }
+
+  for (auto e: g_exclude_list)
+  {
+    cout << e.first << " has to exclude the following lines\n";
+    for (auto d: e.second)
+      cout << d << " ";
+    cout << endl;
+  }
 }
 
 void ParseOptionO()
@@ -828,61 +889,26 @@ public:
           sm.getMainFileID(), line_num, col_num);
     }
 
-    /*if (!OptionRS.empty())
-    {
-      if (OptionRS[0] == 0 || OptionRE[0] == 0)
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
+    // cout << g_inputfile_name << endl;
+    // PrintLocation(sm, g_mutation_range_start);
+    // PrintLocation(sm, g_mutation_range_end);
 
-      SourceLocation interpreted_loc = sm.translateLineCol(
-          sm.getMainFileID(), OptionRS[0], OptionRS[1]);
-
-      if (OptionRS[0] != GetLineNumber(sm, interpreted_loc) ||
-          OptionRS[1] != GetColumnNumber(sm, interpreted_loc))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      g_mutation_range_start = sm.translateLineCol(
-          sm.getMainFileID(), OptionRS[0], OptionRS[1]);
-    }
-
-    cout << "done parsing rs\n";
-
-    if (!OptionRE.empty())
-    {
-      if (OptionRE[0] == 0 || OptionRE[1] == 0)
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      SourceLocation interpreted_loc = sm.translateLineCol(
-          sm.getMainFileID(), OptionRE[0], OptionRE[1]);
-
-      if (OptionRE[0] != GetLineNumber(sm, interpreted_loc) ||
-          OptionRE[1] != GetColumnNumber(sm, interpreted_loc))
-      {
-        PrintLineColNumberErrorMsg();
-        exit(1);
-      }
-
-      g_mutation_range_end = sm.translateLineCol(
-          sm.getMainFileID(), OptionRE[0], OptionRE[1]);
-    }*/
-
-    cout << g_inputfile_name << endl;
-    PrintLocation(sm, g_mutation_range_start);
-    PrintLocation(sm, g_mutation_range_end);
+    vector<int> excluded_lines;
+    if (g_exclude_list.count(g_inputfile_name))
+      excluded_lines = vector<int>(g_exclude_list[g_inputfile_name]);
+    else
+      if (g_exclude_list.count(g_current_inputfile_path))
+        excluded_lines = vector<int>(g_exclude_list[g_current_inputfile_path]); 
 
     /* Create Configuration object pointer to pass as attribute 
        for MusicASTConsumer. */
     g_config = new Configuration(
         g_inputfile_name, g_mutdbfile_name, g_mutation_range_start, 
-        g_mutation_range_end, g_output_dir, g_limit);
+        g_mutation_range_end, excluded_lines, g_output_dir, g_limit);
+
+    // for (auto e: g_config->getExcludedLines())
+    //   cout << e << endl;
+    // exit(1);
 
     g_mutant_database = new MutantDatabase(
         &CI, g_config->getInputFilename(),
@@ -912,7 +938,7 @@ protected:
     cout << "executing action from GatherDataAction\n";
     ASTFrontendAction::ExecuteAction();
 
-    cout << g_gatherer->getLabelToGotoListMap()->size() << endl;
+    // cout << g_gatherer->getLabelToGotoListMap()->size() << endl;
 
     vector<string> source{g_current_inputfile_path};
 
@@ -942,6 +968,7 @@ int main(int argc, const char *argv[])
 
   ParseOptionRS();
   ParseOptionRE();
+  ParseOptionX();
   ParseOptionO();
   ParseOptionL();
   ParseOptionM();
@@ -1001,6 +1028,7 @@ int main(int argc, const char *argv[])
     g_mutdbfile_name.append(g_inputfile_name, 0, g_inputfile_name.length()-2);
     g_mutdbfile_name += "_mut_db.csv";
 
+    cout << "g_current_inputfile_path = " << g_current_inputfile_path << endl;
     cout << "g_inputfile_name = " << g_inputfile_name << endl;
     cout << "g_mutdbfile_name = " << g_mutdbfile_name << endl;
 
