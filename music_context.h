@@ -26,8 +26,7 @@ typedef std::vector<std::string> ScalarReferenceNameList;
 //     {...scope3
 //     }
 //   }
-// }
-typedef std::vector<clang::SourceRange> ScopeRangeList;  
+// }  
 
 class MusicContext
 {

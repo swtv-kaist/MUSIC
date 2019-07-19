@@ -43,6 +43,9 @@ public:
 
 	virtual void setDomain(std::set<std::string> &domain);
   virtual void setRange(std::set<std::string> &range);
+
+  virtual std::string getName();
+  virtual bool IsInitMutationTarget(clang::Expr *e, MusicContext *context);
 	
 protected:
 	/*void GenerateMutantFile(MusicContext *context, 

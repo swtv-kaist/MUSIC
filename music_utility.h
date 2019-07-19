@@ -53,6 +53,8 @@ string ConvertToString(Stmt *from, LangOptions &LangOpts);
 // Print out each element of a string set in a single line.
 void PrintStringSet(std::set<std::string> &string_set);
 
+void PrintStringVector(const std::vector<std::string> &string_vector);
+
 // remove spaces at the beginning and end_loc of string str
 string TrimBeginningAndEndingWhitespace(const string &str);
 
@@ -139,7 +141,7 @@ int GetLineNumber(SourceManager &src_mgr, SourceLocation loc);
 
 int GetColumnNumber(SourceManager &src_mgr, SourceLocation loc);
 
-SourceLocation GetEndLocOfStmt(SourceLocation loc, 
+SourceLocation TryGetEndLocAfterBracketOrSemicolon(SourceLocation loc, 
                                CompilerInstance *comp_inst);
 
 void PrintLocation(SourceManager &src_mgr, SourceLocation loc);
@@ -221,6 +223,8 @@ string getPointerType(QualType type);
 // Return True if the 2 types are same
 bool sameArrayElementType(QualType type1, QualType type2);
 
+bool isCompatibleType(QualType type1, QualType type2);
+
 /** 
   Check if this directory exists
 
@@ -235,6 +239,7 @@ void PrintUsageErrorMsg();
 void PrintLineColNumberErrorMsg();
 
 const Stmt* GetParentOfStmt(Stmt *s, CompilerInstance *comp_inst);
+const Stmt *GetSecondLevelParent(Stmt *s, CompilerInstance *comp_inst);
 
 Expr* GetLeftOperandAfterMutationToMultiplicativeOp(Expr *lhs);
 Expr* GetRightOperandAfterMutationToMultiplicativeOp(Expr *rhs);
@@ -252,5 +257,17 @@ ostream& operator<<(ostream &stream, const MutantEntry &entry);
 ostream& operator<<(ostream &stream, const MutantDatabase &database);
 
 Expr* IgnoreParenExpr(Expr *e);
+
+void ConvertConstIntExprToIntString(Expr *e, CompilerInstance *comp_inst,
+                                    string &str);
+void ConvertConstFloatExprToFloatString(Expr *e, CompilerInstance *comp_inst,
+                                        string &str);
+
+bool SortFloatAscending (long double i,long double j);
+bool SortIntAscending (long long i,long long j);
+bool SortStringAscending (string i,string j);
+
+string GetMaxValue(QualType qualtype);
+string GetMinValue(QualType qualtype);
 
 #endif  // MUSIC_UTILITY_H_

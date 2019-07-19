@@ -1,7 +1,7 @@
 # Edit these variables based on where you put your llvm source file
 # and build file.
-LLVM_SRC_PATH := $$HOME/llvm
-LLVM_BUILD_PATH := $$HOME/build-clang
+LLVM_SRC_PATH := $$HOME/llvm-7.0.1.src
+LLVM_BUILD_PATH := $$HOME/build-clang-7.0.1
 LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 
 SRCS=tool.cpp configuration.cpp music_utility.cpp mutant_entry.cpp\
@@ -45,7 +45,28 @@ SRCS=tool.cpp configuration.cpp music_utility.cpp mutant_entry.cpp\
 		 mutation_operators/oasn.cpp mutation_operators/olan.cpp \
 		 mutation_operators/oran.cpp mutation_operators/olbn.cpp \
 		 mutation_operators/olsn.cpp mutation_operators/orsn.cpp \
-		 mutation_operators/orbn.cpp
+		 mutation_operators/orbn.cpp mutation_operators/rgcr.cpp \
+		 mutation_operators/rlcr.cpp mutation_operators/rgsr.cpp \
+		 mutation_operators/rlsr.cpp mutation_operators/rgpr.cpp \
+		 mutation_operators/rlpr.cpp mutation_operators/rgtr.cpp \
+		 mutation_operators/rltr.cpp mutation_operators/rgar.cpp \
+		 mutation_operators/rlar.cpp mutation_operators/rrcr.cpp \
+		 mutation_operators/dirvararineg.cpp mutation_operators/dirvarbitneg.cpp \
+		 mutation_operators/dirvarlogneg.cpp mutation_operators/dirvarincdec.cpp \
+		 mutation_operators/dirvarrepreq.cpp mutation_operators/dirvarrepcon.cpp \
+		 mutation_operators/dirvarreppar.cpp mutation_operators/dirvarrepglo.cpp \
+		 mutation_operators/dirvarrepext.cpp mutation_operators/dirvarreploc.cpp \
+		 mutation_operators/indvararineg.cpp mutation_operators/indvarbitneg.cpp \
+		 mutation_operators/indvarlogneg.cpp mutation_operators/indvarincdec.cpp \
+		 mutation_operators/indvarrepreq.cpp mutation_operators/indvarrepcon.cpp \
+		 mutation_operators/indvarreppar.cpp mutation_operators/indvarrepglo.cpp \
+		 mutation_operators/indvarrepext.cpp mutation_operators/indvarreploc.cpp \
+		 mutation_operators/sbrc.cpp mutation_operators/scrb.cpp \
+		 mutation_operators/retstadel.cpp mutation_operators/argarineg.cpp \
+		 argbitneg.cpp argdel.cpp argincdec.cpp arglogneg.cpp argrepreq.cpp \
+		 argstcali.cpp funcaldel.cpp swdd.cpp sdwd.cpp vasm.cpp sglr.cpp ssom.cpp \
+		 smvb.cpp srsr.cpp strp.cpp stri.cpp smtt.cpp smtc.cpp sswm.cpp vdtr.cpp \
+		 sbrn.cpp scrn.cpp covallnod.cpp covalledg.cpp
   
 OBJS=tool.o configuration.o music_utility.o symbol_table.o\
 		 mutant_entry.o mutant_database.o \
@@ -60,7 +81,18 @@ OBJS=tool.o configuration.o music_utility.o symbol_table.o\
 		 osln.o osrn.o oban.o obsn.o osan.o osbn.o oaea.o obaa.o \
 		 obba.o obea.o obsa.o osaa.o osba.o osea.o ossa.o oeaa.o \
 		 oeba.o oesa.o oaaa.o oaba.o oasa.o oaln.o oaan.o oarn.o \
-		 oabn.o oasn.o olan.o oran.o olbn.o olsn.o orbn.o orsn.o
+		 oabn.o oasn.o olan.o oran.o olbn.o olsn.o orbn.o orsn.o \
+		 rgcr.o rlcr.o rgsr.o rlsr.o rgpr.o rlpr.o rgtr.o rltr.o \
+		 rgar.o rlar.o rrcr.o dirvararineg.o dirvarbitneg.o dirvarlogneg.o \
+		 dirvarincdec.o dirvarrepreq.o dirvarrepcon.o dirvarreppar.o \
+		 dirvarrepglo.o dirvarrepext.o dirvarreploc.o indvararineg.o \
+		 indvarincdec.o indvarrepreq.o indvarrepcon.o indvarreppar.o \
+		 indvarrepglo.o indvarrepext.o indvarreploc.o indvarlogneg.o \
+		 indvarbitneg.o sbrc.o scrb.o retstadel.o argarineg.o argbitneg.o \
+		 argdel.o argincdec.o arglogneg.o argrepreq.o argstcali.o \
+		 argstcdif.o funcaldel.o swdd.o sdwd.o vasm.o sglr.o ssom.o smvb.o srsr.o \
+		 strp.o stri.o smtt.o smtc.o sswm.o vdtr.o sbrn.o scrn.o covallnod.o \
+		 covalledg.o
 
 TARGET=	music
 
@@ -86,7 +118,7 @@ CLANG_INCLUDES := \
 	-I$(LLVM_SRC_PATH)/include \
 	-I$(LLVM_BUILD_PATH)/include
 
-CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fexceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl
+CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fexceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl -lz -ltinfo
 		
 all: $(TARGET)
 
@@ -122,10 +154,37 @@ tool.o : tool.cpp music_utility.h configuration.h music_context.h \
 	mutation_operators/oaan.h mutation_operators/oarn.h mutation_operators/oabn.h \
 	mutation_operators/oasn.h mutation_operators/olan.h mutation_operators/oran.h \
 	mutation_operators/olbn.h mutation_operators/olsn.h mutation_operators/orsn.h \
-	mutation_operators/orbn.h 
+	mutation_operators/orbn.h mutation_operators/rgcr.h mutation_operators/rlcr.h \
+	mutation_operators/rgsr.h mutation_operators/rlsr.h mutation_operators/rgpr.h \
+	mutation_operators/rlpr.h mutation_operators/rgtr.h mutation_operators/rltr.h \
+	mutation_operators/rgar.h mutation_operators/rlar.h mutation_operators/rrcr.h \
+	mutation_operators/dirvararineg.h mutation_operators/dirvarbitneg.h \
+	mutation_operators/dirvarlogneg.h mutation_operators/dirvarincdec.h \
+	mutation_operators/dirvarrepreq.h mutation_operators/dirvarrepcon.h \
+	mutation_operators/dirvarreppar.h mutation_operators/dirvarrepglo.h \
+	mutation_operators/dirvarrepext.h mutation_operators/dirvarreploc.h \
+	mutation_operators/indvararineg.h mutation_operators/indvarbitneg.h \
+	mutation_operators/indvarlogneg.h mutation_operators/indvarincdec.h \
+	mutation_operators/indvarrepreq.h mutation_operators/indvarrepcon.h \
+	mutation_operators/indvarreppar.h mutation_operators/indvarrepglo.h \
+	mutation_operators/indvarrepext.h mutation_operators/indvarreploc.h \
+	mutation_operators/sbrc.h mutation_operators/scrb.h \
+	mutation_operators/retstadel.h mutation_operators/argarineg.h \
+	mutation_operators/argbitneg.h mutation_operators/argdel.h \
+	mutation_operators/arglogneg.h mutation_operators/argincdec.h \
+	mutation_operators/argrepreq.h mutation_operators/argstcali.h \
+	mutation_operators/argstcdif.h mutation_operators/funcaldel.h \
+	mutation_operators/swdd.h mutation_operators/sdwd.h mutation_operators/vasm.h \
+	mutation_operators/sglr.h mutation_operators/ssom.h mutation_operators/smvb.h \
+	mutation_operators/srsr.h mutation_operators/strp.h mutation_operators/stri.h \
+	mutation_operators/smtt.h mutation_operators/smtc.h mutation_operators/sswm.h \
+	mutation_operators/vdtr.h mutation_operators/sbrn.h mutation_operators/scrn.h \
+	mutation_operators/covallnod.h mutation_operators/covalledg.h
+
 	$(CXX) $(CXXFLAGS) -c tool.cpp
 
-configuration.o : configuration.h configuration.cpp
+configuration.o : configuration.h configuration.cpp \
+	mutation_operators/expr_mutant_operator.h mutation_operators/stmt_mutant_operator.h
 	$(CXX) $(CXXFLAGS) -c configuration.cpp
 
 music_utility.o : music_utility.h music_utility.cpp mutant_database.h
@@ -530,6 +589,306 @@ orbn.o : mutation_operators/orbn.h mutation_operators/orbn.cpp \
 	mutation_operators/mutant_operator_template.h music_utility.h \
 	music_context.h
 	$(CXX) $(CXXFLAGS) -c mutation_operators/orbn.cpp
+
+rgcr.o : mutation_operators/rgcr.h mutation_operators/rgcr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rgcr.cpp
+
+rlcr.o : mutation_operators/rlcr.h mutation_operators/rlcr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rlcr.cpp
+
+rgsr.o : mutation_operators/rgsr.h mutation_operators/rgsr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rgsr.cpp
+
+rlsr.o : mutation_operators/rlsr.h mutation_operators/rlsr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rlsr.cpp
+
+rgpr.o : mutation_operators/rgpr.h mutation_operators/rgpr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rgpr.cpp
+
+rlpr.o : mutation_operators/rlpr.h mutation_operators/rlpr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rlpr.cpp
+
+rgtr.o : mutation_operators/rgtr.h mutation_operators/rgtr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rgtr.cpp
+
+rltr.o : mutation_operators/rltr.h mutation_operators/rltr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rltr.cpp
+
+rgar.o : mutation_operators/rgar.h mutation_operators/rgar.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rgar.cpp
+
+rlar.o : mutation_operators/rlar.h mutation_operators/rlar.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rlar.cpp
+
+rrcr.o : mutation_operators/rrcr.h mutation_operators/rrcr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/rrcr.cpp
+
+dirvararineg.o : mutation_operators/dirvararineg.h mutation_operators/dirvararineg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvararineg.cpp
+
+dirvarbitneg.o : mutation_operators/dirvarbitneg.h mutation_operators/dirvarbitneg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarbitneg.cpp
+
+dirvarlogneg.o : mutation_operators/dirvarlogneg.h mutation_operators/dirvarlogneg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarlogneg.cpp
+
+dirvarincdec.o : mutation_operators/dirvarincdec.h mutation_operators/dirvarincdec.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarincdec.cpp
+
+dirvarrepreq.o : mutation_operators/dirvarrepreq.h mutation_operators/dirvarrepreq.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarrepreq.cpp
+
+dirvarrepcon.o : mutation_operators/dirvarrepcon.h mutation_operators/dirvarrepcon.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarrepcon.cpp
+
+dirvarreppar.o : mutation_operators/dirvarreppar.h mutation_operators/dirvarreppar.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarreppar.cpp
+
+dirvarrepglo.o : mutation_operators/dirvarrepglo.h mutation_operators/dirvarrepglo.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarrepglo.cpp
+
+dirvarrepext.o : mutation_operators/dirvarrepext.h mutation_operators/dirvarrepext.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarrepext.cpp
+
+dirvarreploc.o : mutation_operators/dirvarreploc.h mutation_operators/dirvarreploc.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/dirvarreploc.cpp
+
+indvararineg.o : mutation_operators/indvararineg.h mutation_operators/indvararineg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvararineg.cpp
+
+indvarbitneg.o : mutation_operators/indvarbitneg.h mutation_operators/indvarbitneg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarbitneg.cpp
+
+indvarlogneg.o : mutation_operators/indvarlogneg.h mutation_operators/indvarlogneg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarlogneg.cpp
+
+indvarincdec.o : mutation_operators/indvarincdec.h mutation_operators/indvarincdec.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarincdec.cpp
+
+indvarrepreq.o : mutation_operators/indvarrepreq.h mutation_operators/indvarrepreq.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarrepreq.cpp
+
+indvarrepcon.o : mutation_operators/indvarrepcon.h mutation_operators/indvarrepcon.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarrepcon.cpp
+
+indvarreppar.o : mutation_operators/indvarreppar.h mutation_operators/indvarreppar.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarreppar.cpp
+
+indvarrepglo.o : mutation_operators/indvarrepglo.h mutation_operators/indvarrepglo.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarrepglo.cpp
+
+indvarrepext.o : mutation_operators/indvarrepext.h mutation_operators/indvarrepext.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarrepext.cpp
+
+indvarreploc.o : mutation_operators/indvarreploc.h mutation_operators/indvarreploc.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/indvarreploc.cpp
+
+sbrc.o : mutation_operators/sbrc.h mutation_operators/sbrc.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/sbrc.cpp
+
+scrb.o : mutation_operators/scrb.h mutation_operators/scrb.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/scrb.cpp
+
+retstadel.o : mutation_operators/retstadel.h mutation_operators/retstadel.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/retstadel.cpp
+
+argarineg.o : mutation_operators/argarineg.h mutation_operators/argarineg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/argarineg.cpp
+
+argbitneg.o : mutation_operators/argbitneg.h mutation_operators/argbitneg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/argbitneg.cpp
+
+argdel.o : mutation_operators/argdel.h mutation_operators/argdel.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/argdel.cpp
+
+argincdec.o : mutation_operators/argincdec.h mutation_operators/argincdec.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/argincdec.cpp
+
+arglogneg.o : mutation_operators/arglogneg.h mutation_operators/arglogneg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/arglogneg.cpp
+
+argrepreq.o : mutation_operators/argrepreq.h mutation_operators/argrepreq.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/argrepreq.cpp
+
+argstcali.o : mutation_operators/argstcali.h mutation_operators/argstcali.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/argstcali.cpp
+
+argstcdif.o : mutation_operators/argstcdif.h mutation_operators/argstcdif.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/argstcdif.cpp
+
+funcaldel.o : mutation_operators/funcaldel.h mutation_operators/funcaldel.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/funcaldel.cpp
+
+swdd.o : mutation_operators/swdd.h mutation_operators/swdd.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/swdd.cpp	
+
+sdwd.o : mutation_operators/sdwd.h mutation_operators/sdwd.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/sdwd.cpp	
+
+vasm.o : mutation_operators/vasm.h mutation_operators/vasm.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/vasm.cpp	
+
+sglr.o : mutation_operators/sglr.h mutation_operators/sglr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/sglr.cpp	
+
+ssom.o : mutation_operators/ssom.h mutation_operators/ssom.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/ssom.cpp	
+
+smvb.o : mutation_operators/smvb.h mutation_operators/smvb.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/smvb.cpp	
+
+srsr.o : mutation_operators/srsr.h mutation_operators/srsr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/srsr.cpp	
+
+strp.o : mutation_operators/strp.h mutation_operators/strp.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/strp.cpp	
+
+stri.o : mutation_operators/stri.h mutation_operators/stri.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/stri.cpp	
+
+smtt.o : mutation_operators/smtt.h mutation_operators/smtt.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/smtt.cpp	
+
+smtc.o : mutation_operators/smtc.h mutation_operators/smtc.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/smtc.cpp	
+
+sswm.o : mutation_operators/sswm.h mutation_operators/sswm.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/sswm.cpp	
+
+vdtr.o : mutation_operators/vdtr.h mutation_operators/vdtr.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/vdtr.cpp	
+
+sbrn.o : mutation_operators/sbrn.h mutation_operators/sbrn.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/sbrn.cpp	
+
+scrn.o : mutation_operators/scrn.h mutation_operators/scrn.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/scrn.cpp	
+
+covallnod.o : mutation_operators/covallnod.h mutation_operators/covallnod.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/covallnod.cpp	
+
+covalledg.o : mutation_operators/covalledg.h mutation_operators/covalledg.cpp \
+	mutation_operators/mutant_operator_template.h music_utility.h \
+	music_context.h
+	$(CXX) $(CXXFLAGS) -c mutation_operators/covalledg.cpp	
 
 clean:
 	rm -rf $(OBJS)

@@ -110,7 +110,7 @@ void OCOR::MutateToIntegralType(
     {
       string mutated_token = "(" + it + ")";
       
-      context->mutant_database_.AddMutantEntry(
+      context->mutant_database_.AddMutantEntry(context->getStmtContext(),
           name_, start_loc, end_loc, token, mutated_token, 
           context->getStmtContext().getProteumStyleLineNum());
     }
@@ -128,7 +128,7 @@ void OCOR::MutateToFloatingType(
     {
       string mutated_token = "(" + it + ")";
       
-      context->mutant_database_.AddMutantEntry(
+      context->mutant_database_.AddMutantEntry(context->getStmtContext(),
           name_, start_loc, end_loc, token, mutated_token, 
           context->getStmtContext().getProteumStyleLineNum());
     }
@@ -145,7 +145,7 @@ void OCOR::MutateToSpecifiedRange(
     if (e.compare(type_str) != 0)
     {
       string mutated_token = "(" + e + ")";
-      context->mutant_database_.AddMutantEntry(
+      context->mutant_database_.AddMutantEntry(context->getStmtContext(),
           name_, start_loc, end_loc, token, mutated_token, 
           context->getStmtContext().getProteumStyleLineNum());
     }

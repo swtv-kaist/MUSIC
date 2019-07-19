@@ -4,7 +4,7 @@
 StmtContext::StmtContext(CompilerInstance *CI)
 	:proteumstyle_stmt_start_line_num_(0),
 	is_inside_stmtexpr_(false), is_inside_array_decl_size_(0),
-	is_inside_enumdecl_(false)
+	is_inside_enumdecl_(false), last_return_statement_line_num_(0)
 {
 	clang::SourceManager &src_mgr = CI->getSourceManager();
 	clang::SourceLocation start_of_file = \
@@ -30,6 +30,8 @@ StmtContext::StmtContext(CompilerInstance *CI)
   			start_of_file, start_of_file);
   typedef_range_ = new clang::SourceRange(
   			start_of_file, start_of_file);
+
+  currently_parsed_function_name_ = "MUSIC_global";
 }
 
 int StmtContext::getProteumStyleLineNum()
@@ -162,6 +164,11 @@ void StmtContext::setTypedefDeclRange(clang::SourceRange *range)
 	typedef_range_ = range;
 }
 
+void StmtContext::setCurrentlyParsedFunctionName(std::string function_name)
+{
+  currently_parsed_function_name_ = function_name;
+}
+
 bool StmtContext::IsInStmtExpr()
 {
 	return is_inside_stmtexpr_;
@@ -241,4 +248,24 @@ bool StmtContext::IsInNonFloatingExprRange(clang::SourceLocation loc)
 bool StmtContext::IsInTypedefRange(clang::SourceLocation loc)
 {
   return LocationIsInRange(loc, *typedef_range_);
+}
+
+bool StmtContext::IsInLoopRange(clang::SourceLocation loc)
+{
+  while (!loop_scope_list_->empty() && 
+         !LocationIsInRange(loc, loop_scope_list_->back().second))
+    loop_scope_list_->pop_back();
+
+  return !loop_scope_list_->empty();
+}
+
+std::string StmtContext::getContainingFunction(clang::SourceLocation loc, clang::SourceManager& src_mgr)
+{
+  BeforeThanCompare<SourceLocation> isBefore(src_mgr);
+
+  if (isBefore(loc, currently_parsed_function_range_->getEnd()) &&
+      !isBefore(loc, currently_parsed_function_range_->getBegin()))
+    return currently_parsed_function_name_;
+  else
+    return "MUSIC_global";
 }

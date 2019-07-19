@@ -70,9 +70,9 @@ void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, MusicContext *context)
 	  uo->setOpcode(UO_PreDec);
 	  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
-	  context->mutant_database_.AddMutantEntry(
+	  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	  		name_, start_loc, end_loc, token, mutated_token, 
-	  		context->getStmtContext().getProteumStyleLineNum());
+	  		context->getStmtContext().getProteumStyleLineNum(), "predec");
 	}
 
   if (range_.empty() ||
@@ -82,9 +82,9 @@ void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, MusicContext *context)
 	  uo->setOpcode(UO_PostInc);
 	  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 	  
-	  context->mutant_database_.AddMutantEntry(
+	  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	  		name_, start_loc, end_loc, token, mutated_token, 
-	  		context->getStmtContext().getProteumStyleLineNum());
+	  		context->getStmtContext().getProteumStyleLineNum(), "postinc");
   }
 
   // reset the code structure
@@ -109,22 +109,22 @@ void OMMO::GenerateMutantForPreDec(UnaryOperator *uo, MusicContext *context)
 	  uo->setOpcode(UO_PostDec);
 	  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 	 
-	 	context->mutant_database_.AddMutantEntry(
+	 	context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	 			name_, start_loc, end_loc, token, mutated_token, 
-	 			context->getStmtContext().getProteumStyleLineNum());
+	 			context->getStmtContext().getProteumStyleLineNum(), "postdec");
 	}
 
 
  	if (range_.empty() ||
-			(!range_.empty() && range_.find("predec") != range_.end()))
+			(!range_.empty() && range_.find("preinc") != range_.end()))
  	{
  		// generate --x
 	  uo->setOpcode(UO_PreInc);
 	  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
-	  context->mutant_database_.AddMutantEntry(
+	  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	  		name_, start_loc, end_loc, token, mutated_token, 
-	  		context->getStmtContext().getProteumStyleLineNum());
+	  		context->getStmtContext().getProteumStyleLineNum(), "preinc");
  	}
 
   // reset the code structure

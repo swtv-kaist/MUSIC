@@ -102,7 +102,9 @@ void OALN::Mutate(clang::Expr *e, MusicContext *context)
 		if (token.compare(mutated_token) != 0)
 		{
 			string mutated_expr = "((" + lhs + ") " + mutated_token + " (" + rhs + "))";
-			context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+			context->mutant_database_.AddMutantEntry(context->getStmtContext(),
+					name_, start_loc, end_loc, token, mutated_token, 
+					context->getStmtContext().getProteumStyleLineNum(), token+mutated_token);
 		}
 }
 

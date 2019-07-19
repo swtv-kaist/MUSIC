@@ -54,6 +54,16 @@ bool OAAA::IsMutationTarget(clang::Expr *e, MusicContext *context)
 				GetColumnNumber(src_mgr, start_loc) + binary_operator.length());
 		StmtContext &stmt_context = context->getStmtContext();
 
+		// if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)))
+		// {
+		// 	cout << "OAAA checking: \n";
+		// 	cout << ConvertToString(e, context->comp_inst_->getLangOpts()) << endl;
+		// 	cout << stmt_context.IsInArrayDeclSize() << endl;
+		// 	cout << stmt_context.IsInEnumDecl() << endl;
+		// 	cout << (domain_.find(binary_operator) == domain_.end()) << endl;
+		// 	cout << IsMutationTarget(bo) << endl;
+		// }
+
 		// Return False if expr is not in mutation range, inside array decl size
 		// and inside enum declaration.
 		if (!context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) ||
@@ -110,7 +120,9 @@ void OAAA::Mutate(clang::Expr *e, MusicContext *context)
 					continue;
 		}
 
-		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+		context->mutant_database_.AddMutantEntry(context->getStmtContext(),
+				name_, start_loc, end_loc, token, mutated_token, 
+				context->getStmtContext().getProteumStyleLineNum(), token+mutated_token);
 	}
 
 	only_plus_minus_ = false;

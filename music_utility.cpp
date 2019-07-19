@@ -641,7 +641,7 @@ int GetColumnNumber(SourceManager &src_mgr, SourceLocation loc)
   return static_cast<int>(src_mgr.getExpansionColumnNumber(loc));
 }
 
-SourceLocation GetEndLocOfStmt(SourceLocation loc, 
+SourceLocation TryGetEndLocAfterBracketOrSemicolon(SourceLocation loc, 
                                CompilerInstance *comp_inst)
 {
   SourceLocation ret{};
@@ -1035,7 +1035,13 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   Rewriter rewriter;
   rewriter.setSourceMgr(src_mgr, comp_inst->getLangOpts());
   
-  // cout << "GetEndLocOfExpr: " << ConvertToString(e, comp_inst->getLangOpts()) << endl << endl;
+  if (print)
+  {
+    cout << "GetEndLocOfExpr: " << ConvertToString(e, comp_inst->getLangOpts()) << endl << endl;
+    cout << isa<FloatingLiteral>(e) << endl;
+    cout << e->getStmtClassName() << endl;
+  }
+
 
   // If this is macro, try the best to retrieve then end 
   // loc in source code
@@ -1043,11 +1049,22 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   {
     // cout << ConvertToString(e, comp_inst->getLangOpts()) << endl;
 
-    pair<SourceLocation, SourceLocation> expansionRange = 
+    /* THIS PART WORKS FOR CLANG 6.0.1 */
+    // pair<SourceLocation, SourceLocation> expansionRange = 
+    //     rewriter.getSourceMgr().getImmediateExpansionRange(e->getLocEnd());
+    // SourceLocation end_macro = Lexer::getLocForEndOfToken(
+    //     src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, 
+    //     comp_inst->getLangOpts());
+    /*=================================*/
+
+    /* THIS PART WORKS FOR CLANG 7.0.1 */
+    CharSourceRange expansionRange = 
         rewriter.getSourceMgr().getImmediateExpansionRange(e->getLocEnd());
     SourceLocation end_macro = Lexer::getLocForEndOfToken(
-        src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, 
+        src_mgr.getExpansionLoc(expansionRange.getEnd()), 0, src_mgr, 
         comp_inst->getLangOpts());
+    /*=================================*/
+
     // cout << "macro: " << end_macro.printToString(src_mgr) << endl;
 
     // if (GetLineNumber(src_mgr, end_macro) == 2070)
@@ -1058,7 +1075,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
     while (*(src_mgr.getCharacterData(it_loc)) == ' ')
       it_loc = it_loc.getLocWithOffset(1);
 
-     // Return end_macro if variable-typed. 
+    // Return end_macro if variable-typed. 
     if (*(src_mgr.getCharacterData(it_loc)) != '(')
       return end_macro;
 
@@ -1100,6 +1117,9 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
       return GetEndLocOfExpr(
           uete->getArgumentExpr()->IgnoreImpCasts(), comp_inst);
 
+  if (AbstractConditionalOperator *aco = dyn_cast<AbstractConditionalOperator>(e))
+    return GetEndLocOfExpr(aco->getFalseExpr()->IgnoreImpCasts(), comp_inst);
+
   SourceLocation ret = e->getLocEnd();
 
   if (print) cout << "cp 1\n";
@@ -1109,7 +1129,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   {
     if (print) cout << "cp 2\n";
     ret = e->getLocEnd();
-    ret = GetEndLocOfStmt(ret, comp_inst);
+    ret = TryGetEndLocAfterBracketOrSemicolon(ret, comp_inst);
   }
   else if (CallExpr *ce = dyn_cast<CallExpr>(e))
   {
@@ -1120,15 +1140,22 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
     /* Handling macro. */
     if (ret.isMacroID()) 
     {
-      pair<SourceLocation, SourceLocation> expansionRange = 
-          rewriter.getSourceMgr().getImmediateExpansionRange(ret);
+      /* THIS PART WORKS FOR CLANG 6.0.1 */
+      // pair<SourceLocation, SourceLocation> expansionRange = 
+      //     rewriter.getSourceMgr().getImmediateExpansionRange(ret);
+      // ret = expansionRange.second;
+      /*=================================*/
 
-      ret = expansionRange.second;
+      /* THIS PART WORKS FOR CLANG 7.0.1 */
+      CharSourceRange expansionRange = 
+          rewriter.getSourceMgr().getImmediateExpansionRange(ret);
+      ret = expansionRange.getEnd();
+      /*=================================*/
     }
 
     ret = ret.getLocWithOffset(1);
   }
-  else if (isa<DeclRefExpr>(e) || isa<MemberExpr>(e))
+  else if (isa<DeclRefExpr>(e))
   {
     if (print) cout << "cp 4\n";
     int length = ConvertToString(e, comp_inst->getLangOpts()).length();
@@ -1143,6 +1170,12 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
         src_mgr.getMainFileID(), 
         GetLineNumber(src_mgr, start_loc),
         GetColumnNumber(src_mgr, start_loc) + length);
+
+    if (print) {
+      PrintLocation(src_mgr, start_loc);
+      cout << length << endl;
+      PrintLocation(src_mgr, ret);
+    }
 
     if (GetLineNumber(src_mgr, ret) == 0 ||
         GetColumnNumber(src_mgr, ret) - 1 == 0)
@@ -1161,6 +1194,16 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
     //   cout << ConvertToString(e, comp_inst->getLangOpts()) << endl;
     //   cout << ret.printToString(src_mgr) << endl;
     // }
+  }
+  else if (MemberExpr *me = dyn_cast<MemberExpr>(e))
+  {
+    if (print) cout << "cp 4\n";
+    ret = me->getMemberLoc();
+
+    while (IsCharAlphabetic(*(src_mgr.getCharacterData(ret))) ||
+           IsCharNumeric(*(src_mgr.getCharacterData(ret))) ||
+           *(src_mgr.getCharacterData(ret)) == '_')
+      ret = ret.getLocWithOffset(1);
   }
   else if (isa<CharacterLiteral>(e) || 
             isa<FloatingLiteral>(e) || 
@@ -1183,18 +1226,27 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
 
     if (print && ret.isMacroID())
     {
-      pair<SourceLocation, SourceLocation> expansionRange = 
+      /* THIS PART WORKS FOR CLANG 6.0.1 */
+      // pair<SourceLocation, SourceLocation> expansionRange = 
+      //     rewriter.getSourceMgr().getImmediateExpansionRange(ret);
+      // cout << expansionRange.first.printToString(src_mgr) << endl;
+      // cout << expansionRange.second.printToString(src_mgr) << endl;
+      // SourceLocation end_macro = Lexer::getLocForEndOfToken(
+      //     src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, 
+      //     comp_inst->getLangOpts());
+      // cout << end_macro.printToString(src_mgr) << endl;
+      /*=================================*/
+
+      /* THIS PART WORKS FOR CLANG 6.0.1 */
+      CharSourceRange expansionRange = 
           rewriter.getSourceMgr().getImmediateExpansionRange(ret);
-      cout << expansionRange.first.printToString(src_mgr) << endl;
-      cout << expansionRange.second.printToString(src_mgr) << endl;
-      // cout << *(src_mgr.getCharacterData(expansionRange.second)) << endl;
-      SourceLocation end_macro = Lexer::getLocForEndOfToken(src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, comp_inst->getLangOpts());
-
+      cout << expansionRange.getBegin().printToString(src_mgr) << endl;
+      cout << expansionRange.getEnd().printToString(src_mgr) << endl;
+      SourceLocation end_macro = Lexer::getLocForEndOfToken(
+          src_mgr.getExpansionLoc(expansionRange.getEnd()), 0, src_mgr, 
+          comp_inst->getLangOpts());
       cout << end_macro.printToString(src_mgr) << endl;
-
-      // if (src_mgr.getFileID(end_macro) == src_mgr.getMainFileID())
-      //   cout << std::string(src_mgr.getCharacterData(expansionRange.first),
-      //     src_mgr.getCharacterData(end_macro)-src_mgr.getCharacterData(expansionRange.first)) << endl;
+      /*=================================*/
     }
 
     ret = ret.getLocWithOffset(1);
@@ -1211,7 +1263,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
     // cout << ConvertToString(e, comp_inst->getLangOpts()) << endl;
     // ret.dump(src_mgr);
     // cout << GetLineNumber(src_mgr, ret) << "=:=" << GetColumnNumber(src_mgr, ret) - 1 << endl;
-    ret = GetEndLocOfStmt(ret, comp_inst);
+    ret = TryGetEndLocAfterBracketOrSemicolon(ret, comp_inst);
 
     if (ret.isInvalid())
       ret = e->getLocEnd();
@@ -1221,7 +1273,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
 
     // cout << "cp GetEndLocOfExpr2\n";
     // cout << GetLineNumber(src_mgr, ret) << ":" << GetColumnNumber(src_mgr, ret) - 1 << endl;
-    // GetEndLocOfStmt sometimes returns location after semicolon
+    // TryGetEndLocAfterBracketOrSemicolon may returns location after semicolon
     SourceLocation prevLoc = src_mgr.translateLineCol(
         src_mgr.getMainFileID(),
         GetLineNumber(src_mgr, ret),
@@ -1332,6 +1384,30 @@ bool sameArrayElementType(QualType type1, QualType type2)
   return elementType1.compare(elementType2) == 0;
 }
 
+bool isCompatibleType(QualType type1, QualType type2)
+{
+  // Scalar types are compatible.
+  if (type1.getCanonicalType().getTypePtr()->isScalarType() &&
+      type2.getCanonicalType().getTypePtr()->isScalarType() &&
+      !type1.getCanonicalType().getTypePtr()->isPointerType() &&
+      !type2.getCanonicalType().getTypePtr()->isPointerType())
+    return true;
+
+  if (type1.getCanonicalType().getTypePtr()->isPointerType() &&
+      type2.getCanonicalType().getTypePtr()->isPointerType())
+    return getPointerType(type1).compare(getPointerType(type2)) == 0;
+
+  if (type1.getCanonicalType().getTypePtr()->isArrayType() &&
+      type2.getCanonicalType().getTypePtr()->isArrayType())
+    return sameArrayElementType(type1, type2);
+
+  if (type1.getCanonicalType().getTypePtr()->isStructureType() &&
+      type2.getCanonicalType().getTypePtr()->isStructureType())
+    return getStructureType(type1).compare(getStructureType(type2)) == 0;
+
+  return false;
+}
+
 /** 
   Check if this directory exists
 
@@ -1384,6 +1460,28 @@ const Stmt* GetParentOfStmt(Stmt *s, CompilerInstance *comp_inst)
  
   if (!stmt_ptr)
     return nullptr;
+
+  return stmt_ptr;
+}
+
+const Stmt *GetSecondLevelParent(Stmt *s, CompilerInstance *comp_inst)
+{
+  const Stmt* stmt_ptr = s;
+
+  for (int i = 0; i < 2; ++i)
+  {
+    //get parents
+    const auto& parent_stmt = comp_inst->getASTContext().getParents(*stmt_ptr);
+
+    if (parent_stmt.empty()) {
+      return nullptr;
+    }
+
+    stmt_ptr = parent_stmt[0].get<Stmt>();
+   
+    if (!stmt_ptr)
+      return nullptr;
+  }
 
   return stmt_ptr;
 }
@@ -1541,11 +1639,11 @@ Expr* GetRightOperandAfterMutation(
 ostream& operator<<(ostream &stream, const MutantEntry &entry)
 {
   stream << "============ entry =============" << endl;
-  stream << "proteum line num: " << entry.getProteumStyleLineNum() << endl;
-  stream << "start location: "; PrintLocation(entry.src_mgr_, entry.getStartLocation());
-  stream << "end location: "; PrintLocation(entry.src_mgr_, entry.getTokenEndLocation());
-  stream << "token: " << entry.getToken() << endl;
-  stream << "mutated token: " << entry.getMutatedToken() << endl;
+  // stream << "proteum line num: " << entry.getProteumStyleLineNum() << endl;
+  stream << "start location: "; PrintLocation(entry.src_mgr_, entry.getStartLocation()[0]);
+  stream << "end location: "; PrintLocation(entry.src_mgr_, entry.getTokenEndLocation()[0]);
+  stream << "token: " << entry.getToken()[0] << endl;
+  stream << "mutated token: " << entry.getMutatedToken()[0] << endl;
   stream << "================================";
 
   return stream;
@@ -1582,6 +1680,107 @@ Expr* IgnoreParenExpr(Expr *e)
 
     while (pe = dyn_cast<ParenExpr>(ret))
       ret = pe->getSubExpr()->IgnoreImpCasts();
+  }
+  
+  return ret;
+}
+
+void ConvertConstIntExprToIntString(Expr *e, CompilerInstance *comp_inst,
+                                    string &str)
+{
+  llvm::APSInt result;
+  if (e->EvaluateAsInt(result, comp_inst->getASTContext()))
+    str = result.toString(10);
+  
+  // if case value is char, convert it to int value
+  if (str.front() == '\'' && str.back() == '\'')
+    str = ConvertCharStringToIntString(str);
+}
+
+void ConvertConstFloatExprToFloatString(Expr *e, CompilerInstance *comp_inst,
+                                        string &str)
+{
+  llvm::APFloat result(0.0);
+  if (e->EvaluateAsFloat(result, comp_inst->getASTContext()))
+  {
+    double val = result.convertToDouble();
+    stringstream ss;
+    ss << val;
+    str = ss.str();
+  }
+}
+
+bool SortFloatAscending (long double i,long double j) { return (i<j); }
+bool SortIntAscending (long long i,long long j) { return (i<j); }
+bool SortStringAscending (string i,string j) { return (i.compare(j) < 0); }
+
+string GetMaxValue(QualType qualtype)
+{
+  string ret;
+  const Type *type = qualtype.getCanonicalType().getTypePtr();
+  string type_string = qualtype.getAsString();
+
+  if (type_string.find(string("float")) != string::npos)
+    ret = "(3.4E38)";
+  else if (type_string.find(string("double")) != string::npos)
+    ret = "(1.7E308)";
+  else if (type_string.find(string("char")) != string::npos)
+    if (type->isSignedIntegerType())
+      ret = "(127)";
+    else
+      ret = "(255)";
+  else if (type_string.find(string("short")) != string::npos)
+    if (type->isSignedIntegerType())
+      ret = "(32767)";
+    else
+      ret = "(65535)";
+  else if (type_string.find(string("long")) != string::npos)
+    if (type->isSignedIntegerType())
+      ret = "(9223372036854775807)";
+    else
+      ret = "(18446744073709551615)";
+  else  // int type 
+  { 
+    if (type->isSignedIntegerType())
+      ret = "(2147483647)";
+    else
+      ret = "(4294967295)";
+  }
+
+  return ret;
+}
+
+string GetMinValue(QualType qualtype)
+{
+  string ret;
+  const Type *type = qualtype.getCanonicalType().getTypePtr();
+  string type_string = qualtype.getAsString();
+
+  if (type_string.find(string("float")) != string::npos)
+    ret = "(-3.4E38)";
+  else if (type_string.find(string("double")) != string::npos)
+    ret = "(-1.7E308)";
+  else if (type_string.find(string("char")) != string::npos)
+    if (type->isSignedIntegerType())
+      ret = "(-128)";
+    else
+      ret = "(0)";
+  else if (type_string.find(string("short")) != string::npos)
+    if (type->isSignedIntegerType())
+      ret = "(-32768)";
+    else
+      ret = "(0)";
+  else if (type_string.find(string("long")) != string::npos)
+    if (type->isSignedIntegerType())
+      ret = "(-9223372036854775808)";
+    else
+      ret = "(0)";
+  else  // int type 
+  { 
+    if (type->isSignedIntegerType())
+      ret = "(-2147483648)";
+    else
+      ret = "(0)";
   }
   
   return ret;

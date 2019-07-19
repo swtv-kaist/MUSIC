@@ -122,7 +122,9 @@ void OEAA::Mutate(clang::Expr *e, MusicContext *context)
 					continue;
 		}
 
-		context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+		context->mutant_database_.AddMutantEntry(context->getStmtContext(),
+				name_, start_loc, end_loc, token, mutated_token, 
+				context->getStmtContext().getProteumStyleLineNum(), token+mutated_token);
 	}
 	only_plus_ = false;
 	only_minus_ = false;

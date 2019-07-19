@@ -1,44 +1,17 @@
-#include <cstdio>
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <map>
 #include <utility>
-#include <iomanip>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <vector>
 #include <set>
-#include <cctype>
 #include <limits.h>
 #include <time.h>
 
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetOptions.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Frontend/CompilerInstance.h"
+#include "music_utility.h"
+
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Parse/ParseAST.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Frontend/Utils.h"
 #include "clang/Sema/Sema.h"
 
-#include "music_utility.h"
 #include "configuration.h"
 #include "music_context.h"
 #include "information_visitor.h"
@@ -47,9 +20,40 @@
 #include "music_ast_consumer.h"
 #include "all_mutant_operators.h"
 
-// #include <cstring>
-// #include <cerrno>
-
+set<string> stmt_mutation_operators{"SSDL"};
+set<string> operator_mutation_operators{
+    "OPPO", "OMMO", "OLNG", "OBNG", "OIPM", "OCOR", "OCNG",
+    "OLLN", "OLRN", "OLAN", "OLBN", "OLSN",
+    "OSSN", "OSLN", "OSRN", "OSAN", "OSBN", 
+    "OBBN", "OBLN", "OBRN", "OBAN", "OBSN", 
+    "OAAN", "OARN", "OABN", "OASN", "OALN",
+    "ORRN", "ORLN", "ORAN", "ORSN", "ORBN",
+    "OAEA", "OAAA", "OABA", "OASA",
+    "OBAA", "OBBA", "OBEA", "OBSA", 
+    "OSAA", "OSBA", "OSEA", "OSSA",
+    "OEAA", "OEBA", "OESA"
+};
+set<string>  constant_mutation_operators{
+    "CRCR", "CGCR", "CLCR", "CGSR", "CLSR"
+};
+set<string> variable_mutation_operators{
+    "VGSR", "VLSR", "VGAR", "VLAR", "VGTR", "VLTR", "VGPR", "VLPR", 
+    "VSCR", "VTWF"
+};
+set<string> ftncall_mutation_operators{
+    "VTWF", "VLSF", "VGSF", "VLTF", "VGTF", "VLPF", "VGPF"
+};
+set<string> rhs_mutation_operators{
+    "RGCR", "RLCR", "RGSR", "RLSR", "RGPR", "RLPR", "RLTR", "RGAR", 
+    "RLAR", "RRCR"
+};
+set<string> interface_mutation_operators{
+    "DirVarAriNeg", "DirVarBitNeg", "DirVarLogNeg", "DirVarIncDec",
+    "DirVarRepReq", "DirVarRepCon", "DirVarRepPar", "DirVarRepGlo", 
+    "DirVarRepExt", "DirVarRepLoc", "IndVarAriNeg", "IndVarBitNeg", 
+    "IndVarLogNeg", "IndVarIncDec", "IndVarRepReq", "IndVarRepCon", 
+    "IndVarRepPar", "IndVarRepGlo", "IndVarRepExt", "IndVarRepLoc"
+};
 
 void AddMutantOperator(string mutant_name, 
                        set<string> &domain, set<string> &range, 
@@ -65,6 +69,36 @@ void AddMutantOperator(string mutant_name,
     new_stmt_operator = new SSDL();
   else if (mutant_name.compare("OCNG") == 0)
     new_stmt_operator = new OCNG();
+  else if (mutant_name.compare("SCRB") == 0)
+    new_stmt_operator = new SCRB();
+  else if (mutant_name.compare("SBRC") == 0)
+    new_stmt_operator = new SBRC();
+  else if (mutant_name.compare("RETSTADEL") == 0)
+    new_stmt_operator = new RetStaDel();
+  else if (mutant_name.compare("SWDD") == 0)
+    new_stmt_operator = new SWDD();
+  else if (mutant_name.compare("SDWD") == 0)
+    new_stmt_operator = new SDWD();
+  else if (mutant_name.compare("SGLR") == 0)
+    new_stmt_operator = new SGLR();
+  else if (mutant_name.compare("SMVB") == 0)
+    new_stmt_operator = new SMVB();
+  else if (mutant_name.compare("SRSR") == 0)
+    new_stmt_operator = new SRSR();
+  else if (mutant_name.compare("STRP") == 0)
+    new_stmt_operator = new STRP();
+  else if (mutant_name.compare("STRI") == 0)
+    new_stmt_operator = new STRI();
+  else if (mutant_name.compare("SMTT") == 0)
+    new_stmt_operator = new SMTT();
+  else if (mutant_name.compare("SMTC") == 0)
+    new_stmt_operator = new SMTC();
+  else if (mutant_name.compare("SSWM") == 0)
+    new_stmt_operator = new SSWM();
+  else if (mutant_name.compare("COVALLNOD") == 0)
+    new_stmt_operator = new CovAllNod();
+  else if (mutant_name.compare("COVALLEDG") == 0)
+    new_stmt_operator = new CovAllEdg();
 
   if (new_stmt_operator != nullptr)
   {
@@ -234,6 +268,92 @@ void AddMutantOperator(string mutant_name,
     new_expr_operator = new ORSN();
   else if (mutant_name.compare("ORBN") == 0)
     new_expr_operator = new ORBN();
+  else if (mutant_name.compare("RGCR") == 0)
+    new_expr_operator = new RGCR();
+  else if (mutant_name.compare("RLCR") == 0)
+    new_expr_operator = new RLCR();
+  else if (mutant_name.compare("RGSR") == 0)
+    new_expr_operator = new RGSR();
+  else if (mutant_name.compare("RLSR") == 0)
+    new_expr_operator = new RLSR();
+  else if (mutant_name.compare("RGPR") == 0)
+    new_expr_operator = new RGPR();
+  else if (mutant_name.compare("RLPR") == 0)
+    new_expr_operator = new RLPR();
+  else if (mutant_name.compare("RGTR") == 0)
+    new_expr_operator = new RGTR();
+  else if (mutant_name.compare("RLTR") == 0)
+    new_expr_operator = new RLTR();
+  else if (mutant_name.compare("RGAR") == 0)
+    new_expr_operator = new RGAR();
+  else if (mutant_name.compare("RLAR") == 0)
+    new_expr_operator = new RLAR();
+  else if (mutant_name.compare("RRCR") == 0)
+    new_expr_operator = new RRCR();
+  else if (mutant_name.compare("DIRVARARINEG") == 0)
+    new_expr_operator = new DirVarAriNeg();
+  else if (mutant_name.compare("DIRVARBITNEG") == 0)
+    new_expr_operator = new DirVarBitNeg();
+  else if (mutant_name.compare("DIRVARLOGNEG") == 0)
+    new_expr_operator = new DirVarLogNeg();
+  else if (mutant_name.compare("DIRVARINCDEC") == 0)
+    new_expr_operator = new DirVarIncDec();
+  else if (mutant_name.compare("DIRVARREPREQ") == 0)
+    new_expr_operator = new DirVarRepReq();
+  else if (mutant_name.compare("DIRVARREPCON") == 0)
+    new_expr_operator = new DirVarRepCon();
+  else if (mutant_name.compare("DIRVARREPPAR") == 0)
+    new_expr_operator = new DirVarRepPar();
+  else if (mutant_name.compare("DIRVARREPGLO") == 0)
+    new_expr_operator = new DirVarRepGlo();
+  else if (mutant_name.compare("DIRVARREPEXT") == 0)
+    new_expr_operator = new DirVarRepExt();
+  else if (mutant_name.compare("DIRVARREPLOC") == 0)
+    new_expr_operator = new DirVarRepLoc();
+  else if (mutant_name.compare("INDVARARINEG") == 0)
+    new_expr_operator = new IndVarAriNeg();
+  else if (mutant_name.compare("INDVARBITNEG") == 0)
+    new_expr_operator = new IndVarBitNeg();
+  else if (mutant_name.compare("INDVARLOGNEG") == 0)
+    new_expr_operator = new IndVarLogNeg();
+  else if (mutant_name.compare("INDVARINCDEC") == 0)
+    new_expr_operator = new IndVarIncDec();
+  else if (mutant_name.compare("INDVARREPREQ") == 0)
+    new_expr_operator = new IndVarRepReq();
+  else if (mutant_name.compare("INDVARREPCON") == 0)
+    new_expr_operator = new IndVarRepCon();
+  else if (mutant_name.compare("INDVARREPPAR") == 0)
+    new_expr_operator = new IndVarRepPar();
+  else if (mutant_name.compare("INDVARREPGLO") == 0)
+    new_expr_operator = new IndVarRepGlo();
+  else if (mutant_name.compare("INDVARREPEXT") == 0)
+    new_expr_operator = new IndVarRepExt();
+  else if (mutant_name.compare("INDVARREPLOC") == 0)
+    new_expr_operator = new IndVarRepLoc();
+  else if (mutant_name.compare("ARGARINEG") == 0)
+    new_expr_operator = new ArgAriNeg();
+  else if (mutant_name.compare("ARGBITNEG") == 0)
+    new_expr_operator = new ArgBitNeg();
+  else if (mutant_name.compare("ARGDEL") == 0)
+    new_expr_operator = new ArgDel();
+  else if (mutant_name.compare("ARGINCDEC") == 0)
+    new_expr_operator = new ArgIncDec();
+  else if (mutant_name.compare("ARGLOGNEG") == 0)
+    new_expr_operator = new ArgLogNeg();
+  else if (mutant_name.compare("ARGREPREQ") == 0)
+    new_expr_operator = new ArgRepReq();
+  else if (mutant_name.compare("ARGSTCALI") == 0)
+    new_expr_operator = new ArgStcAli();
+  else if (mutant_name.compare("ARGSTCDIF") == 0)
+    new_expr_operator = new ArgStcDif();
+  else if (mutant_name.compare("FUNCALDEL") == 0)
+    new_expr_operator = new FunCalDel();
+  else if (mutant_name.compare("VASM") == 0)
+    new_expr_operator = new VASM();
+  else if (mutant_name.compare("SSOM") == 0)
+    new_expr_operator = new SSOM();
+  else if (mutant_name.compare("VDTR") == 0)
+    new_expr_operator = new VDTR();
   else
   {
     cout << "Unknown mutant operator: " << mutant_name << endl;
@@ -271,17 +391,29 @@ void AddAllMutantOperator(vector<StmtMutantOperator*> &stmt_operator_list,
   set<string> domain;
   set<string> range;
 
-  set<string> stmt_mutant_operators{"SSDL", "OCNG"};
+  set<string> stmt_mutant_operators{
+      "SSDL", "OCNG", "SCRB", "SBRC", "RETSTADEL", "SWDD", "SDWD", "SGLR",
+      "SMVB", "SRSR", "STRP", "STRI", "SMTT", "SMTC", "COVALLNOD", "COVALLEDG"};
+
   set<string> expr_mutant_operators{
-      "ORRN", "VTWF", "CRCR", "SANL", "SRWS", "SCSR", "VLSF", "VGSF", 
-      "VLTF", "VGTF", "VLPF", "VGPF", "VGSR", "VLSR", "VGAR", "VLAR", 
+      "ORRN", /*"VTWF",*/ "CRCR", /*"SANL", "SRWS", "SCSR", "VLSF", "VGSF", 
+      "VLTF", "VGTF", "VLPF", "VGPF",*/ "VGSR", "VLSR", "VGAR", "VLAR", 
       "VGTR", "VLTR", "VGPR", "VLPR", "VTWD", "VSCR", "CGCR", "CLCR", 
       "CGSR", "CLSR", "OPPO", "OMMO", "OLNG", "OBNG", "OIPM", "OCOR", 
       "OLLN", "OSSN", "OBBN", "OLRN", "ORLN", "OBLN", "OBRN", "OSLN", 
       "OSRN", "OBAN", "OBSN", "OSAN", "OSBN", "OAEA", "OBAA", "OBBA", 
       "OBEA", "OBSA", "OSAA", "OSBA", "OSEA", "OSSA", "OEAA", "OEBA", 
       "OESA", "OAAA", "OABA", "OASA", "OALN", "OAAN", "OARN", "OABN", 
-      "OASN", "OLAN", "ORAN", "OLBN", "OLSN", "ORSN", "ORBN"};
+      "OASN", "OLAN", "ORAN", "OLBN", "OLSN", "ORSN", "ORBN"/*, "RGCR",
+      "RLCR", "RGSR", "RLSR", "RGPR", "RLPR", "RLTR", "RGAR", "RLAR", 
+      "RRCR"*/, "DIRVARARINEG", "DIRVARBITNEG", "DIRVARLOGNEG", "DIRVARINCDEC",
+      "DIRVARREPREQ", "DIRVARREPCON", "DIRVARREPPAR", "DIRVARREPGLO", 
+      "DIRVARREPEXT", "DIRVARREPLOC", "INDVARARINEG", "INDVARBITNEG", 
+      "INDVARLOGNEG", "INDVARINCDEC", "INDVARREPREQ", "INDVARREPCON", 
+      "INDVARREPPAR", "INDVARREPGLO", "INDVARREPEXT", "INDVARREPLOC",
+      "ARGARINEG", "ARGBITNEG", "ARGDEL", "ARGINCDEC", "ARGLOGNEG",
+      "ARGREPREQ", "ARGSTCALI", "ARGSTCDIF", "FUNCALDEL", 
+      "VASM", "SSOM", "VDTR"};
 
   for (auto mutant_name: stmt_mutant_operators)
     AddMutantOperator(mutant_name, domain, range, stmt_operator_list, 
@@ -469,10 +601,6 @@ static llvm::cl::list<string> OptionRE(
     "re",
     llvm::cl::cat(MusicOptions));
 
-static llvm::cl::list<string> OptionX(
-    "x", llvm::cl::desc("Specify list of lines to exclude for mutant generation for each file"),
-    llvm::cl::cat(MusicOptions));
-
 // static llvm::cl::list<unsigned int> OptionRE(
 //     "re", llvm::cl::multi_val(2),
 //     llvm::cl::cat(MusicOptions));
@@ -489,7 +617,6 @@ vector<ExprMutantOperator*> g_expr_mutant_operator_list;
 vector<StmtMutantOperator*> g_stmt_mutant_operator_list;
 map<string, vector<int>> g_rs_list;
 map<string, vector<int>> g_re_list;
-map<string, vector<int>> g_exclude_list;
 tooling::CommonOptionsParser *g_option_parser;
 
 // default output directory is current directory.
@@ -633,62 +760,6 @@ void ParseOptionRE()
   // }
 }
 
-void ParseOptionX() 
-{
-  if (OptionX.empty())
-    return;
-
-  for (auto e: OptionX)
-  {
-    cout << "parsing " << e << endl;
-    vector<string> temp;
-    SplitStringIntoVector(e, temp, string(":"));
-
-    if (temp.size() != 2)
-    {
-      cout << "Excluded lines not specified in " << e << endl;
-      exit(1);
-    }
-
-    cout << "target is " << temp[0] << endl;
-
-    vector<string> excluded_line_list;
-    SplitStringIntoVector(temp[1], excluded_line_list, string(","));
-
-    if (g_exclude_list.count(temp[0]) == 0)
-      g_exclude_list[temp[0]] = vector<int>{};
-
-    for (auto line_num_str: excluded_line_list) 
-    {
-      if (!IsAllDigits(line_num_str))
-      {
-        cout << "Invalid line number " << line_num_str << "\n";
-        cout << "Usage: [-x <filename>:<line1>[,<line2>,...]]\n";
-        exit(1);
-      }
-
-      int line_num;
-      stringstream(line_num_str) >> line_num;
-
-      if (line_num == 0)
-      {
-        cout << "Option X specification error: line number must be larger than 0." << endl;
-        exit(1);
-      }
-
-      g_exclude_list[temp[0]].push_back(line_num);
-    }
-  }
-
-  for (auto e: g_exclude_list)
-  {
-    cout << e.first << " has to exclude the following lines\n";
-    for (auto d: e.second)
-      cout << d << " ";
-    cout << endl;
-  }
-}
-
 void ParseOptionO()
 {
   // Parse option -o (if provided)
@@ -742,6 +813,8 @@ void ParseOptionM()
 
   for (auto e: OptionM)
   {
+
+
     set<string> domain, range;
 
     cout << "analyzing " << e << endl;
@@ -750,8 +823,8 @@ void ParseOptionM()
     // Split input into mutant operator name, domain, range (if specified)
     SplitStringIntoVector(e, mutant_operator, string(":"));
 
-    for (auto it: mutant_operator)
-      cout << it << endl;
+    // for (auto it: mutant_operator)
+    //   cout << it << endl;
 
     // Capitalize mutant operator name.
     for (int i = 0; i < mutant_operator[0].length() ; ++i)
@@ -824,9 +897,9 @@ protected:
     else
       cout << "opened file name " << g_mutdbfile_name << endl;
 
-    out_mutDb << "Mutant Filename,Mutation Operator,Line#,Before Mutation,,,,,After Mutation" << endl;
-    out_mutDb << ",,,Start Line#,Start Col#,End Line#,End Col#,Target Token,";
-    out_mutDb << "Start Line#,Start Col#,End Line#,End Col#,Mutated Token" << endl;
+    out_mutDb << ",,,Before Mutation,,,,,After Mutation" << endl;
+    out_mutDb << "Mutant Filename,Mutation Operator,Start Line#,Start Col#,End Line#,End Col#,Target Token,";
+    out_mutDb << "Start Line#,Start Col#,End Line#,End Col#,Mutated Token,Extra Info" << endl;
     out_mutDb.close();
 
     g_mutant_database->ExportAllEntries();
@@ -889,26 +962,61 @@ public:
           sm.getMainFileID(), line_num, col_num);
     }
 
-    // cout << g_inputfile_name << endl;
-    // PrintLocation(sm, g_mutation_range_start);
-    // PrintLocation(sm, g_mutation_range_end);
+    /*if (!OptionRS.empty())
+    {
+      if (OptionRS[0] == 0 || OptionRE[0] == 0)
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
 
-    vector<int> excluded_lines;
-    if (g_exclude_list.count(g_inputfile_name))
-      excluded_lines = vector<int>(g_exclude_list[g_inputfile_name]);
-    else
-      if (g_exclude_list.count(g_current_inputfile_path))
-        excluded_lines = vector<int>(g_exclude_list[g_current_inputfile_path]); 
+      SourceLocation interpreted_loc = sm.translateLineCol(
+          sm.getMainFileID(), OptionRS[0], OptionRS[1]);
+
+      if (OptionRS[0] != GetLineNumber(sm, interpreted_loc) ||
+          OptionRS[1] != GetColumnNumber(sm, interpreted_loc))
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      g_mutation_range_start = sm.translateLineCol(
+          sm.getMainFileID(), OptionRS[0], OptionRS[1]);
+    }
+
+    cout << "done parsing rs\n";
+
+    if (!OptionRE.empty())
+    {
+      if (OptionRE[0] == 0 || OptionRE[1] == 0)
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      SourceLocation interpreted_loc = sm.translateLineCol(
+          sm.getMainFileID(), OptionRE[0], OptionRE[1]);
+
+      if (OptionRE[0] != GetLineNumber(sm, interpreted_loc) ||
+          OptionRE[1] != GetColumnNumber(sm, interpreted_loc))
+      {
+        PrintLineColNumberErrorMsg();
+        exit(1);
+      }
+
+      g_mutation_range_end = sm.translateLineCol(
+          sm.getMainFileID(), OptionRE[0], OptionRE[1]);
+    }*/
+
+    cout << g_inputfile_name << endl;
+    PrintLocation(sm, g_mutation_range_start);
+    PrintLocation(sm, g_mutation_range_end);
 
     /* Create Configuration object pointer to pass as attribute 
        for MusicASTConsumer. */
     g_config = new Configuration(
         g_inputfile_name, g_mutdbfile_name, g_mutation_range_start, 
-        g_mutation_range_end, excluded_lines, g_output_dir, g_limit);
-
-    // for (auto e: g_config->getExcludedLines())
-    //   cout << e << endl;
-    // exit(1);
+        g_mutation_range_end, g_output_dir, g_limit);
 
     g_mutant_database = new MutantDatabase(
         &CI, g_config->getInputFilename(),
@@ -919,7 +1027,7 @@ public:
         g_gatherer->getSymbolTable(), *g_mutant_database);
 
     return unique_ptr<ASTConsumer>(new MusicASTConsumer(
-        &CI, g_gatherer->getLabelToGotoListMap(),
+        &CI,
         g_stmt_mutant_operator_list,
         g_expr_mutant_operator_list, *g_music_context));
   }
@@ -937,8 +1045,9 @@ protected:
 
     cout << "executing action from GatherDataAction\n";
     ASTFrontendAction::ExecuteAction();
+    cout << "Done GatherDataAction\n";
 
-    // cout << g_gatherer->getLabelToGotoListMap()->size() << endl;
+    cout << g_gatherer->getLabelToGotoListMap()->size() << endl;
 
     vector<string> source{g_current_inputfile_path};
 
@@ -968,7 +1077,6 @@ int main(int argc, const char *argv[])
 
   ParseOptionRS();
   ParseOptionRE();
-  ParseOptionX();
   ParseOptionO();
   ParseOptionL();
   ParseOptionM();
@@ -1025,10 +1133,18 @@ int main(int argc, const char *argv[])
     if (g_mutdbfile_name.back() != '/')
       g_mutdbfile_name += "/";
 
-    g_mutdbfile_name.append(g_inputfile_name, 0, g_inputfile_name.length()-2);
+    size_t last_dot_pos = g_inputfile_name.find_last_of(".");
+
+    if (last_dot_pos == string::npos)
+    {
+      cout << g_inputfile_name << " is neither a C or C++ file\n";
+      return 0;
+    }
+
+    // g_mutdbfile_name.append(g_inputfile_name, 0, g_inputfile_name.length()-2);
+    g_mutdbfile_name += g_inputfile_name.substr(0, last_dot_pos);
     g_mutdbfile_name += "_mut_db.csv";
 
-    cout << "g_current_inputfile_path = " << g_current_inputfile_path << endl;
     cout << "g_inputfile_name = " << g_inputfile_name << endl;
     cout << "g_mutdbfile_name = " << g_mutdbfile_name << endl;
 

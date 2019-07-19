@@ -23,7 +23,7 @@ bool VTWF::IsMutationTarget(clang::Expr *e, MusicContext *context)
     const Stmt* parent = GetParentOfStmt(e, context->comp_inst_);
 
     // Single function call statement
-    // Mutating +1 or -1 has no impact.
+    // Mutating +1 or -1 has no impact --> equivalent mutant.
     // And it can sometimes cause uncompilable mutants.
     if (parent)
       if (isa<CompoundStmt>(parent))
@@ -70,18 +70,18 @@ void VTWF::Mutate(clang::Expr *e, MusicContext *context)
 			(!range_.empty() && range_.find("plusone") != range_.end()))
 	{
 		string mutated_token = "(" + token + "+1)";
-		context->mutant_database_.AddMutantEntry(
+		context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 				name_, start_loc, end_loc, token, mutated_token,
-				context->getStmtContext().getProteumStyleLineNum());
+				context->getStmtContext().getProteumStyleLineNum(), "plus");
 	}
 		
 	if (range_.empty() ||
 			(!range_.empty() && range_.find("minusone") != range_.end()))
 	{
 		string mutated_token = "(" + token + "-1)";
-		context->mutant_database_.AddMutantEntry(
+		context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 				name_, start_loc, end_loc, token, mutated_token, 
-				context->getStmtContext().getProteumStyleLineNum());
+				context->getStmtContext().getProteumStyleLineNum(), "minus");
 	}
 }
 

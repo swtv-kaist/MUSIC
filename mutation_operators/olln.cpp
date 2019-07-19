@@ -91,9 +91,9 @@ void OLLN::Mutate(clang::Expr *e, MusicContext *context)
 			// WriteMutantInfoToMutantDbFile(context, start_loc, end_loc, 
 			// 															token, mutated_token);
 
-			context->mutant_database_.AddMutantEntry(
+			context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 					name_, start_loc, end_loc, token, mutated_token, 
-					context->getStmtContext().getProteumStyleLineNum());
+					context->getStmtContext().getProteumStyleLineNum(), token+mutated_token);
 		}
 }
 

@@ -5,11 +5,13 @@
 #include <string>
 #include <utility>
 #include <map>
+#include <set>
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 
 // <line number, column number>
 typedef std::pair<int, int> LabelStmtLocation; 
@@ -50,6 +52,19 @@ typedef std::vector<ExprList> LocalScalarConstantList;
 // pair<range of switch statement, list of case values' string representation>
 typedef std::vector<std::pair<clang::SourceRange, std::vector<std::string>>> SwitchStmtInfoList;
 
+typedef std::vector<std::vector<clang::ParmVarDecl *>> FunctionParamList;
+typedef std::vector<std::vector<clang::NamedDecl *>> FunctionUsedGlobalList;
+typedef std::vector<VarDeclList> FunctionNotUsedGlobalList;
+typedef std::vector<VarDeclList> FunctionLocalList;
+
+// a map from a code line to a set of the variables used at the code line
+typedef std::map<int, std::set<clang::VarDecl *>> LineToVarsMap;
+typedef std::map<int, std::set<clang::Expr *>> LineToConstsMap;
+
+typedef std::vector<clang::LabelStmt *> LabelList;
+
+typedef std::vector<clang::ReturnStmt *> ReturnStmtList;
+
 class SymbolTable
 {
 public:
@@ -65,7 +80,16 @@ public:
 			VarDeclList *g_struct_vardecl_list,
 		  std::vector<VarDeclList> *l_struct_vardecl_list,
 			VarDeclList *g_pointer_vardecl_list,
-		  std::vector<VarDeclList> *l_pointer_vardecl_list);
+		  std::vector<VarDeclList> *l_pointer_vardecl_list,
+      FunctionParamList *func_param_list,
+      FunctionUsedGlobalList *func_used_global_list,
+      FunctionNotUsedGlobalList *func_not_used_global_list,
+      FunctionLocalList *func_local_list,
+      LineToVarsMap *line_to_vars_map,
+      LineToConstsMap *line_to_consts_map,
+      std::vector<LabelList> *label_list,
+      std::vector<ReturnStmtList> *return_stmt_list_);
+
 
   // getters
 	GlobalScalarConstantList* getGlobalScalarConstantList();
@@ -80,6 +104,14 @@ public:
 	std::vector<VarDeclList>* getLocalStructVarDeclList();
 	VarDeclList* getGlobalPointerVarDeclList();
 	std::vector<VarDeclList>* getLocalPointerVarDeclList();
+  FunctionParamList* getFuncParamList();
+  FunctionUsedGlobalList* getFuncUsedGlobalList();
+  FunctionNotUsedGlobalList* getFuncNotUsedGlobalList();
+  FunctionLocalList* getFuncLocalList();
+  LineToVarsMap* getLineToVarMap();
+  LineToConstsMap* getLineToConstsMap();
+  std::vector<LabelList>* getLabelList();
+  std::vector<ReturnStmtList>* getReturnStmtList();
 	
 private:
 	// global/local number, char literals
@@ -109,6 +141,20 @@ private:
   // local_pointer_vardecl_list_ follows the same nesting rule as ScopeRangeList
   VarDeclList *global_pointer_vardecl_list_;
   std::vector<VarDeclList> *local_pointer_vardecl_list_;
+
+  FunctionParamList *func_param_list_;
+  FunctionUsedGlobalList *func_used_global_list_;
+  FunctionNotUsedGlobalList *func_not_used_global_list_;
+  FunctionLocalList *func_local_list_;
+
+  LineToVarsMap *line_to_vars_map_;
+  LineToConstsMap *line_to_consts_map_;
+
+  // Each function has an ID corresponding to the vector index
+  // Basically, this is like a function id to label list map.
+  std::vector<LabelList> *label_list_;
+  std::vector<ReturnStmtList> *return_stmt_list_;
+
 };
 
 #endif	// MUSIC_SYMBOL_TABLE

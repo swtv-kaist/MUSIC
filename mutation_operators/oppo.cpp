@@ -67,9 +67,9 @@ void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, MusicContext *context)
 	  string mutated_token = ConvertToString(
 	  		uo, context->comp_inst_->getLangOpts());
 
-	  context->mutant_database_.AddMutantEntry(
+	  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	  		name_, start_loc, end_loc, token, mutated_token,
-	  		context->getStmtContext().getProteumStyleLineNum());
+	  		context->getStmtContext().getProteumStyleLineNum(), "preinc");
 	}
 		
 	if (range_.empty() ||
@@ -79,9 +79,9 @@ void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, MusicContext *context)
 	  uo->setOpcode(UO_PostDec);
 	  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
-	  context->mutant_database_.AddMutantEntry(
+	  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	  		name_, start_loc, end_loc, token, mutated_token, 
-	  		context->getStmtContext().getProteumStyleLineNum());
+	  		context->getStmtContext().getProteumStyleLineNum(), "postdec");
 	}
 	  
   // reset the code structure
@@ -106,9 +106,9 @@ void OPPO::GenerateMutantForPreInc(UnaryOperator *uo, MusicContext *context)
 	  uo->setOpcode(UO_PostInc);
 	  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 	  
-	  context->mutant_database_.AddMutantEntry(
+	  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	  		name_, start_loc, end_loc, token, mutated_token, 
-	  		context->getStmtContext().getProteumStyleLineNum());
+	  		context->getStmtContext().getProteumStyleLineNum(), "postinc");
 	}
 		
 	if (range_.empty() ||
@@ -118,9 +118,9 @@ void OPPO::GenerateMutantForPreInc(UnaryOperator *uo, MusicContext *context)
 	  uo->setOpcode(UO_PreDec);
 	  string mutated_token = ConvertToString(uo, context->comp_inst_->getLangOpts());
 
-	  context->mutant_database_.AddMutantEntry(
+	  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 	  		name_, start_loc, end_loc, token, mutated_token, 
-	  		context->getStmtContext().getProteumStyleLineNum());
+	  		context->getStmtContext().getProteumStyleLineNum(), "predec");
 	}
 
   // reset the code structure

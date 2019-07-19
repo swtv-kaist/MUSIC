@@ -65,9 +65,9 @@ void VTWD::Mutate(clang::Expr *e, MusicContext *context)
 	{
 		string mutated_token = "(" + token + "+1)";
 
-		context->mutant_database_.AddMutantEntry(
+		context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 				name_, start_loc, end_loc, token, mutated_token, 
-				context->getStmtContext().getProteumStyleLineNum());
+				context->getStmtContext().getProteumStyleLineNum(), "plus");
 	}
 
 	if (range_.empty() || 
@@ -75,9 +75,9 @@ void VTWD::Mutate(clang::Expr *e, MusicContext *context)
 	{
 		string mutated_token = "(" + token + "-1)";
 
-		context->mutant_database_.AddMutantEntry(
+		context->mutant_database_.AddMutantEntry(context->getStmtContext(),
 				name_, start_loc, end_loc, token, mutated_token, 
-				context->getStmtContext().getProteumStyleLineNum());
+				context->getStmtContext().getProteumStyleLineNum(), "minus");
 	}
 }
 

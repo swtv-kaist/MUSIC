@@ -1,6 +1,40 @@
 #include "music_ast_consumer.h"
 #include "music_utility.h"
 
+set<string> rhs_to_const_mutation_operators{"RGCR", "RLCR", "RRCR"};
+set<string> rhs_to_var_mutation_operators{"RGSR", "RLSR", "RGPR", "RLPR", 
+                                          "RGTR", "RLTR", "RGAR", "RLAR"};
+
+MusicASTVisitor::MusicASTVisitor(
+    clang::CompilerInstance *CI, 
+    std::vector<StmtMutantOperator*> &stmt_operator_list,
+    std::vector<ExprMutantOperator*> &expr_operator_list,
+    MusicContext &context) 
+  : src_mgr_(CI->getSourceManager()),
+    comp_inst_(CI), context_(context), stmt_context_(context.getStmtContext()),
+    stmt_mutant_operator_list_(stmt_operator_list),
+    expr_mutant_operator_list_(expr_operator_list)
+{
+  proteumstyle_stmt_end_line_num_ = 0;
+
+  // setup for rewriter
+  rewriter_.setSourceMgr(src_mgr_, CI->getLangOpts());
+
+  // set range variables to a 0 range, start_loc and end_loc at the same point
+  SourceLocation start_of_file;
+  start_of_file = src_mgr_.getLocForStartOfFile(src_mgr_.getMainFileID());
+
+  functionprototype_range_ = new SourceRange(start_of_file, start_of_file);
+
+  array_decl_range_ = new SourceRange(start_of_file, start_of_file);
+
+  context_.switchstmt_info_list_ = &switchstmt_info_list_;
+  context_.non_VTWD_mutatable_scalarref_list_ = &non_VTWD_mutatable_scalarref_list_;
+
+  context_.scope_list_ = &scope_list_;
+  stmt_context_.loop_scope_list_ = &loop_scope_list_;
+}
+
 void MusicASTVisitor::UpdateAddressOfRange(
     UnaryOperator *uo, SourceLocation *start_loc, SourceLocation *end_loc)
 {
@@ -169,6 +203,7 @@ void MusicASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
 void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
 {
   // cout << "HandleBinaryOperatorExpr called\n";
+  // cout << "HandleBinaryOperatorExpr\n" << ConvertToString(e, comp_inst_->getLangOpts()) << endl; 
   BinaryOperator *bo = cast<BinaryOperator>(e);
 
   // if (bo->getOpcode() == BO_Sub && ExprIsPointer(bo->getLHS()) && ExprIsPointer(bo->getRHS()))
@@ -202,7 +237,8 @@ void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
 
   // In an expression PTR+<expr> or PTR-<EXPR>,
   // right hand side <expr> should not be floating
-  if (bo->getOpcode() == BO_Add || bo->getOpcode() == BO_Sub)
+  if (bo->getOpcode() == BO_Add || bo->getOpcode() == BO_Sub ||
+      bo->getOpcode() == BO_AddAssign || bo->getOpcode() == BO_SubAssign)
   {
     if ((ExprIsPointer(bo->getLHS()->IgnoreImpCasts()) ||
          ExprIsArray(bo->getLHS()->IgnoreImpCasts())) &&
@@ -212,54 +248,128 @@ void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
           GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts(), comp_inst_)));
   }
 
+  // cout << "cp" << endl;
+  // cout << OperatorIsShiftAssignment(bo) << endl;
+  // cout << (binary_operator.compare("%") == 0) << endl;
+  // cout << bo->isBitwiseOp() << endl;
+  // cout << bo->isShiftOp() << endl;
+  // cout << (bo->getOpcode() == BO_RemAssign) << endl;
+  // cout << OperatorIsBitwiseAssignment(bo) << endl;
+  // cout << bo->isShiftAssignOp() << endl;
+
   // Modulo, shift and bitwise expressions' values are integral,
   // and they also only take integral operands.
   // So OCOR should not mutate any cast inside these expr to float type
   if (binary_operator.compare("%") == 0 || bo->isBitwiseOp() || 
       bo->isShiftOp() || bo->getOpcode() == BO_RemAssign ||
-      OperatorIsBitwiseAssignment(bo) || OperatorIsShiftAssignment(bo)) 
+      OperatorIsBitwiseAssignment(bo) || bo->isShiftAssignOp()) 
   {
+    // cout << "cp2" << endl;
     // Setting up for blocking uncompilable mutants for OCOR
     if (!stmt_context_.IsInNonFloatingExprRange(e))
     {
+      // cout << "cp3" << endl;
       stmt_context_.setNonFloatingExprRange(new SourceRange(
           bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_)));
+      // PrintRange(src_mgr_, *stmt_context_.non_floating_expr_range_);
     }        
   }
 }
 
-MusicASTVisitor::MusicASTVisitor(
-    clang::CompilerInstance *CI, 
-    LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
-    std::vector<StmtMutantOperator*> &stmt_operator_list,
-    std::vector<ExprMutantOperator*> &expr_operator_list,
-    MusicContext &context) 
-  : src_mgr_(CI->getSourceManager()),
-    comp_inst_(CI), context_(context), stmt_context_(context.getStmtContext()),
-    stmt_mutant_operator_list_(stmt_operator_list),
-    expr_mutant_operator_list_(expr_operator_list)
+bool MusicASTVisitor::ValidateSourceRange(SourceLocation &start_loc, SourceLocation &end_loc)
 {
-  proteumstyle_stmt_end_line_num_ = 0;
+  // I forget the reason why ...
+  // if (start_loc.isMacroID() && end_loc.isMacroID())
+  //   return false;
+  // cout << "checking\n";
+  // PrintLocation(src_mgr_, start_loc);
+  // PrintLocation(src_mgr_, end_loc);
 
-  // setup for rewriter
-  rewriter_.setSourceMgr(src_mgr_, CI->getLangOpts());
+  if (start_loc.isInvalid() || end_loc.isInvalid())
+    return false;
 
-  // set range variables to a 0 range, start_loc and end_loc at the same point
-  SourceLocation start_of_file;
-  start_of_file = src_mgr_.getLocForStartOfFile(src_mgr_.getMainFileID());
+  // if (!src_mgr_.isInFileID(start_loc, src_mgr_.getMainFileID()) &&
+  //     !src_mgr_.isInFileID(end_loc, src_mgr_.getMainFileID()))
+  //   return false;
 
-  functionprototype_range_ = new SourceRange(start_of_file, start_of_file);
+  // cout << "MusicASTVisitor cp1\n";
+  // cout << start_loc.printToString(src_mgr_) << endl;
+  // cout << end_loc.printToString(src_mgr_) << endl;
+  // cout << src_mgr_.isInFileID(start_loc, src_mgr_.getMainFileID()) << endl;
+  // cout << src_mgr_.isInFileID(end_loc, src_mgr_.getMainFileID()) << endl;
 
-  array_decl_range_ = new SourceRange(start_of_file, start_of_file);
+  // Skip nodes that are not in the to-be-mutated file.
+  if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(start_loc).getHashValue() &&
+      src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(end_loc).getHashValue())
+    return false;
 
-  context_.switchstmt_info_list_ = &switchstmt_info_list_;
-  context_.non_VTWD_mutatable_scalarref_list_ = &non_VTWD_mutatable_scalarref_list_;
+  // cout << "cp2\n";
 
-  context_.scope_list_ = &scope_list_;
+  if (start_loc.isMacroID())
+  {
+    /* THIS PART WORKS FOR CLANG 6.0.1 */
+    // pair<SourceLocation, SourceLocation> expansion_range = 
+    //     rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+    // start_loc = expansion_range.first;
+    /*=================================*/
+
+    /* THIS PART WORKS FOR CLANG 7.0.1 */
+    CharSourceRange expansion_range = 
+        rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+    start_loc = expansion_range.getBegin();
+    /*=================================*/
+  }
+
+  // cout << "cp2\n";
+
+  if (end_loc.isMacroID())
+  {
+    /* THIS PART WORKS FOR CLANG 6.0.1 */
+    // pair<SourceLocation, SourceLocation> expansion_range = 
+    //     rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+    // end_loc = expansion_range.second;
+    /*=================================*/
+
+    /* THIS PART WORKS FOR CLANG 7.0.1 */
+    CharSourceRange expansion_range = 
+        rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+    end_loc = expansion_range.getEnd();
+    /*=================================*/
+
+    end_loc = Lexer::getLocForEndOfToken(
+        src_mgr_.getExpansionLoc(end_loc), 0, src_mgr_, comp_inst_->getLangOpts());
+
+    // Skipping whitespaces (if any)
+    while (*(src_mgr_.getCharacterData(end_loc)) == ' ')
+      end_loc = end_loc.getLocWithOffset(1);
+
+    // Return if macro is variable-typed. 
+    if (*(src_mgr_.getCharacterData(end_loc)) != '(')
+      return true;
+
+    // Find the closing bracket of this function-typed macro
+    int parenthesis_counter = 1;
+    end_loc = end_loc.getLocWithOffset(1);
+
+    while (parenthesis_counter != 0)
+    {
+      if (*(src_mgr_.getCharacterData(end_loc)) == '(')
+        parenthesis_counter++;
+
+      if (*(src_mgr_.getCharacterData(end_loc)) == ')')
+        parenthesis_counter--;
+
+      end_loc = end_loc.getLocWithOffset(1);
+    }
+  }
+  // cout << "cp3\n";
+
+  return true;
 }
 
 bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
 {
+  // cout << "VisitStmt\n";
   SourceLocation start_loc = s->getLocStart();
   SourceLocation end_loc = s->getLocEnd();
   SourceLocation start_spelling_loc = src_mgr_.getSpellingLoc(start_loc);
@@ -268,29 +378,39 @@ bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
   if (start_loc.isMacroID() && end_loc.isMacroID())
     return true;
 
-  // FileID start_loc_fileid = src_mgr_.getFileID(start_spelling_loc);
-  // FileID end_loc_fileid = src_mgr_.getFileID(end_spelling_loc);
+  if (!ValidateSourceRange(start_loc, end_loc))
+    return true;
 
-  // if (start_loc_fileid.isValid() && start_loc_fileid != src_mgr_.getMainFileID() &&
-  //     end_loc_fileid.isValid() && end_loc_fileid != src_mgr_.getMainFileID())
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(start_loc).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(end_loc).getHashValue())
   //   return true;
 
-  /* This stmt is not written inside current target file */
-  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
-  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // if (start_loc.isMacroID())
   // {
-  //   // cout << "Not a statement inside currently parsed file\n";
-  //   // cout << ConvertToString(s, comp_inst_->getLangOpts()) << endl;
-  //   // cout << start_loc.printToString(src_mgr_) << endl;
-  //   return true;
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+  //   start_loc = expansion_range.first;
+  // }
+
+  // if (end_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+  //   end_loc = expansion_range.first;
   // }
 
   // cout << "VisitStmt\n" << ConvertToString(s, comp_inst_->getLangOpts()) << endl;
+
   // PrintLocation(src_mgr_, start_loc);
   // start_loc.dump(src_mgr_);
 
+  // cout << "we here boys\n";
+
+  //============================================================================
   // set up Proteum-style line number
-  if (GetLineNumber(src_mgr_, start_loc) > proteumstyle_stmt_end_line_num_)
+  // COMMENTED OUT FOR CAUSING ERROR IN MUTATING MARK.C OF VIM V5.3
+  /*if (GetLineNumber(src_mgr_, start_loc) > proteumstyle_stmt_end_line_num_)
   {
     stmt_context_.setProteumStyleLineNum(GetLineNumber(
         src_mgr_, start_loc));
@@ -317,34 +437,84 @@ bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
       proteumstyle_stmt_end_line_num_ = stmt_context_.getProteumStyleLineNum();
     else
       proteumstyle_stmt_end_line_num_ = GetLineNumber(src_mgr_, end_loc);
-  }
+  }*/
+  //============================================================================
 
   if (stmt_context_.IsInArrayDeclSize() && 
       ((!start_loc.isMacroID() && !LocationIsInRange(start_loc, *array_decl_range_)) ||
        (!end_loc.isMacroID() && !LocationIsInRange(end_loc, *array_decl_range_))))
   {
+    // cout << "out of array_decl_range_\n";
+    // PrintLocation(src_mgr_, start_loc);
     stmt_context_.setIsInArrayDeclSize(false);
   }
+
+  // cout << "array decl size is not a problem\n";
 
   if (isa<ForStmt>(s))
     scope_list_.push_back(SourceRange(start_loc, end_loc));
 
+  if (isa<ForStmt>(s) || isa<WhileStmt>(s) || isa<DoStmt>(s))
+  {
+    loop_scope_list_.push_back(
+        make_pair(s, SourceRange(start_loc, end_loc)));
+  }
+
+  // cout << "loop is not a problem\n";
+
+  if (isa<ReturnStmt>(s))
+  {
+    stmt_context_.last_return_statement_line_num_ = src_mgr_.getExpansionLineNumber(start_loc);
+  }
+
+  // cout << "return is not a problem\n";
+
   for (auto mutant_operator: stmt_mutant_operator_list_)
+  {
+    // cout << mutant_operator->getName() << " mutating\n";
     if (mutant_operator->IsMutationTarget(s, &context_))
       mutant_operator->Mutate(s, &context_);
+    // cout << "DONE\n";
+  }
 
   return true;
 }
 
 bool MusicASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
 {
-  SourceLocation start_spelling_loc = \
-      src_mgr_.getSpellingLoc(c->getLocStart());
-  SourceLocation end_spelling_loc = \
-      src_mgr_.getSpellingLoc(c->getLocEnd());
+  // cout << "VisitCompoundStmt\n";
+  // SourceLocation start_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(c->getLocStart());
+  // SourceLocation end_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(c->getLocEnd());
 
-  if (c->getLBracLoc().isMacroID() && c->getRBracLoc().isMacroID())
+  SourceLocation start_loc = c->getLocStart();
+  SourceLocation end_loc = c->getLocEnd();
+
+  if (!ValidateSourceRange(start_loc, end_loc))
     return true;
+
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(c->getLocStart()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(c->getLocEnd()).getHashValue())
+  //   return true;
+
+  // if (start_loc.isMacroID() && end_loc.isMacroID())
+  //   return true;
+
+  // if (start_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+  //   start_loc = expansion_range.first;
+  // }
+
+  // if (end_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+  //   end_loc = expansion_range.first;
+  // }
 
   /* This expr is not written inside current target file */
   // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
@@ -355,20 +525,32 @@ bool MusicASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
 
   // cout << "VisitCompoundStmt called\n";
   // entering a new scope
-  scope_list_.push_back(SourceRange(c->getLocStart(), c->getLocEnd()));
+  scope_list_.push_back(SourceRange(start_loc, end_loc));
 
   return true;
 }
 
 bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
 {
-  SourceLocation start_spelling_loc = \
-      src_mgr_.getSpellingLoc(ss->getLocStart());
-  SourceLocation end_spelling_loc = \
-      src_mgr_.getSpellingLoc(ss->getLocEnd());
+  // cout << "VisitSwitchStmt\n";
+  SourceLocation start_loc = ss->getLocStart();
+  SourceLocation end_loc = ss->getLocEnd();
 
-  if (ss->getLocStart().isMacroID() && ss->getLocEnd().isMacroID())
+  if (!ValidateSourceRange(start_loc, end_loc))
     return true;
+
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(ss->getLocStart()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(ss->getLocEnd()).getHashValue())
+  //   return true;
+
+  // SourceLocation start_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(ss->getLocStart());
+  // SourceLocation end_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(ss->getLocEnd());
+
+  // if (ss->getLocStart().isMacroID() && ss->getLocEnd().isMacroID())
+  //   return true;
 
   /* This expr is not written inside current target file */
   // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
@@ -416,9 +598,7 @@ bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
     // remove whitespaces at the beginning and end_loc of retrieved string
     case_value = TrimBeginningAndEndingWhitespace(case_value);
 
-    // if case value is char, convert it to int value
-    if (case_value.front() == '\'' && case_value.back() == '\'')
-      case_value = ConvertCharStringToIntString(case_value);
+    ConvertConstIntExprToIntString(cs->getLHS(), comp_inst_, case_value);
 
     case_value_list.push_back(case_value);
 
@@ -426,7 +606,7 @@ bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
   }
 
   switchstmt_info_list_.push_back(
-      make_pair(SourceRange(ss->getLocStart(), ss->getLocEnd()), 
+      make_pair(SourceRange(start_loc, end_loc), 
                 case_value_list));
 
   return true;
@@ -434,13 +614,39 @@ bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
 
 bool MusicASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
 {
-  SourceLocation start_spelling_loc = \
-      src_mgr_.getSpellingLoc(sc->getLocStart());
-  SourceLocation end_spelling_loc = \
-      src_mgr_.getSpellingLoc(sc->getLocEnd());
+  // cout << "VisitSwitchCase\n";
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(sc->getLocStart()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(sc->getLocEnd()).getHashValue())
+  //   return true;
 
-  if (sc->getLocStart().isMacroID() && sc->getLocEnd().isMacroID())
+  // SourceLocation start_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(sc->getLocStart());
+  // SourceLocation end_spelling_loc = \
+  //     src_mgr_.getSpellingLoc(sc->getLocEnd());
+
+  SourceLocation start_loc = sc->getLocStart();
+  SourceLocation end_loc = sc->getLocEnd();
+
+  if (!ValidateSourceRange(start_loc, end_loc))
     return true;
+
+  // if (start_loc.isMacroID() && end_loc.isMacroID())
+  //   return true;
+
+  // if (start_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+  //   start_loc = expansion_range.first;
+  // }
+
+  // if (end_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+  //   end_loc = expansion_range.first;
+  // }
 
   /* This expr is not written inside current target file */
   // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
@@ -450,7 +656,7 @@ bool MusicASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
   // }
 
   stmt_context_.setSwitchCaseRange(
-      new SourceRange(sc->getLocStart(), sc->getColonLoc()));
+      new SourceRange(start_loc, sc->getColonLoc()));
   
   // remove switch statements that are already passed
   while (!switchstmt_info_list_.empty() && 
@@ -463,45 +669,47 @@ bool MusicASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
 
 bool MusicASTVisitor::VisitExpr(clang::Expr *e)
 {
+  // cout << "VisitExpr\n";
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(e->getLocStart()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(e->getLocEnd()).getHashValue())
+  //   return true;
+
   // cout << "VisitExpr\n" << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
   // PrintLocation(src_mgr_, e->getLocStart());
 
-  if (e->getLocStart().isMacroID() && e->getLocEnd().isMacroID())
+  SourceLocation start_loc = e->getLocStart();
+  SourceLocation end_loc = e->getLocEnd();
+
+  // cout << "cp1\n";
+
+  if (!ValidateSourceRange(start_loc, end_loc))
     return true;
 
-  // if (GetLineNumber(src_mgr_, e->getLocStart()) == 49)
+  // cout << "cp2\n";
+
+  // if (start_loc.isMacroID() && end_loc.isMacroID())
+  //   return true;
+
+  // if (start_loc.isMacroID())
   // {
-  //   cout << "VisitExpr\n" << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
-  //   cout << e->getLocStart().printToString(src_mgr_) << endl;
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+  //   start_loc = expansion_range.first;
   // }
 
-  // SourceLocation start_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(e->getLocStart());
-  // SourceLocation end_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(e->getLocEnd());
-
-  // /* This expr is not written inside current target file */
-  // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
-  //     src_mgr_.getFileID(end_spelling_loc) != src_mgr_.getMainFileID())
+  // if (end_loc.isMacroID())
   // {
-  //   // cout << "Not a expression inside currently parsed file\n";
-  //   // cout << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
-  //   // cout << e->getLocStart().printToString(src_mgr_) << endl;
-  //   return true;
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+  //   end_loc = expansion_range.first;
   // }
 
   // Do not mutate or consider anything inside a typedef definition
   if (stmt_context_.IsInTypedefRange(e))
     return true;
 
-  for (auto mutant_operator: expr_mutant_operator_list_)
-    if (mutant_operator->IsMutationTarget(e, &context_))
-    {
-      // if (GetLineNumber(src_mgr_, e->getLocStart()) == 49)
-      //   cout << "yes\n";
-
-      mutant_operator->Mutate(e, &context_);
-    }
+  // cout << "cp3\n";
 
   if (StmtExpr *se = dyn_cast<StmtExpr>(e))  
   {
@@ -511,7 +719,7 @@ bool MusicASTVisitor::VisitExpr(clang::Expr *e)
   else if (ArraySubscriptExpr *ase = dyn_cast<ArraySubscriptExpr>(e))
   {
     SourceLocation start_loc = ase->getLocStart();
-    SourceLocation end_loc = GetEndLocOfStmt(ase->getLocEnd(), comp_inst_);
+    SourceLocation end_loc = TryGetEndLocAfterBracketOrSemicolon(ase->getLocEnd(), comp_inst_);
 
     stmt_context_.setArraySubscriptRange(new SourceRange(start_loc, end_loc));
   }
@@ -520,51 +728,209 @@ bool MusicASTVisitor::VisitExpr(clang::Expr *e)
   else if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e)) 
     HandleBinaryOperatorExpr(e);
 
+  // cout << "cp4\n";
+
+  for (auto mutant_operator: expr_mutant_operator_list_)
+  {
+    // cout << mutant_operator->getName() << " mutating\n";
+    
+    if (mutant_operator->IsMutationTarget(e, &context_))
+      mutant_operator->Mutate(e, &context_);
+
+    // cout << "DONE\n";
+  }
+
+  // cout << "cp5\n";
+
   return true;
 }
 
 bool MusicASTVisitor::VisitEnumDecl(clang::EnumDecl *ed)
 {
+  // cout << "VisitEnumDecl\n";
+  SourceLocation start_loc = ed->getLocStart();
+  SourceLocation end_loc = ed->getLocEnd();
+
+  // Skip nodes that are not in the to-be-mutated file.
+  if (start_loc.isInvalid() || end_loc.isInvalid())
+    return true;
+
+  // if (!src_mgr_.isInFileID(start_loc, src_mgr_.getMainFileID()) &&
+  //     !src_mgr_.isInFileID(end_loc, src_mgr_.getMainFileID()))
+  //   return false;
+
+  // cout << "MusicASTVisitor cp1\n";
+  // cout << start_loc.printToString(src_mgr_) << endl;
+  // cout << end_loc.printToString(src_mgr_) << endl;
+  // cout << src_mgr_.isInFileID(start_loc, src_mgr_.getMainFileID()) << endl;
+  // cout << src_mgr_.isInFileID(end_loc, src_mgr_.getMainFileID()) << endl;
+
+  if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(start_loc).getHashValue() &&
+      src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(end_loc).getHashValue())
+    return true;
+
+  // cout << "cp2\n";
+
   stmt_context_.setIsInEnumDecl(true);
   return true;
 }
 
 bool MusicASTVisitor::VisitTypedefDecl(clang::TypedefDecl *td)
 {
-  stmt_context_.setTypedefDeclRange(
-      new SourceRange(td->getLocStart(), td->getLocEnd()));
+  // cout << "VisitTypedefDecl\n";
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(td->getLocStart()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(td->getLocEnd()).getHashValue())
+  //   return true;
 
+  SourceLocation start_loc = td->getLocStart();
+  SourceLocation end_loc = td->getLocEnd();
+
+  if (!ValidateSourceRange(start_loc, end_loc))
+    return true;
+
+  // if (start_loc.isMacroID() && end_loc.isMacroID())
+  //   return true;
+
+  // if (start_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+  //   start_loc = expansion_range.first;
+  // }
+
+  // if (end_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+  //   end_loc = expansion_range.first;
+  // }
+
+  stmt_context_.setTypedefDeclRange(new SourceRange(start_loc, end_loc));
   return true;
 }
 
 bool MusicASTVisitor::VisitFieldDecl(clang::FieldDecl *fd)
 {
+  // cout << "VisitFieldDecl\n";
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(fd->getLocStart()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(fd->getLocEnd()).getHashValue())
+  //   return true;
+
   SourceLocation start_loc = fd->getLocStart();
   SourceLocation end_loc = fd->getLocEnd();
+
+  if (!ValidateSourceRange(start_loc, end_loc))
+    return true;
+
+  // if (start_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+  //   start_loc = expansion_range.first;
+  // }
+
+  // if (end_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+  //   end_loc = expansion_range.first;
+  // }
 
   stmt_context_.setFieldDeclRange(new SourceRange(start_loc, end_loc));
   
   if (fd->getType().getTypePtr()->isArrayType())
   {
-    stmt_context_.setIsInArrayDeclSize(true);
-
-    array_decl_range_ = new SourceRange(fd->getLocStart(), fd->getLocEnd());
+    if ((!start_loc.isMacroID() && !LocationIsInRange(start_loc, *array_decl_range_)) ||
+        (!end_loc.isMacroID() && !LocationIsInRange(end_loc, *array_decl_range_)))
+    {  
+      stmt_context_.setIsInArrayDeclSize(true);
+      array_decl_range_ = new SourceRange(start_loc, end_loc);
+      // cout << "setting array_decl_range_ in FieldDecl\n";
+      // cout << fd->getNameAsString() << endl;
+      // PrintRange(src_mgr_, *array_decl_range_);
+      // PrintLocation(src_mgr_, src_mgr_.getSpellingLoc(start_loc));
+      // cout << src_mgr_.getFileID(start_loc).getHashValue() << endl;
+      // cout << src_mgr_.getMainFileID().getHashValue() << endl;
+    }
   }
   return true;
 }
 
 bool MusicASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 {
+  // cout << "VisitVarDecl\n";
+  // Skip nodes that are not in the to-be-mutated file.
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(vd->getLocStart()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(vd->getLocEnd()).getHashValue())
+  //   return true;
+
   SourceLocation start_loc = vd->getLocStart();
   SourceLocation end_loc = vd->getLocEnd();
+
+  if (!ValidateSourceRange(start_loc, end_loc))
+    return true;
+
+  // if (start_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(start_loc);
+  //   start_loc = expansion_range.first;
+  // }
+
+  // if (end_loc.isMacroID())
+  // {
+  //   pair<SourceLocation, SourceLocation> expansion_range = 
+  //       rewriter_.getSourceMgr().getImmediateExpansionRange(end_loc);
+  //   end_loc = expansion_range.first;
+  // }
+
+  if (vd->hasInit())
+  {
+    // cout << "visit scalar var declaration statement at ";
+    // PrintLocation(src_mgr_, start_loc);
+    
+    Stmt** init = vd->getInitAddress();
+    // cout << "init stmt\n" << ConvertToString(*init, comp_inst_->getLangOpts()) << endl;
+
+    if (Expr* e = dyn_cast<Expr>(*init))
+    {
+      e = e->IgnoreImpCasts();
+      for (auto mutation_operator: expr_mutant_operator_list_)
+      {
+        if (rhs_to_const_mutation_operators.find(mutation_operator->getName()) != 
+                rhs_to_const_mutation_operators.end())
+        {          
+          // cout << mutation_operator->IsInitMutationTarget(e, &context_) << endl;
+          if (mutation_operator->IsInitMutationTarget(e, &context_))
+            mutation_operator->Mutate(e, &context_);
+        }
+
+        // only mutate local definition to variable
+        // cannot mutate global definition to variable (any variable is not 
+        // considered constant)
+        if (!vd->isFileVarDecl()) 
+        {
+          if (rhs_to_var_mutation_operators.find(mutation_operator->getName()) != 
+                  rhs_to_var_mutation_operators.end())
+          {          
+            // cout << mutation_operator->IsInitMutationTarget(e, &context_) << endl;
+            if (mutation_operator->IsInitMutationTarget(e, &context_))
+              mutation_operator->Mutate(e, &context_);
+          }
+        }
+      }
+    }      
+  }
 
   SourceLocation start_spelling_loc = \
       src_mgr_.getSpellingLoc(start_loc);
   SourceLocation end_spelling_loc = \
       src_mgr_.getSpellingLoc(end_loc);
 
-  if (start_loc.isMacroID() && end_loc.isMacroID())
-    return true;
+  // if (start_loc.isMacroID() && end_loc.isMacroID())
+  //   return true;
 
   /* This expr is not written inside current target file */
   // if (src_mgr_.getFileID(start_spelling_loc) != src_mgr_.getMainFileID() &&
@@ -587,11 +953,12 @@ bool MusicASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 
     if (auto array_type =  dyn_cast_or_null<ConstantArrayType>(type)) 
     {  
-      stmt_context_.setIsInArrayDeclSize(true);
-
       if ((!start_loc.isMacroID() && !LocationIsInRange(start_loc, *array_decl_range_)) ||
           (!end_loc.isMacroID() && !LocationIsInRange(end_loc, *array_decl_range_)))
-      array_decl_range_ = new SourceRange(start_loc, end_loc);
+      {
+        stmt_context_.setIsInArrayDeclSize(true);
+        array_decl_range_ = new SourceRange(start_loc, end_loc);
+      }
     }
   }
 
@@ -599,28 +966,41 @@ bool MusicASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 }
 
 bool MusicASTVisitor::VisitFunctionDecl(clang::FunctionDecl *f) 
-{   
+{
+  // cout << "VisitFunctionDecl\n";
+  SourceLocation start_loc = f->getLocStart();
+  SourceLocation end_loc = f->getLocEnd();
+
+  if (!ValidateSourceRange(start_loc, end_loc))
+    return true;
+
   // Function with nobody, and function declaration within 
   // another function is function prototype.
   // no global or local variable mutation will be applied here.
   if (!f->hasBody() || 
-      stmt_context_.IsInCurrentlyParsedFunctionRange(f->getLocStart()))
+      stmt_context_.IsInCurrentlyParsedFunctionRange(start_loc))
   {
-    functionprototype_range_ = new SourceRange(f->getLocStart(), 
-                                               f->getLocEnd());
+    functionprototype_range_ = new SourceRange(start_loc, end_loc);
   }
   else
   {
+    string ftn_name{f->getNameAsString()};
+    cout << "====== entering " << ftn_name << endl;
+    // cout << "start_loc = "; PrintLocation(src_mgr_, start_loc);
+    // cout << "end_loc = "; PrintLocation(src_mgr_, end_loc);
     // entering a new local scope
     scope_list_.clear();
-    scope_list_.push_back(SourceRange(f->getLocStart(), f->getLocEnd()));
+    loop_scope_list_.clear();
+    scope_list_.push_back(SourceRange(start_loc, end_loc));
 
     context_.IncrementFunctionId();
 
     stmt_context_.setIsInEnumDecl(false);
 
     stmt_context_.setCurrentlyParsedFunctionRange(
-        new SourceRange(f->getLocStart(), f->getLocEnd()));
+        new SourceRange(start_loc, end_loc));
+
+    stmt_context_.setCurrentlyParsedFunctionName(ftn_name);
 
     // if (f->getName().compare("read_field_headers") == 0 ||
     //     f->getName().compare("formparse") == 0)
@@ -634,11 +1014,10 @@ bool MusicASTVisitor::VisitFunctionDecl(clang::FunctionDecl *f)
 
 MusicASTConsumer::MusicASTConsumer(
     clang::CompilerInstance *CI, 
-    LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
     std::vector<StmtMutantOperator*> &stmt_operator_list,
     std::vector<ExprMutantOperator*> &expr_operator_list,
     MusicContext &context)
-  : Visitor(CI, label_to_gotolist_map, stmt_operator_list, 
+  : Visitor(CI, stmt_operator_list, 
             expr_operator_list, context) 
 { 
 }

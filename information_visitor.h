@@ -20,11 +20,13 @@ public:
                        clang::SourceLocation goto_stmt_loc);
   
   bool VisitLabelStmt(clang::LabelStmt *ls);
-  bool VisitGotoStmt(clang::GotoStmt * gs);
+  bool VisitGotoStmt(clang::GotoStmt *gs);
+  bool VisitReturnStmt(clang::ReturnStmt *rs);
   bool VisitExpr(clang::Expr *e);
   bool VisitTypedefDecl(clang::TypedefDecl *td);
   bool VisitVarDecl(clang::VarDecl *vd);
   bool VisitFunctionDecl(clang::FunctionDecl *fd);
+  bool VisitDeclRefExpr(clang::DeclRefExpr *dre);
 
   SymbolTable* getSymbolTable();
   LabelStmtToGotoStmtListMap* getLabelToGotoListMap();
@@ -84,9 +86,23 @@ private:
   // pointing to that label.
   LabelStmtToGotoStmtListMap label_to_gotolist_map_;
 
+  FunctionParamList func_param_list_;
+  FunctionUsedGlobalList func_used_global_list_;
+  FunctionNotUsedGlobalList func_not_used_global_list_;
+  VarDeclList global_vardecl_list_;
+  FunctionLocalList func_local_list_;
+
+  // Map from a code line to a set of variables accessed at the line.
+  LineToVarsMap line_to_vars_map_;
+  LineToConstsMap line_to_consts_map_;
+
+  std::vector<LabelList> label_list_;
+  std::vector<ReturnStmtList> return_stmt_list_;
+
   void CollectVarDecl(clang::VarDecl *vd);
   void CollectScalarConstant(clang::Expr *e);
   void CollectStringLiteral(clang::Expr *e);
+  bool ValidateSourceRange(clang::SourceLocation &start_loc, clang::SourceLocation &end_loc);
 };
 
 #endif	// MUSIC_INFORMATION_VISITOR_H_

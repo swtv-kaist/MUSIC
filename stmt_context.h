@@ -11,11 +11,15 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/ASTContext.h"
 
+typedef std::vector<std::pair<clang::Stmt*, clang::SourceRange>> StmtScopeRangeList;
+typedef std::vector<clang::SourceRange> ScopeRangeList;
+
 class StmtContext
 {
 public:
 	// initialize to 0
   int proteumstyle_stmt_start_line_num_;
+  int last_return_statement_line_num_;
 
 	// initialize to false
   bool is_inside_stmtexpr_;
@@ -32,6 +36,12 @@ public:
   clang::SourceRange *switchcase_range_;
   clang::SourceRange *non_floating_expr_range_;
   clang::SourceRange *typedef_range_;
+
+  std::string currently_parsed_function_name_;
+
+  // list of for/while/do loop that the current statement is in.
+  // used for remove stillborn mutants for SBRC.
+  StmtScopeRangeList *loop_scope_list_;
 
 public:
 	StmtContext(clang::CompilerInstance *CI);
@@ -55,6 +65,7 @@ public:
   void setSwitchCaseRange(clang::SourceRange *range);
   void setNonFloatingExprRange(clang::SourceRange *range);
   void setTypedefDeclRange(clang::SourceRange *range);
+  void setCurrentlyParsedFunctionName(std::string function_name);
 
 	bool IsInStmtExpr();
 	bool IsInArrayDeclSize();
@@ -74,6 +85,12 @@ public:
   bool IsInCurrentlyParsedFunctionRange(clang::SourceLocation loc);
   bool IsInNonFloatingExprRange(clang::SourceLocation loc);
   bool IsInTypedefRange(clang::SourceLocation loc);
+
+  // Check if the given location is inside any loop.
+  // Update the loop_scope_list_ at the same time.
+  bool IsInLoopRange(clang::SourceLocation loc);
+
+  std::string getContainingFunction(clang::SourceLocation loc, clang::SourceManager& src_mgr);
 };
 
 #endif	// MUSIC_STMT_CONTEXT_H_

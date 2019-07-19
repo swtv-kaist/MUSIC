@@ -163,7 +163,9 @@ void OIPM::MutateArraySubscriptSubExpr(
   string mutated_token = "(" + token.substr(0, token.length() - \
                           array_index.length()) + ")" + array_index;
 
-  context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
+      name_, start_loc, end_loc, token, mutated_token, 
+      context->getStmtContext().getProteumStyleLineNum());
 }
 
 void OIPM::MutatePointerSubExpr(
@@ -186,7 +188,9 @@ void OIPM::MutatePointerSubExpr(
   else
     first_mutated_token = "++(" + mutated_token + ")";
 
-  context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
+      name_, start_loc, end_loc, token, mutated_token, 
+      context->getStmtContext().getProteumStyleLineNum());
 
 	string second_mutated_token;
   if (uo->getOpcode() == UO_PostDec)
@@ -194,5 +198,7 @@ void OIPM::MutatePointerSubExpr(
   else
     second_mutated_token = "(" + mutated_token + ")++";
 
-  context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
+      name_, start_loc, end_loc, token, mutated_token, 
+      context->getStmtContext().getProteumStyleLineNum());
 }

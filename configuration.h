@@ -2,8 +2,10 @@
 #define CONFIGURATION_H_
 
 #include <string>
-#include <vector>
+
 #include "clang/Basic/SourceLocation.h"
+// #include "mutation_operators/expr_mutant_operator.h"
+// #include "mutation_operators/stmt_mutant_operator.h"
 
 /**
   Contain the interpreted user input based on command option(s).
@@ -25,13 +27,14 @@ private:
   clang::SourceLocation mutation_range_end_loc_;
   std::string output_directory_;
   int limit_num_of_mutant_;
-  std::vector<int> excluded_lines_;
+
+  // std::vector<StmtMutantOperator*> &stmt_mutant_operator_list_;
+  // std::vector<ExprMutantOperator*> &expr_mutant_operator_list_;
 
 public:
   Configuration(std::string inputfile_name, std::string mutation_db_filename, 
-  					    clang::SourceLocation start_loc, clang::SourceLocation end_loc, 
-  					    std::vector<int>& excluded_lines, std::string directory = "./", 
-                int limit = 0);
+  					clang::SourceLocation start_loc, clang::SourceLocation end_loc, 
+  					std::string directory = "./", int limit = 0);
 
   // Getters
   std::string getInputFilename();
@@ -40,7 +43,8 @@ public:
 	clang::SourceLocation* getEndOfMutationRange();
 	std::string getOutputDir();
 	int getLimitNumOfMutants();
-  std::vector<int>& getExcludedLines();
+  // std::vector<StmtMutantOperator*>& getStmtOperatorList();
+  // std::vector<ExprMutantOperator*>& getExprOperatorList();
 };
 
 #endif	// CONFIGURATION_H_

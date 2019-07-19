@@ -26,6 +26,7 @@ private:
   int proteumstyle_stmt_end_line_num_;
 
   ScopeRangeList scope_list_;
+  StmtScopeRangeList loop_scope_list_;
 
   // Range of the latest parsed array declaration statement
   clang::SourceRange *array_decl_range_;
@@ -72,9 +73,10 @@ private:
 
   void HandleBinaryOperatorExpr(clang::Expr *e);
 
+  bool ValidateSourceRange(clang::SourceLocation &start_loc, clang::SourceLocation &end_loc);
+
 public:
   MusicASTVisitor(clang::CompilerInstance *CI, 
-                  LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
                   std::vector<StmtMutantOperator*> &stmt_operator_list,
                   std::vector<ExprMutantOperator*> &expr_operator_list,
                   MusicContext &context);
@@ -95,7 +97,6 @@ class MusicASTConsumer : public clang::ASTConsumer
 {
 public:
   MusicASTConsumer(clang::CompilerInstance *CI, 
-                   LabelStmtToGotoStmtListMap *label_to_gotolist_map, 
                    std::vector<StmtMutantOperator*> &stmt_operator_list,
                    std::vector<ExprMutantOperator*> &expr_operator_list,
                    MusicContext &context);

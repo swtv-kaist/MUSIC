@@ -40,20 +40,20 @@ void OBNG::Mutate(clang::Expr *e, MusicContext *context)
 	// Generate mutant by negating the whole expression
 	if (range_.empty() ||
       (!range_.empty() && range_.find("whole") != range_.end()))
-		GenerateMutantByNegation(e, context);
+		GenerateMutantByNegation(e, context, "both");
 
 	// Generate mutant by negating right hand side of expr
 	if (range_.empty() ||
       (!range_.empty() && range_.find("right") != range_.end()))
-		GenerateMutantByNegation(bo->getRHS()->IgnoreImpCasts(), context);
+		GenerateMutantByNegation(bo->getRHS()->IgnoreImpCasts(), context, "right");
 
 	// Generate mutant by negating left hand side of expr
 	if (range_.empty() ||
       (!range_.empty() && range_.find("left") != range_.end()))
-		GenerateMutantByNegation(bo->getLHS()->IgnoreImpCasts(), context);
+		GenerateMutantByNegation(bo->getLHS()->IgnoreImpCasts(), context, "left");
 }
 
-void OBNG::GenerateMutantByNegation(Expr *e, MusicContext *context)
+void OBNG::GenerateMutantByNegation(Expr *e, MusicContext *context, string side)
 {
   SourceLocation start_loc = e->getLocStart();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 
@@ -66,5 +66,7 @@ void OBNG::GenerateMutantByNegation(Expr *e, MusicContext *context)
 
   string mutated_token = "~(" + token + ")";
 
-  context->mutant_database_.AddMutantEntry(name_, start_loc, end_loc, token, mutated_token, context->getStmtContext().getProteumStyleLineNum());
+  context->mutant_database_.AddMutantEntry(context->getStmtContext(),
+      name_, start_loc, end_loc, token, mutated_token, 
+      context->getStmtContext().getProteumStyleLineNum(), side);
 }

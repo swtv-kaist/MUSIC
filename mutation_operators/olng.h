@@ -19,7 +19,7 @@ public:
 	virtual void Mutate(clang::Expr *e, MusicContext *context);
 
 private:
-	void GenerateMutantByNegation(Expr *e, MusicContext *context);
+	void GenerateMutantByNegation(Expr *e, MusicContext *context, std::string side);
 };
 
 #endif	// MUSIC_OLNG_H_

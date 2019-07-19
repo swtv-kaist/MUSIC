@@ -20,28 +20,6 @@ bool SSDL::ValidateRange(const set<string> &range)
   return range.empty();
 }
 
-const Stmt *GetSecondLevelParent(Stmt *s, CompilerInstance *comp_inst)
-{
-  const Stmt* stmt_ptr = s;
-
-  for (int i = 0; i < 2; ++i)
-  {
-    //get parents
-    const auto& parent_stmt = comp_inst->getASTContext().getParents(*stmt_ptr);
-
-    if (parent_stmt.empty()) {
-      return nullptr;
-    }
-
-    stmt_ptr = parent_stmt[0].get<Stmt>();
-   
-    if (!stmt_ptr)
-      return nullptr;
-  }
-
-  return stmt_ptr;
-}
-
 bool SSDL::IsMutationTarget(Stmt *s, MusicContext *context)
 {
   // Do NOT delete declaration statement.
@@ -134,7 +112,8 @@ void SSDL::DeleteStatement(Stmt *s, MusicContext *context)
 	string token{ConvertToString(s, context->comp_inst_->getLangOpts())};
 	SourceLocation start_loc = s->getLocStart();
 	SourceLocation end_loc = GetLocationAfterSemicolon(
-    src_mgr, GetEndLocOfStmt(s->getLocEnd(), context->comp_inst_));
+      src_mgr, 
+      TryGetEndLocAfterBracketOrSemicolon(s->getLocEnd(), context->comp_inst_));
 
   // cout << "returned from GetLocationAfterSemicolon\n";
 
@@ -159,7 +138,7 @@ void SSDL::DeleteStatement(Stmt *s, MusicContext *context)
       															SourceRange(start_loc, end_loc),
       															context->label_to_gotolist_map_))
 	{
-		context->mutant_database_.AddMutantEntry(
+		context->mutant_database_.AddMutantEntry(context->getStmtContext(),
         name_, start_loc, end_loc, token, mutated_token, 
         context->getStmtContext().getProteumStyleLineNum());
 	}
@@ -289,7 +268,7 @@ void SSDL::DeleteCompoundStmtContent(CompoundStmt *c, MusicContext *context)
   if (context->IsRangeInMutationRange(SourceRange(start_loc, end_loc)) &&
       IsInSpecifiedDomain(src_mgr, start_loc, end_loc))
   {
-  	context->mutant_database_.AddMutantEntry(
+  	context->mutant_database_.AddMutantEntry(context->getStmtContext(),
         name_, start_loc, end_loc, token, mutated_token, 
         context->getStmtContext().getProteumStyleLineNum());
   }
