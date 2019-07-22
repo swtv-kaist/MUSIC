@@ -1,6 +1,6 @@
 # MUtation analySIs tool with high Configurability and extensibility MUSIC
 
-## Install Clang/LLVM 7.0
+## Install Clang/LLVM 7
 
 MUSIC is built on top of Clang/LLVM so the first step is to get a working LLVM 
 installation. See 
@@ -18,7 +18,7 @@ deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
 ```
 
-Then add the repository key and install the 7.0 packages:
+Then add the repository key and install the Clang/LLVM 7 packages:
 
 ```
 $ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
@@ -28,29 +28,26 @@ $ sudo apt-get install clang-7 clang-tools-7 clang-7-doc libclang-common-7-dev l
 
 ## Compile
 
-Before compilation of MUSIC, clang v7.0 should be installed.
+Before compilation of MUSIC, clang v7 should be installed.
 
-The current version of MUSIC has only been tested to compile and run successfully on clang v7.0, Linux x86-64.
+The current version of MUSIC has only been tested to compile and run successfully on clang v7, Linux x86-64.
 
-After install and build clang, if necessary, you can edit llvm source and build directory specification in the following 3 lines of Makefile
+After install and build clang, if necessary, you can edit llvm build directory specification in the following line of Makefile
 
 ```
-LLVM_SRC_PATH := /usr/lib/llvm-7.0
-LLVM_BUILD_PATH := /usr/lib/llvmbuild-7.0
+LLVM_BUILD_PATH := /usr/lib/llvm-7
 LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 ```
 
-LLVM_SRC_PATH & LLVM_BUILD_PATH are directories containing llvm source and build respectively.
+LLVM_BUILD_PATH are directories containing llvm build.
 
-LLVM_BIN_PATH is directory containing executables (ex. clang-7.0, llvm-config, ...)
+LLVM_BIN_PATH is directory containing executables (ex. clang-7, llvm-config, ...)
 
 In short, according to the current Makefile:
 
-	/usr/lib/llvm-7.0 is the directory of llvm source.
+	/usr/lib/llvm-7 is the directory of the llvm build.
 
-	/usr/lib/llvmbuild-7.0 is the directory of the llvm build.
-
-	/usr/lib/llvmbuild-7.0/bin is the directory containing bin folder with all the executables.
+	/usr/lib/llvm-7/bin is the directory containing bin folder with all the executables.
 
 Compile using make to produce MUSIC executable.
 

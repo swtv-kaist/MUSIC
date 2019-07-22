@@ -1,7 +1,7 @@
 # Edit these variables based on where you put your llvm source file
 # and build file.
-LLVM_SRC_PATH := $$HOME/llvm-7.0.1.src
-LLVM_BUILD_PATH := $$HOME/build-clang-7.0.1
+# LLVM_SRC_PATH := /usr/lib/llvm-7
+LLVM_BUILD_PATH := /usr/lib/llvm-7
 LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 
 SRCS=tool.cpp configuration.cpp music_utility.cpp mutant_entry.cpp\
@@ -100,8 +100,7 @@ TARGET=	music
 LLVM_LIBS := core mc all
 LLVM_CONFIG_COMMAND := $(LLVM_BIN_PATH)/llvm-config  \
 					  --ldflags --libs $(LLVM_LIBS)
-CLANG_BUILD_FLAGS := -I$(LLVM_SRC_PATH)/tools/clang/include \
-					-I$(LLVM_BUILD_PATH)/tools/clang/include
+CLANG_BUILD_FLAGS := -I$(LLVM_BUILD_PATH)/tools/clang/include
 
 CLANG_LIBS := \
 	-lclangTooling -lclangFrontendTool -lclangFrontend -lclangDriver \
@@ -114,9 +113,7 @@ CLANG_LIBS := \
 
 CXX := g++
 
-CLANG_INCLUDES := \
-	-I$(LLVM_SRC_PATH)/include \
-	-I$(LLVM_BUILD_PATH)/include
+CLANG_INCLUDES := -I$(LLVM_BUILD_PATH)/include
 
 CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fexceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl -lz -ltinfo
 		
