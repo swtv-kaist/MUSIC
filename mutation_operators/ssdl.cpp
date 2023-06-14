@@ -48,8 +48,8 @@ bool SSDL::IsMutationTarget(Stmt *s, MusicContext *context)
     auto it = c->body_begin();
     for (; it != c->body_end(); it++)
     {
-      if (!((*it)->getLocStart() != s->getLocStart() ||
-            (*it)->getLocEnd() != s->getLocEnd()))
+      if (!((*it)->getBeginLoc() != s->getBeginLoc() ||
+            (*it)->getEndLoc() != s->getEndLoc()))
         break;
     }
 
@@ -69,9 +69,9 @@ void SSDL::Mutate(Stmt *s, MusicContext *context)
 {
   // llvm::iterator_range<PreprocessingRecord::iterator> directive_list = \
   //     context->comp_inst_->getPreprocessor().getPreprocessingRecord()->getPreprocessedEntitiesInRange(
-  //         SourceRange(s->getLocStart(), s->getLocEnd()));
+  //         SourceRange(s->getBeginLoc(), s->getEndLoc()));
 
-  // cout << s->getLocStart().printToString(context->comp_inst_->getSourceManager()) << endl;
+  // cout << s->getBeginLoc().printToString(context->comp_inst_->getSourceManager()) << endl;
 
   // int count = 0;
 
@@ -110,10 +110,10 @@ void SSDL::DeleteStatement(Stmt *s, MusicContext *context)
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{ConvertToString(s, context->comp_inst_->getLangOpts())};
-	SourceLocation start_loc = s->getLocStart();
+	SourceLocation start_loc = s->getBeginLoc();
 	SourceLocation end_loc = GetLocationAfterSemicolon(
       src_mgr, 
-      TryGetEndLocAfterBracketOrSemicolon(s->getLocEnd(), context->comp_inst_));
+      TryGetEndLocAfterBracketOrSemicolon(s->getEndLoc(), context->comp_inst_));
 
   // cout << "returned from GetLocationAfterSemicolon\n";
 

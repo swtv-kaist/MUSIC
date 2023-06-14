@@ -617,7 +617,7 @@ vector<ExprMutantOperator*> g_expr_mutant_operator_list;
 vector<StmtMutantOperator*> g_stmt_mutant_operator_list;
 map<string, vector<int>> g_rs_list;
 map<string, vector<int>> g_re_list;
-tooling::CommonOptionsParser *g_option_parser;
+//llvm::Expected<clang::tooling::CommonOptionsParser> &g_option_parser;
 
 // default output directory is current directory.
 string g_output_dir = "./";
@@ -1051,7 +1051,7 @@ protected:
 
     vector<string> source{g_current_inputfile_path};
 
-    tooling::ClangTool Tool2(g_option_parser->getCompilations(),
+    tooling::ClangTool Tool2(m_option_parser->getCompilations(),
                              source);
 
     Tool2.run(tooling::newFrontendActionFactory<GenerateMutantAction>().get());
@@ -1065,11 +1065,34 @@ public:
     g_gatherer = new InformationGatherer(&CI);
     return unique_ptr<ASTConsumer>(g_gatherer);
   }
+  GatherDataAction(llvm::Expected<tooling::CommonOptionsParser> &option_parser)
+	  :m_option_parser(option_parser) {} ;
+
+private:
+  llvm::Expected<tooling::CommonOptionsParser> &m_option_parser;
+		
 };
+
+std::unique_ptr<tooling::FrontendActionFactory> myNewFrontendActionFactory(llvm::Expected<tooling::CommonOptionsParser> &option_parser) {
+  class SimpleFrontendActionFactory : public tooling::FrontendActionFactory {
+   public:
+    SimpleFrontendActionFactory(llvm::Expected<tooling::CommonOptionsParser> &option_parser) : m_option_parser(option_parser) {}
+
+    std::unique_ptr<FrontendAction> create() override {
+      return std::make_unique<GatherDataAction>(m_option_parser);
+    }
+
+   private:
+    llvm::Expected<tooling::CommonOptionsParser> &m_option_parser;
+  };
+
+  return std::unique_ptr<tooling::FrontendActionFactory>(
+      new SimpleFrontendActionFactory(option_parser));
+}
 
 int main(int argc, const char *argv[])
 {
-  g_option_parser = new tooling::CommonOptionsParser(
+  llvm::Expected<tooling::CommonOptionsParser> option_parser = tooling::CommonOptionsParser::create(
       argc, argv, MusicOptions/*, llvm::cl::Optional*/);
 
   // Randomization for option -l.
@@ -1084,15 +1107,15 @@ int main(int argc, const char *argv[])
   // ofstream my_file("/home/duyloc1503/comut-libtool/multiple-compile-command-files.txt", ios::trunc);    
 
   /* Run tool separately for each input file. */
-  for (auto file: g_option_parser->getSourcePathList())
+  for (auto file: option_parser->getSourcePathList())
   { 
     // cout << "Running MUSIC on " << file << endl;
 
-    if (g_option_parser->getCompilations().getCompileCommands(file).size() > 1)
+    if (option_parser->getCompilations().getCompileCommands(file).size() > 1)
     {
       cout << "This file has more than 1 compile commands\n" << file << endl;
 
-      for (auto e: g_option_parser->getCompilations().getCompileCommands(file))
+      for (auto e: option_parser->getCompilations().getCompileCommands(file))
       {
         for (auto command: e.CommandLine)
           cout << command << " ";
@@ -1151,10 +1174,10 @@ int main(int argc, const char *argv[])
     vector<string> source{g_current_inputfile_path};
   
     // Run tool
-    tooling::ClangTool Tool1(g_option_parser->getCompilations(),
+    tooling::ClangTool Tool1(option_parser->getCompilations(),
                              source);
 
-    Tool1.run(tooling::newFrontendActionFactory<GatherDataAction>().get());
+    Tool1.run(myNewFrontendActionFactory(option_parser).get());
 
     cout << "Done tooling on " << file << endl;
   }

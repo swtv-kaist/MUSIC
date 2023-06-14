@@ -35,7 +35,7 @@ bool VGPF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
-		SourceLocation start_loc = ce->getLocStart();
+		SourceLocation start_loc = ce->getBeginLoc();
 
     // getRParenLoc returns the location before the right parenthesis
     SourceLocation end_loc = ce->getRParenLoc();
@@ -62,7 +62,7 @@ void VGPF::Mutate(clang::Expr *e, MusicContext *context)
 	if (!(ce = dyn_cast<CallExpr>(e)))
 		return;
 
-	SourceLocation start_loc = ce->getLocStart();
+	SourceLocation start_loc = ce->getBeginLoc();
 
   // getRParenLoc returns the location before the right parenthesis
   SourceLocation end_loc = ce->getRParenLoc();
@@ -86,7 +86,7 @@ void VGPF::Mutate(clang::Expr *e, MusicContext *context)
 
   for (auto vardecl: *(context->getSymbolTable()->getGlobalPointerVarDeclList()))
   {
-    if (!(vardecl->getLocStart() < start_loc))
+    if (!(vardecl->getBeginLoc() < start_loc))
       break;
     
     if (skip_float_vardecl && IsVarDeclFloating(vardecl))

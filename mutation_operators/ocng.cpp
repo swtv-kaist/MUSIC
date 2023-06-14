@@ -24,7 +24,7 @@ bool OCNG::IsMutationTarget(clang::Stmt *s, MusicContext *context)
 			return false;
 
 		condition = is->getCond()->IgnoreImpCasts();
-		start_loc = condition->getLocStart();
+		start_loc = condition->getBeginLoc();
 
 		if (start_loc.isInvalid())
 			goto invalid_start_loc;
@@ -38,7 +38,7 @@ bool OCNG::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
 		condition = ws->getCond()->IgnoreImpCasts();
-		start_loc = condition->getLocStart();
+		start_loc = condition->getBeginLoc();
 
 		if (start_loc.isInvalid())
 			goto invalid_start_loc;
@@ -52,7 +52,7 @@ bool OCNG::IsMutationTarget(clang::Stmt *s, MusicContext *context)
 			return false;
 
 		condition = ds->getCond()->IgnoreImpCasts();
-		start_loc = condition->getLocStart();
+		start_loc = condition->getBeginLoc();
 
 		if (start_loc.isInvalid())
 			goto invalid_start_loc;
@@ -66,7 +66,7 @@ bool OCNG::IsMutationTarget(clang::Stmt *s, MusicContext *context)
 			return false;
 
 		condition = fs->getCond()->IgnoreImpCasts();
-		start_loc = condition->getLocStart();
+		start_loc = condition->getBeginLoc();
 
 		if (start_loc.isInvalid())
 			goto invalid_start_loc;
@@ -81,7 +81,7 @@ bool OCNG::IsMutationTarget(clang::Stmt *s, MusicContext *context)
 			return false;
 
 		condition = aco->getCond()->IgnoreImpCasts();
-		start_loc = condition->getLocStart();
+		start_loc = condition->getBeginLoc();
 
 		if (start_loc.isInvalid())
 			goto invalid_start_loc;
@@ -124,7 +124,7 @@ void OCNG::Mutate(clang::Stmt *s, MusicContext *context)
 
 void OCNG::GenerateMutantByNegation(Expr *e, MusicContext *context)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 
 
   Rewriter rewriter;

@@ -47,7 +47,7 @@ bool VGAR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsArrayReference(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
@@ -74,7 +74,7 @@ string newGetArrayTypeFunction(QualType type)
 
 void VGAR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
@@ -90,7 +90,7 @@ void VGAR::Mutate(clang::Expr *e, MusicContext *context)
 
   for (auto vardecl: *(context->getSymbolTable()->getGlobalArrayVarDeclList()))
   {
-  	if (!(vardecl->getLocStart() < start_loc))
+  	if (!(vardecl->getBeginLoc() < start_loc))
   		break; 
 
     string mutated_token{GetVarDeclName(vardecl)};

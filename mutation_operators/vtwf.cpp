@@ -17,7 +17,7 @@ bool VTWF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
-		SourceLocation start_loc = ce->getLocStart();
+		SourceLocation start_loc = ce->getBeginLoc();
 
     // Only delete COMPLETE statements whose parent is a CompoundStmt.
     const Stmt* parent = GetParentOfStmt(e, context->comp_inst_);
@@ -54,7 +54,7 @@ void VTWF::Mutate(clang::Expr *e, MusicContext *context)
 	if (!(ce = dyn_cast<CallExpr>(e)))
 		return;
 
-	SourceLocation start_loc = ce->getLocStart();
+	SourceLocation start_loc = ce->getBeginLoc();
 
   // getRParenLoc returns the location before the right parenthesis
   SourceLocation end_loc = ce->getRParenLoc();

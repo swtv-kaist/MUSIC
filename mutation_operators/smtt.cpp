@@ -34,10 +34,10 @@ bool SMTT::IsMutationTarget(Stmt *s, MusicContext *context)
     return false;
 
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-  SourceLocation start_loc = s->getLocStart();
+  SourceLocation start_loc = s->getBeginLoc();
   SourceLocation end_loc = GetLocationAfterSemicolon(
       src_mgr, 
-      TryGetEndLocAfterBracketOrSemicolon(s->getLocEnd(), context->comp_inst_));
+      TryGetEndLocAfterBracketOrSemicolon(s->getEndLoc(), context->comp_inst_));
 
   return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
 }
@@ -59,10 +59,10 @@ void SMTT::Mutate(Stmt *s, MusicContext *context)
   if (!body)
     return;
 
-  SourceLocation start_loc = body->getLocStart();
+  SourceLocation start_loc = body->getBeginLoc();
   SourceLocation end_loc = GetLocationAfterSemicolon(
       src_mgr, 
-      TryGetEndLocAfterBracketOrSemicolon(body->getLocEnd(), context->comp_inst_));
+      TryGetEndLocAfterBracketOrSemicolon(body->getEndLoc(), context->comp_inst_));
 
   if (CompoundStmt *c = dyn_cast<CompoundStmt>(body))
   {

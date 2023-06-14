@@ -16,7 +16,7 @@ bool SRWS::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (StringLiteral *sl = dyn_cast<StringLiteral>(e))
 	{
-		SourceLocation start_loc = sl->getLocStart();
+		SourceLocation start_loc = sl->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfStringLiteral(
     		context->comp_inst_->getSourceManager(), start_loc);
     StmtContext &stmt_context = context->getStmtContext();
@@ -35,7 +35,7 @@ bool SRWS::IsMutationTarget(clang::Expr *e, MusicContext *context)
 void SRWS::Mutate(clang::Expr *e, MusicContext *context)
 {
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfStringLiteral(src_mgr, start_loc);
 
   Rewriter rewriter;

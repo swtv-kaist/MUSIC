@@ -24,7 +24,7 @@ bool CovAllEdg::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = is->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -38,7 +38,7 @@ bool CovAllEdg::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = ws->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -52,7 +52,7 @@ bool CovAllEdg::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = ds->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -66,7 +66,7 @@ bool CovAllEdg::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = fs->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -81,7 +81,7 @@ bool CovAllEdg::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = aco->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -90,10 +90,10 @@ bool CovAllEdg::IsMutationTarget(clang::Stmt *s, MusicContext *context)
   }
   else if (isa<SwitchStmt>(s))
   {
-    start_loc = s->getLocStart();
+    start_loc = s->getBeginLoc();
     end_loc = GetLocationAfterSemicolon(
         context->comp_inst_->getSourceManager(), 
-        TryGetEndLocAfterBracketOrSemicolon(s->getLocEnd(), context->comp_inst_));
+        TryGetEndLocAfterBracketOrSemicolon(s->getEndLoc(), context->comp_inst_));
 
     return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
   }
@@ -140,7 +140,7 @@ void CovAllEdg::HandleConditionalStmt(clang::Stmt *s, MusicContext *context)
     return;
 
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-  SourceLocation start_loc = condition->getLocStart();
+  SourceLocation start_loc = condition->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
   
   string token{ConvertToString(condition, context->comp_inst_->getLangOpts())};
@@ -185,7 +185,7 @@ void CovAllEdg::HandleSwitchStmt(clang::Stmt *s, MusicContext *context)
 
   while (sc != nullptr)
   {
-    SourceLocation start_loc = sc->getLocStart();
+    SourceLocation start_loc = sc->getBeginLoc();
     SourceLocation end_loc = sc->getColonLoc().getLocWithOffset(1);
     SourceLocation temp_loc = start_loc;
     string token{""};

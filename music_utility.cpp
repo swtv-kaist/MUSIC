@@ -995,10 +995,10 @@ SourceLocation GetEndLocOfConstantLiteral(
 SourceLocation GetEndLocOfUnaryOpExpr(
     UnaryOperator *uo, CompilerInstance *comp_inst)
 {
-  SourceLocation ret = uo->getLocEnd();
+  SourceLocation ret = uo->getEndLoc();
 
   if (uo->getOpcode() == UO_PostInc || uo->getOpcode() == UO_PostDec)
-    // for post increment/decrement, getLocEnd returns 
+    // for post increment/decrement, getEndLoc returns 
     // the location right BEFORE ++/--
     ret = ret.getLocWithOffset(2);
   else
@@ -1007,12 +1007,12 @@ SourceLocation GetEndLocOfUnaryOpExpr(
         uo->getOpcode() == UO_Plus || uo->getOpcode() == UO_Minus ||
         uo->getOpcode() == UO_Not || uo->getOpcode() == UO_LNot)
     {
-      // getLocEnd returns the location right AFTER the unary operator
+      // getEndLoc returns the location right AFTER the unary operator
       // end_loc location of the expression is end_loc location of the sub-expr
       Expr *subexpr = uo->getSubExpr()->IgnoreImpCasts();
 
-      SourceLocation start_loc = uo->getLocStart();
-      SourceLocation end_loc = uo->getLocEnd();
+      SourceLocation start_loc = uo->getBeginLoc();
+      SourceLocation end_loc = uo->getEndLoc();
 
       ret = GetEndLocOfExpr(subexpr, comp_inst);
     }
@@ -1027,7 +1027,7 @@ SourceLocation GetEndLocOfUnaryOpExpr(
 SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
 {
   bool print = false;
-  int line = GetLineNumber(comp_inst->getSourceManager(), e->getLocStart());
+  int line = GetLineNumber(comp_inst->getSourceManager(), e->getBeginLoc());
   if (false)
     print = true;
 
@@ -1045,13 +1045,13 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
 
   // If this is macro, try the best to retrieve then end 
   // loc in source code
-  if (e->getLocStart().isMacroID() && e->getLocEnd().isMacroID())
+  if (e->getBeginLoc().isMacroID() && e->getEndLoc().isMacroID())
   {
     // cout << ConvertToString(e, comp_inst->getLangOpts()) << endl;
 
     /* THIS PART WORKS FOR CLANG 6.0.1 */
     // pair<SourceLocation, SourceLocation> expansionRange = 
-    //     rewriter.getSourceMgr().getImmediateExpansionRange(e->getLocEnd());
+    //     rewriter.getSourceMgr().getImmediateExpansionRange(e->getEndLoc());
     // SourceLocation end_macro = Lexer::getLocForEndOfToken(
     //     src_mgr.getExpansionLoc(expansionRange.second), 0, src_mgr, 
     //     comp_inst->getLangOpts());
@@ -1059,7 +1059,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
 
     /* THIS PART WORKS FOR CLANG 7.0.1 */
     CharSourceRange expansionRange = 
-        rewriter.getSourceMgr().getImmediateExpansionRange(e->getLocEnd());
+        rewriter.getSourceMgr().getImmediateExpansionRange(e->getEndLoc());
     SourceLocation end_macro = Lexer::getLocForEndOfToken(
         src_mgr.getExpansionLoc(expansionRange.getEnd()), 0, src_mgr, 
         comp_inst->getLangOpts());
@@ -1120,7 +1120,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   if (AbstractConditionalOperator *aco = dyn_cast<AbstractConditionalOperator>(e))
     return GetEndLocOfExpr(aco->getFalseExpr()->IgnoreImpCasts(), comp_inst);
 
-  SourceLocation ret = e->getLocEnd();
+  SourceLocation ret = e->getEndLoc();
 
   if (print) cout << "cp 1\n";
 
@@ -1128,7 +1128,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   if (isa<ArraySubscriptExpr>(e))
   {
     if (print) cout << "cp 2\n";
-    ret = e->getLocEnd();
+    ret = e->getEndLoc();
     ret = TryGetEndLocAfterBracketOrSemicolon(ret, comp_inst);
   }
   else if (CallExpr *ce = dyn_cast<CallExpr>(e))
@@ -1159,7 +1159,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   {
     if (print) cout << "cp 4\n";
     int length = ConvertToString(e, comp_inst->getLangOpts()).length();
-    SourceLocation start_loc = e->getLocStart();
+    SourceLocation start_loc = e->getBeginLoc();
 
     if (GetLineNumber(src_mgr, start_loc) == 0 ||
         GetColumnNumber(src_mgr, start_loc) + length == 0)
@@ -1210,7 +1210,7 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
             isa<IntegerLiteral>(e))
   {
     if (print) cout << "cp 5\n";
-    ret = GetEndLocOfConstantLiteral(src_mgr, e->getLocStart());
+    ret = GetEndLocOfConstantLiteral(src_mgr, e->getBeginLoc());
   }
   else if (isa<CStyleCastExpr>(e))  // explicit cast
   {
@@ -1254,19 +1254,19 @@ SourceLocation GetEndLocOfExpr(Expr *e, CompilerInstance *comp_inst)
   else if (isa<StringLiteral>(e))
   {
     if (print) cout << "cp 8\n";
-    ret = GetEndLocOfStringLiteral(src_mgr, e->getLocStart());
+    ret = GetEndLocOfStringLiteral(src_mgr, e->getBeginLoc());
   }
   else 
   {
     if (print) cout << "cp 9\n";
-    ret = e->getLocEnd();
+    ret = e->getEndLoc();
     // cout << ConvertToString(e, comp_inst->getLangOpts()) << endl;
     // ret.dump(src_mgr);
     // cout << GetLineNumber(src_mgr, ret) << "=:=" << GetColumnNumber(src_mgr, ret) - 1 << endl;
     ret = TryGetEndLocAfterBracketOrSemicolon(ret, comp_inst);
 
     if (ret.isInvalid())
-      ret = e->getLocEnd();
+      ret = e->getEndLoc();
 
     if (GetColumnNumber(src_mgr, ret) == 1 || GetLineNumber(src_mgr, ret) == 0)
       goto done;
@@ -1688,9 +1688,9 @@ Expr* IgnoreParenExpr(Expr *e)
 void ConvertConstIntExprToIntString(Expr *e, CompilerInstance *comp_inst,
                                     string &str)
 {
-  llvm::APSInt result;
+  Expr::EvalResult result;
   if (e->EvaluateAsInt(result, comp_inst->getASTContext()))
-    str = result.toString(10);
+    str = llvm::toString(result.Val.getInt(), 10);
   
   // if case value is char, convert it to int value
   if (str.front() == '\'' && str.back() == '\'')

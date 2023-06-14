@@ -20,9 +20,9 @@ bool RetStaDel::IsMutationTarget(Stmt *s, MusicContext *context)
   if (!isa<ReturnStmt>(s))
     return false;
 
-  SourceLocation start_loc = s->getLocStart();
+  SourceLocation start_loc = s->getBeginLoc();
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-  SourceLocation end_loc = s->getLocEnd();
+  SourceLocation end_loc = s->getEndLoc();
 
   ReturnStmt *rs = dyn_cast<ReturnStmt>(s);
   if (Expr *ret_expr = rs->getRetValue()) 
@@ -40,9 +40,9 @@ bool RetStaDel::IsMutationTarget(Stmt *s, MusicContext *context)
 
 void RetStaDel::Mutate(Stmt *s, MusicContext *context)
 {
-  SourceLocation start_loc = s->getLocStart();
+  SourceLocation start_loc = s->getBeginLoc();
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-  SourceLocation end_loc = s->getLocEnd();
+  SourceLocation end_loc = s->getEndLoc();
 
   ReturnStmt *rs = dyn_cast<ReturnStmt>(s);
   if (Expr *ret_expr = rs->getRetValue()) 

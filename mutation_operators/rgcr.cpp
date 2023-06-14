@@ -58,7 +58,7 @@ bool RGCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
     // outside enum declaration, outside field declaration range and
     // in domain (if user specified)
     Expr *rhs = bo->getRHS()->IgnoreImpCasts();
-    SourceLocation start_loc = rhs->getLocStart();
+    SourceLocation start_loc = rhs->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(rhs, context->comp_inst_);
     StmtContext& stmt_context = context->getStmtContext();
     string token{ConvertToString(rhs, context->comp_inst_->getLangOpts())};
@@ -77,7 +77,7 @@ bool RGCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 bool RGCR::IsInitMutationTarget(clang::Expr *e, MusicContext *context)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   StmtContext& stmt_context = context->getStmtContext();
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
@@ -115,7 +115,7 @@ void RGCR::Mutate(clang::Expr *e, MusicContext *context)
       rhs = bo->getRHS()->IgnoreImpCasts();
   }
 
-  SourceLocation start_loc = rhs->getLocStart();
+  SourceLocation start_loc = rhs->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(rhs, context->comp_inst_);
 
   // PrintLocation(context->comp_inst_->getSourceManager(), end_loc);

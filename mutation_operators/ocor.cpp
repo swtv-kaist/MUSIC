@@ -26,7 +26,7 @@ bool OCOR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CStyleCastExpr *csce = dyn_cast<CStyleCastExpr>(e))
 	{
-		SourceLocation start_loc = csce->getLocStart();
+		SourceLocation start_loc = csce->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
     const Type *type{csce->getTypeAsWritten().getCanonicalType().getTypePtr()};
     StmtContext &stmt_context = context->getStmtContext();

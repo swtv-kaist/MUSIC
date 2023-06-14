@@ -65,7 +65,7 @@ bool CLCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 			!isa<IntegerLiteral>(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
@@ -89,7 +89,7 @@ bool CLCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void CLCR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();

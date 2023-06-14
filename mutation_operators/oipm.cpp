@@ -40,7 +40,7 @@ bool OIPM::IsMutationTarget(clang::Expr *e, MusicContext *context)
       break;
     }
 
-    SourceLocation start_loc = uo->getLocStart();
+    SourceLocation start_loc = uo->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
     if (isa<ArraySubscriptExpr>(first_non_deref_subexpr))
@@ -106,7 +106,7 @@ void OIPM::Mutate(clang::Expr *e, MusicContext *context)
     break;
   }
 
-  SourceLocation start_loc = uo->getLocStart();
+  SourceLocation start_loc = uo->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
 	if (is_subexpr_pointer)
@@ -129,7 +129,7 @@ void OIPM::Mutate(clang::Expr *e, MusicContext *context)
 SourceLocation OIPM::GetLeftBracketOfArraySubscript(
 		const ArraySubscriptExpr *ase, SourceManager &src_mgr)
 {
-  SourceLocation ret = ase->getLocStart();
+  SourceLocation ret = ase->getBeginLoc();
 
   while (*(src_mgr.getCharacterData(ret)) != '[')
     ret = ret.getLocWithOffset(1);

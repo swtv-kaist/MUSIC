@@ -40,17 +40,17 @@ bool SMVB::IsMutationTarget(clang::Stmt *s, MusicContext *context)
     {
       auto if_stmt = cast<IfStmt>(parent);
       // cout << "if\n";
-      // PrintLocation(src_mgr, if_stmt->getThen()->getLocStart());
-      // PrintLocation(src_mgr, s->getLocStart());
+      // PrintLocation(src_mgr, if_stmt->getThen()->getBeginLoc());
+      // PrintLocation(src_mgr, s->getBeginLoc());
       // cout << (!if_stmt->getElse()) << endl;
 
-      if (if_stmt->getThen()->getLocStart() == s->getLocStart() &&
+      if (if_stmt->getThen()->getBeginLoc() == s->getBeginLoc() &&
           if_stmt->getElse())
         return false;
     }
 
     // PrintLocation(src_mgr, start_loc);
-    // PrintLocation(src_mgr, parent->getLocStart());
+    // PrintLocation(src_mgr, parent->getBeginLoc());
     // cout << parent->getStmtClassName() << endl;
 
     return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
@@ -100,7 +100,7 @@ void SMVB::Mutate(clang::Stmt *s, MusicContext *context)
     goto case2;
 
   // PrintLocation(src_mgr, start_loc);
-  // PrintLocation(src_mgr, (*last_stmt)->getLocStart());
+  // PrintLocation(src_mgr, (*last_stmt)->getBeginLoc());
   // cout << (*last_stmt)->getStmtClassName() << endl;
 
   mutated_token1 += "}\n";
@@ -136,8 +136,8 @@ void SMVB::Mutate(clang::Stmt *s, MusicContext *context)
 
   for (; it2 != compound_grandparent->body_end(); it2++)
   {
-    if (!((*it2)->getLocStart() != parent->getLocStart() ||
-          (*it2)->getLocEnd() != parent->getLocEnd()))
+    if (!((*it2)->getBeginLoc() != parent->getBeginLoc() ||
+          (*it2)->getEndLoc() != parent->getEndLoc()))
       break;
 
     next_stmt++;
@@ -148,7 +148,7 @@ void SMVB::Mutate(clang::Stmt *s, MusicContext *context)
 
   end_loc = GetLocationAfterSemicolon(
       src_mgr, 
-      TryGetEndLocAfterBracketOrSemicolon((*next_stmt)->getLocEnd(), context->comp_inst_));
+      TryGetEndLocAfterBracketOrSemicolon((*next_stmt)->getEndLoc(), context->comp_inst_));
 
   string mutated_token2{ConvertToString(s, context->comp_inst_->getLangOpts())};
   size_t closing_brace_idx = mutated_token2.find_last_of("}");

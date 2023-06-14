@@ -1,53 +1,53 @@
 # MUtation analySIs tool with high Configurability and extensibility MUSIC
 
-## Install Clang/LLVM 7
+## Install Clang/LLVM 16
 
 MUSIC is built on top of Clang/LLVM so the first step is to get a working LLVM 
 installation. See 
 [Getting Started with the LLVM System](http://llvm.org/docs/GettingStarted.html)
  for more information.
 
-If you are using a recent Ubuntu (≥ 16.04 and ≤ 17.10, e.g. 16.04 LTS), we 
+If you are using a recent Ubuntu (e.g. 20.04 LTS), we 
 recommend you to use the LLVM packages provided by LLVM itself. Use 
 [LLVM Package Repository](http://apt.llvm.org/) to add the appropriate line to 
-your /etc/apt/sources.list. As an example, for Ubuntu 16.04, the following 
+your /etc/apt/sources.list. As an example, for Ubuntu 20.04, the following 
 lines should be added:
 
 ```
-deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
-deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
+deb http://apt.llvm.org/focal/ llvm-toolchain-focal-16 main
+deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-16 main
 ```
 
-Then add the repository key and install the Clang/LLVM 7 packages:
+Then add the repository key and install the Clang/LLVM 16 packages:
 
 ```
 $ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 $ sudo apt-get update 
-$ sudo apt-get install clang-7 clang-tools-7 clang-7-doc libclang-common-7-dev libclang-7-dev libclang1-7 clang-format-7 python-clang-7 libllvm-7-ocaml-dev libllvm7 llvm-7 llvm-7-dev llvm-7-doc llvm-7-examples llvm-7-runtime
+$ sudo apt-get install clang-16 clang-tools-16 clang-16-doc libclang-common-16-dev libclang-16-dev libclang1-16 clang-format-16 python3-clang-16 libllvm-16-ocaml-dev libllvm16 llvm-16 llvm-16-dev llvm-16-doc llvm-16-examples llvm-16-runtime
 ```
 
 ## Compile
 
-Before compilation of MUSIC, clang v7 should be installed.
+Before compilation of MUSIC, clang v16 should be installed.
 
-The current version of MUSIC has only been tested to compile and run successfully on clang v7, Linux x86-64.
+The current version of MUSIC has only been tested to compile and run successfully on clang v16, Linux x86-64.
 
 After install and build clang, if necessary, you can edit llvm build directory specification in the following line of Makefile
 
 ```
-LLVM_BUILD_PATH := /usr/lib/llvm-7
+LLVM_BUILD_PATH := /usr/lib/llvm-16
 LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 ```
 
 LLVM_BUILD_PATH are directories containing llvm build.
 
-LLVM_BIN_PATH is directory containing executables (ex. clang-7, llvm-config, ...)
+LLVM_BIN_PATH is directory containing executables (ex. clang-16, llvm-config, ...)
 
 In short, according to the current Makefile:
 
-	/usr/lib/llvm-7 is the directory of the llvm build.
+	/usr/lib/llvm-16 is the directory of the llvm build.
 
-	/usr/lib/llvm-7/bin is the directory containing bin folder with all the executables.
+	/usr/lib/llvm-16/bin is the directory containing bin folder with all the executables.
 
 Compile using make to produce MUSIC executable.
 

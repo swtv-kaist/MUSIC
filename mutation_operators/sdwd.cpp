@@ -29,10 +29,10 @@ bool SDWD::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-    SourceLocation start_loc = s->getLocStart();
+    SourceLocation start_loc = s->getBeginLoc();
     SourceLocation end_loc = GetLocationAfterSemicolon(
         src_mgr, 
-        TryGetEndLocAfterBracketOrSemicolon(s->getLocEnd(), context->comp_inst_));
+        TryGetEndLocAfterBracketOrSemicolon(s->getEndLoc(), context->comp_inst_));
 
     return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
   }
@@ -47,10 +47,10 @@ void SDWD::Mutate(clang::Stmt *s, MusicContext *context)
     return;
 
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-  SourceLocation start_loc = s->getLocStart();
+  SourceLocation start_loc = s->getBeginLoc();
   SourceLocation end_loc = GetLocationAfterSemicolon(
         src_mgr, 
-        TryGetEndLocAfterBracketOrSemicolon(s->getLocEnd(), context->comp_inst_));
+        TryGetEndLocAfterBracketOrSemicolon(s->getEndLoc(), context->comp_inst_));
 
   Stmt *body = ds->getBody();
   string body_string{ConvertToString(body, context->comp_inst_->getLangOpts())};

@@ -183,7 +183,7 @@ bool MusicASTVisitor::CollectNonVtwdMutatableScalarRef(
 void MusicASTVisitor::HandleUnaryOperatorExpr(UnaryOperator *uo)
 {
   // cout << "HandleUnaryOperatorExpr called\n";
-  SourceLocation start_loc = uo->getLocStart();
+  SourceLocation start_loc = uo->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, comp_inst_);
 
   // Retrieve the range of UnaryOperator address-of
@@ -224,7 +224,7 @@ void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
   if (bo->isAssignmentOp())
   {
     stmt_context_.setLhsOfAssignmentRange(
-        new SourceRange(bo->getLHS()->getLocStart(), start_loc));
+        new SourceRange(bo->getLHS()->getBeginLoc(), start_loc));
   }
 
   // Setting up for prevent redundant VTWD mutants
@@ -244,7 +244,7 @@ void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
          ExprIsArray(bo->getLHS()->IgnoreImpCasts())) &&
         !stmt_context_.IsInNonFloatingExprRange(e))
       stmt_context_.setNonFloatingExprRange(new SourceRange(
-          bo->getRHS()->getLocStart(), 
+          bo->getRHS()->getBeginLoc(), 
           GetEndLocOfExpr(bo->getRHS()->IgnoreImpCasts(), comp_inst_)));
   }
 
@@ -270,7 +270,7 @@ void MusicASTVisitor::HandleBinaryOperatorExpr(Expr *e)
     {
       // cout << "cp3" << endl;
       stmt_context_.setNonFloatingExprRange(new SourceRange(
-          bo->getLocStart(), GetEndLocOfExpr(e, comp_inst_)));
+          bo->getBeginLoc(), GetEndLocOfExpr(e, comp_inst_)));
       // PrintRange(src_mgr_, *stmt_context_.non_floating_expr_range_);
     }        
   }
@@ -370,8 +370,8 @@ bool MusicASTVisitor::ValidateSourceRange(SourceLocation &start_loc, SourceLocat
 bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
 {
   // cout << "VisitStmt\n";
-  SourceLocation start_loc = s->getLocStart();
-  SourceLocation end_loc = s->getLocEnd();
+  SourceLocation start_loc = s->getBeginLoc();
+  SourceLocation end_loc = s->getEndLoc();
   SourceLocation start_spelling_loc = src_mgr_.getSpellingLoc(start_loc);
   SourceLocation end_spelling_loc = src_mgr_.getSpellingLoc(end_loc);
 
@@ -420,11 +420,11 @@ bool MusicASTVisitor::VisitStmt(clang::Stmt *s)
       SourceLocation end_loc_of_stmt = end_loc;
 
       if (IfStmt *is = dyn_cast<IfStmt>(s))
-        end_loc_of_stmt = is->getCond()->getLocEnd();
+        end_loc_of_stmt = is->getCond()->getEndLoc();
       else if (WhileStmt *ws = dyn_cast<WhileStmt>(s))
-        end_loc_of_stmt = ws->getCond()->getLocEnd();
+        end_loc_of_stmt = ws->getCond()->getEndLoc();
       else if (SwitchStmt *ss = dyn_cast<SwitchStmt>(s))
-        end_loc_of_stmt = ss->getCond()->getLocEnd();
+        end_loc_of_stmt = ss->getCond()->getEndLoc();
 
       while (*(src_mgr_.getCharacterData(end_loc_of_stmt)) != '\n' && 
              *(src_mgr_.getCharacterData(end_loc_of_stmt)) != '{')
@@ -484,19 +484,19 @@ bool MusicASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
 {
   // cout << "VisitCompoundStmt\n";
   // SourceLocation start_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(c->getLocStart());
+  //     src_mgr_.getSpellingLoc(c->getBeginLoc());
   // SourceLocation end_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(c->getLocEnd());
+  //     src_mgr_.getSpellingLoc(c->getEndLoc());
 
-  SourceLocation start_loc = c->getLocStart();
-  SourceLocation end_loc = c->getLocEnd();
+  SourceLocation start_loc = c->getBeginLoc();
+  SourceLocation end_loc = c->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
 
   // Skip nodes that are not in the to-be-mutated file.
-  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(c->getLocStart()).getHashValue() &&
-  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(c->getLocEnd()).getHashValue())
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(c->getBeginLoc()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(c->getEndLoc()).getHashValue())
   //   return true;
 
   // if (start_loc.isMacroID() && end_loc.isMacroID())
@@ -533,23 +533,23 @@ bool MusicASTVisitor::VisitCompoundStmt(clang::CompoundStmt *c)
 bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
 {
   // cout << "VisitSwitchStmt\n";
-  SourceLocation start_loc = ss->getLocStart();
-  SourceLocation end_loc = ss->getLocEnd();
+  SourceLocation start_loc = ss->getBeginLoc();
+  SourceLocation end_loc = ss->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
 
   // Skip nodes that are not in the to-be-mutated file.
-  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(ss->getLocStart()).getHashValue() &&
-  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(ss->getLocEnd()).getHashValue())
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(ss->getBeginLoc()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(ss->getEndLoc()).getHashValue())
   //   return true;
 
   // SourceLocation start_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(ss->getLocStart());
+  //     src_mgr_.getSpellingLoc(ss->getBeginLoc());
   // SourceLocation end_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(ss->getLocEnd());
+  //     src_mgr_.getSpellingLoc(ss->getEndLoc());
 
-  // if (ss->getLocStart().isMacroID() && ss->getLocEnd().isMacroID())
+  // if (ss->getBeginLoc().isMacroID() && ss->getEndLoc().isMacroID())
   //   return true;
 
   /* This expr is not written inside current target file */
@@ -561,12 +561,12 @@ bool MusicASTVisitor::VisitSwitchStmt(clang::SwitchStmt *ss)
 
   // cout << "VisitSwitchStmt called\n";
   stmt_context_.setSwitchStmtConditionRange(
-      new SourceRange(ss->getSwitchLoc(), ss->getBody()->getLocStart()));
+      new SourceRange(ss->getSwitchLoc(), ss->getBody()->getBeginLoc()));
 
   // remove switch statements that are already passed
   while (!switchstmt_info_list_.empty() && 
          !LocationIsInRange(
-             ss->getLocStart(), switchstmt_info_list_.back().first))
+             ss->getBeginLoc(), switchstmt_info_list_.back().first))
     switchstmt_info_list_.pop_back();
 
   // cout << "done removing passed switch stmt\n";
@@ -616,17 +616,17 @@ bool MusicASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
 {
   // cout << "VisitSwitchCase\n";
   // Skip nodes that are not in the to-be-mutated file.
-  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(sc->getLocStart()).getHashValue() &&
-  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(sc->getLocEnd()).getHashValue())
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(sc->getBeginLoc()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(sc->getEndLoc()).getHashValue())
   //   return true;
 
   // SourceLocation start_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(sc->getLocStart());
+  //     src_mgr_.getSpellingLoc(sc->getBeginLoc());
   // SourceLocation end_spelling_loc = \
-  //     src_mgr_.getSpellingLoc(sc->getLocEnd());
+  //     src_mgr_.getSpellingLoc(sc->getEndLoc());
 
-  SourceLocation start_loc = sc->getLocStart();
-  SourceLocation end_loc = sc->getLocEnd();
+  SourceLocation start_loc = sc->getBeginLoc();
+  SourceLocation end_loc = sc->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -661,7 +661,7 @@ bool MusicASTVisitor::VisitSwitchCase(clang::SwitchCase *sc)
   // remove switch statements that are already passed
   while (!switchstmt_info_list_.empty() && 
          !LocationIsInRange(
-             sc->getLocStart(), switchstmt_info_list_.back().first))
+             sc->getBeginLoc(), switchstmt_info_list_.back().first))
     switchstmt_info_list_.pop_back();
 
   return true;
@@ -671,15 +671,15 @@ bool MusicASTVisitor::VisitExpr(clang::Expr *e)
 {
   // cout << "VisitExpr\n";
   // Skip nodes that are not in the to-be-mutated file.
-  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(e->getLocStart()).getHashValue() &&
-  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(e->getLocEnd()).getHashValue())
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(e->getBeginLoc()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(e->getEndLoc()).getHashValue())
   //   return true;
 
   // cout << "VisitExpr\n" << ConvertToString(e, comp_inst_->getLangOpts()) << endl;
-  // PrintLocation(src_mgr_, e->getLocStart());
+  // PrintLocation(src_mgr_, e->getBeginLoc());
 
-  SourceLocation start_loc = e->getLocStart();
-  SourceLocation end_loc = e->getLocEnd();
+  SourceLocation start_loc = e->getBeginLoc();
+  SourceLocation end_loc = e->getEndLoc();
 
   // cout << "cp1\n";
 
@@ -718,8 +718,8 @@ bool MusicASTVisitor::VisitExpr(clang::Expr *e)
   }
   else if (ArraySubscriptExpr *ase = dyn_cast<ArraySubscriptExpr>(e))
   {
-    SourceLocation start_loc = ase->getLocStart();
-    SourceLocation end_loc = TryGetEndLocAfterBracketOrSemicolon(ase->getLocEnd(), comp_inst_);
+    SourceLocation start_loc = ase->getBeginLoc();
+    SourceLocation end_loc = TryGetEndLocAfterBracketOrSemicolon(ase->getEndLoc(), comp_inst_);
 
     stmt_context_.setArraySubscriptRange(new SourceRange(start_loc, end_loc));
   }
@@ -748,8 +748,8 @@ bool MusicASTVisitor::VisitExpr(clang::Expr *e)
 bool MusicASTVisitor::VisitEnumDecl(clang::EnumDecl *ed)
 {
   // cout << "VisitEnumDecl\n";
-  SourceLocation start_loc = ed->getLocStart();
-  SourceLocation end_loc = ed->getLocEnd();
+  SourceLocation start_loc = ed->getBeginLoc();
+  SourceLocation end_loc = ed->getEndLoc();
 
   // Skip nodes that are not in the to-be-mutated file.
   if (start_loc.isInvalid() || end_loc.isInvalid())
@@ -779,12 +779,12 @@ bool MusicASTVisitor::VisitTypedefDecl(clang::TypedefDecl *td)
 {
   // cout << "VisitTypedefDecl\n";
   // Skip nodes that are not in the to-be-mutated file.
-  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(td->getLocStart()).getHashValue() &&
-  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(td->getLocEnd()).getHashValue())
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(td->getBeginLoc()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(td->getEndLoc()).getHashValue())
   //   return true;
 
-  SourceLocation start_loc = td->getLocStart();
-  SourceLocation end_loc = td->getLocEnd();
+  SourceLocation start_loc = td->getBeginLoc();
+  SourceLocation end_loc = td->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -814,12 +814,12 @@ bool MusicASTVisitor::VisitFieldDecl(clang::FieldDecl *fd)
 {
   // cout << "VisitFieldDecl\n";
   // Skip nodes that are not in the to-be-mutated file.
-  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(fd->getLocStart()).getHashValue() &&
-  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(fd->getLocEnd()).getHashValue())
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(fd->getBeginLoc()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(fd->getEndLoc()).getHashValue())
   //   return true;
 
-  SourceLocation start_loc = fd->getLocStart();
-  SourceLocation end_loc = fd->getLocEnd();
+  SourceLocation start_loc = fd->getBeginLoc();
+  SourceLocation end_loc = fd->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -862,12 +862,12 @@ bool MusicASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 {
   // cout << "VisitVarDecl\n";
   // Skip nodes that are not in the to-be-mutated file.
-  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(vd->getLocStart()).getHashValue() &&
-  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(vd->getLocEnd()).getHashValue())
+  // if (src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(vd->getBeginLoc()).getHashValue() &&
+  //     src_mgr_.getMainFileID().getHashValue() != src_mgr_.getFileID(vd->getEndLoc()).getHashValue())
   //   return true;
 
-  SourceLocation start_loc = vd->getLocStart();
-  SourceLocation end_loc = vd->getLocEnd();
+  SourceLocation start_loc = vd->getBeginLoc();
+  SourceLocation end_loc = vd->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -968,8 +968,8 @@ bool MusicASTVisitor::VisitVarDecl(clang::VarDecl *vd)
 bool MusicASTVisitor::VisitFunctionDecl(clang::FunctionDecl *f) 
 {
   // cout << "VisitFunctionDecl\n";
-  SourceLocation start_loc = f->getLocStart();
-  SourceLocation end_loc = f->getLocEnd();
+  SourceLocation start_loc = f->getBeginLoc();
+  SourceLocation end_loc = f->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;

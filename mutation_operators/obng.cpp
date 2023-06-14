@@ -16,7 +16,7 @@ bool OBNG::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (BinaryOperator *bo = dyn_cast<BinaryOperator>(e))
 	{
-		SourceLocation start_loc = e->getLocStart();
+		SourceLocation start_loc = e->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
     StmtContext &stmt_context = context->getStmtContext();
 
@@ -55,7 +55,7 @@ void OBNG::Mutate(clang::Expr *e, MusicContext *context)
 
 void OBNG::GenerateMutantByNegation(Expr *e, MusicContext *context, string side)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_); 
 
   Rewriter rewriter;

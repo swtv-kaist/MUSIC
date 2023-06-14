@@ -44,7 +44,7 @@ bool VLTR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsStructReference(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   StmtContext &stmt_context = context->getStmtContext();
 
@@ -67,7 +67,7 @@ bool VLTR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void VLTR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -115,7 +115,7 @@ void VLTR::Mutate(clang::Expr *e, MusicContext *context)
 
 void VLTR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   Rewriter rewriter;
   rewriter.setSourceMgr(context->comp_inst_->getSourceManager(), 
                         context->comp_inst_->getLangOpts());
@@ -134,7 +134,7 @@ void VLTR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
   // remove all vardecl appear after expr
   for (auto it = range->begin(); it != range->end(); )
   {
-    if (!((*it)->getLocStart() < start_loc))
+    if (!((*it)->getBeginLoc() < start_loc))
     {
       range->erase(it, range->end());
       break;
@@ -167,10 +167,10 @@ void VLTR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
     if (!LocationIsInRange(start_loc, scope))
       for (auto it = range->begin(); it != range->end();)
       {
-        if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+        if (LocationAfterRangeEnd((*it)->getBeginLoc(), scope))
           break;
 
-        if (LocationIsInRange((*it)->getLocStart(), scope))
+        if (LocationIsInRange((*it)->getBeginLoc(), scope))
         {
           it = range->erase(it);
           continue;

@@ -48,7 +48,7 @@ bool VGSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsScalarReference(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
@@ -70,7 +70,7 @@ bool VGSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void VGSR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
@@ -89,7 +89,7 @@ void VGSR::Mutate(clang::Expr *e, MusicContext *context)
   for (auto vardecl: *(context->getSymbolTable()->getGlobalScalarVarDeclList()))
   {
     // The rest of loop are VarDecl declared after current point of parsing.
-  	if (!(vardecl->getLocStart() < start_loc))
+  	if (!(vardecl->getBeginLoc() < start_loc))
   		break;
 
     string mutated_token{GetVarDeclName(vardecl)};

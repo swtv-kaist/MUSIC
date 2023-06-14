@@ -27,7 +27,7 @@ bool VASM::IsMutationTarget(clang::Expr *e, MusicContext *context)
     if (!isa<ArraySubscriptExpr>(base))
       return false;
 
-    SourceLocation start_loc = e->getLocStart();
+    SourceLocation start_loc = e->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(ase, context->comp_inst_);
 
     return context->IsRangeInMutationRange(SourceRange(start_loc, end_loc));
@@ -44,7 +44,7 @@ void VASM::Mutate(clang::Expr *e, MusicContext *context)
 
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
   vector<string> idx_list;
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(ase, context->comp_inst_);
 
   // Collect all the index of this ArraySubscriptExpr

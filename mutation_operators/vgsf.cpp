@@ -41,7 +41,7 @@ bool VGSF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
-		SourceLocation start_loc = ce->getLocStart();
+		SourceLocation start_loc = ce->getBeginLoc();
 
     // getRParenLoc returns the location before the right parenthesis
     SourceLocation end_loc = ce->getRParenLoc();
@@ -71,7 +71,7 @@ void VGSF::Mutate(clang::Expr *e, MusicContext *context)
 	if (!(ce = dyn_cast<CallExpr>(e)))
 		return;
 
-	SourceLocation start_loc = ce->getLocStart();
+	SourceLocation start_loc = ce->getBeginLoc();
 
   // getRParenLoc returns the location before the right parenthesis
   SourceLocation end_loc = ce->getRParenLoc();
@@ -87,7 +87,7 @@ void VGSF::Mutate(clang::Expr *e, MusicContext *context)
 
   for (auto vardecl: *(context->getSymbolTable()->getGlobalScalarVarDeclList()))
   {
-  	if (!(vardecl->getLocStart() < start_loc))
+  	if (!(vardecl->getBeginLoc() < start_loc))
   		break;
 
     string mutated_token{GetVarDeclName(vardecl)};

@@ -25,7 +25,7 @@ bool SGLR::IsMutationTarget(clang::Stmt *s, MusicContext *context)
   if (GotoStmt *gs = dyn_cast<GotoStmt>(s))
   {
     SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-    SourceLocation start_loc = s->getLocStart();
+    SourceLocation start_loc = s->getBeginLoc();
     string label_name{gs->getLabel()->getName()};
     SourceLocation end_loc = gs->getLabelLoc().getLocWithOffset(
         label_name.length());
@@ -43,7 +43,7 @@ void SGLR::Mutate(clang::Stmt *s, MusicContext *context)
     return;
 
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-  SourceLocation start_loc = s->getLocStart();
+  SourceLocation start_loc = s->getBeginLoc();
   string label_name{gs->getLabel()->getName()};
   SourceLocation end_loc = gs->getLabelLoc().getLocWithOffset(
       label_name.length());

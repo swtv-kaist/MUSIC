@@ -41,7 +41,7 @@ void SSOM::Mutate(clang::Expr *e, MusicContext *context)
 
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
   vector<string> expr_list;
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(bo, context->comp_inst_);
 
   // Collect all the expressions of this comma expression

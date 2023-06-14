@@ -186,53 +186,53 @@ bool StmtContext::IsInEnumDecl()
 
 bool StmtContext::IsInLhsOfAssignmentRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *lhs_of_assignment_range_);
+	return LocationIsInRange(s->getBeginLoc(), *lhs_of_assignment_range_);
 }
 
 bool StmtContext::IsInAddressOpRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *addressop_range_);
+	return LocationIsInRange(s->getBeginLoc(), *addressop_range_);
 }
 
 bool StmtContext::IsInUnaryIncrementDecrementRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *unary_inc_dec_range_);
+	return LocationIsInRange(s->getBeginLoc(), *unary_inc_dec_range_);
 }
 
 bool StmtContext::IsInFieldDeclRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *fielddecl_range_);
+	return LocationIsInRange(s->getBeginLoc(), *fielddecl_range_);
 }
 
 bool StmtContext::IsInCurrentlyParsedFunctionRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), 
+	return LocationIsInRange(s->getBeginLoc(), 
 													 *currently_parsed_function_range_);
 }
 
 bool StmtContext::IsInSwitchStmtConditionRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *switchstmt_condition_range_);
+	return LocationIsInRange(s->getBeginLoc(), *switchstmt_condition_range_);
 }
 
 bool StmtContext::IsInArraySubscriptRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *arraysubscript_range_);
+	return LocationIsInRange(s->getBeginLoc(), *arraysubscript_range_);
 }
 
 bool StmtContext::IsInSwitchCaseRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *switchcase_range_);
+	return LocationIsInRange(s->getBeginLoc(), *switchcase_range_);
 }
 
 bool StmtContext::IsInNonFloatingExprRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *non_floating_expr_range_);
+	return LocationIsInRange(s->getBeginLoc(), *non_floating_expr_range_);
 }
 
 bool StmtContext::IsInTypedefRange(Stmt *s)
 {
-	return LocationIsInRange(s->getLocStart(), *typedef_range_);
+	return LocationIsInRange(s->getBeginLoc(), *typedef_range_);
 }
 
 bool StmtContext::IsInCurrentlyParsedFunctionRange(clang::SourceLocation loc)

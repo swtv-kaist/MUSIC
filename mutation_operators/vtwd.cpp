@@ -20,7 +20,7 @@ bool VTWD::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsScalarReference(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	Rewriter rewriter;
@@ -51,7 +51,7 @@ bool VTWD::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void VTWD::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	Rewriter rewriter;

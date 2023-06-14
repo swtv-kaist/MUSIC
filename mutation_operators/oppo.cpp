@@ -17,7 +17,7 @@ bool OPPO::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
 		if (uo->getOpcode() == UO_PostInc || uo->getOpcode() == UO_PreInc)
 		{
-			SourceLocation start_loc = uo->getLocStart();
+			SourceLocation start_loc = uo->getBeginLoc();
     	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
     	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -50,7 +50,7 @@ void OPPO::Mutate(clang::Expr *e, MusicContext *context)
 
 void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, MusicContext *context)
 {
-	SourceLocation start_loc = uo->getLocStart();
+	SourceLocation start_loc = uo->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -90,7 +90,7 @@ void OPPO::GenerateMutantForPostInc(UnaryOperator *uo, MusicContext *context)
 
 void OPPO::GenerateMutantForPreInc(UnaryOperator *uo, MusicContext *context)
 {
-	SourceLocation start_loc = uo->getLocStart();
+	SourceLocation start_loc = uo->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();

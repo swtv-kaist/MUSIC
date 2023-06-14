@@ -17,7 +17,7 @@ bool OMMO::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e))
 		if (uo->getOpcode() == UO_PostDec || uo->getOpcode() == UO_PreDec)
 		{
-			SourceLocation start_loc = uo->getLocStart();
+			SourceLocation start_loc = uo->getBeginLoc();
     	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
     	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -54,7 +54,7 @@ void OMMO::Mutate(clang::Expr *e, MusicContext *context)
 
 void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, MusicContext *context)
 {
-	SourceLocation start_loc = uo->getLocStart();
+	SourceLocation start_loc = uo->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -93,7 +93,7 @@ void OMMO::GenerateMutantForPostDec(UnaryOperator *uo, MusicContext *context)
 
 void OMMO::GenerateMutantForPreDec(UnaryOperator *uo, MusicContext *context)
 {
-	SourceLocation start_loc = uo->getLocStart();
+	SourceLocation start_loc = uo->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfUnaryOpExpr(uo, context->comp_inst_);
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();

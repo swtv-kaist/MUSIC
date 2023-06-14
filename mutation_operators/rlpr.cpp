@@ -62,7 +62,7 @@ bool RLPR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
     // RHS needs to be inside mutation range, outside enum declaration,
     // and inside user-specified domain (if available)
-    SourceLocation start_loc = rhs->getLocStart();
+    SourceLocation start_loc = rhs->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(rhs, context->comp_inst_);
     StmtContext& stmt_context = context->getStmtContext();
     string token{ConvertToString(rhs, context->comp_inst_->getLangOpts())};
@@ -81,7 +81,7 @@ bool RLPR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 bool RLPR::IsInitMutationTarget(clang::Expr *e, MusicContext *context)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   StmtContext& stmt_context = context->getStmtContext();
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
@@ -120,7 +120,7 @@ void RLPR::Mutate(clang::Expr *e, MusicContext *context)
       rhs = bo->getRHS()->IgnoreImpCasts();
   }
 
-  SourceLocation start_loc = rhs->getLocStart();
+  SourceLocation start_loc = rhs->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(rhs, context->comp_inst_);
 
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -147,7 +147,7 @@ void RLPR::Mutate(clang::Expr *e, MusicContext *context)
     if (pointee_type.compare(getPointerType(vardecl->getType())) == 0)
     {
       // cout << mutated_token << endl;
-      // PrintLocation(src_mgr, vardecl->getLocEnd());
+      // PrintLocation(src_mgr, vardecl->getEndLoc());
 
       string_range.push_back(mutated_token);
     }
@@ -170,7 +170,7 @@ void RLPR::Mutate(clang::Expr *e, MusicContext *context)
 
 void RLPR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
 
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
   StmtContext &stmt_context = context->getStmtContext();
@@ -178,11 +178,11 @@ void RLPR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
   // remove all vardecl appear after expr
   for (auto it = range->begin(); it != range->end(); )
   {
-    PrintLocation(context->comp_inst_->getSourceManager(), (*it)->getLocStart());
-    PrintLocation(context->comp_inst_->getSourceManager(), (*it)->getLocEnd());
+    PrintLocation(context->comp_inst_->getSourceManager(), (*it)->getBeginLoc());
+    PrintLocation(context->comp_inst_->getSourceManager(), (*it)->getEndLoc());
     PrintLocation(context->comp_inst_->getSourceManager(), start_loc);
 
-    if (!((*it)->getLocStart() < start_loc))
+    if (!((*it)->getBeginLoc() < start_loc))
     {
       range->erase(it, range->end());
       break;
@@ -215,10 +215,10 @@ void RLPR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
     if (!LocationIsInRange(start_loc, scope))
       for (auto it = range->begin(); it != range->end();)
       {
-        if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+        if (LocationAfterRangeEnd((*it)->getBeginLoc(), scope))
           break;
 
-        if (LocationIsInRange((*it)->getLocStart(), scope))
+        if (LocationIsInRange((*it)->getBeginLoc(), scope))
         {
           it = range->erase(it);
           continue;

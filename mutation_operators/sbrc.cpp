@@ -20,7 +20,7 @@ bool SBRC::IsMutationTarget(Stmt *s, MusicContext *context)
   if (!isa<BreakStmt>(s))
     return false;
 
-  SourceLocation start_loc = s->getLocStart();
+  SourceLocation start_loc = s->getBeginLoc();
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
   SourceLocation end_loc = src_mgr.translateLineCol(
         src_mgr.getMainFileID(), 
@@ -33,7 +33,7 @@ bool SBRC::IsMutationTarget(Stmt *s, MusicContext *context)
 
 void SBRC::Mutate(Stmt *s, MusicContext *context)
 {
-  SourceLocation start_loc = s->getLocStart();
+  SourceLocation start_loc = s->getBeginLoc();
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
   SourceLocation end_loc = src_mgr.translateLineCol(
         src_mgr.getMainFileID(), 

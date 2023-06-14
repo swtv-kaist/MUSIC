@@ -41,7 +41,7 @@ bool ArgIncDec::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
   if (CallExpr *ce = dyn_cast<CallExpr>(e))
   {
-    SourceLocation start_loc = ce->getLocStart();
+    SourceLocation start_loc = ce->getBeginLoc();
 
     // getRParenLoc returns the location before the right parenthesis
     SourceLocation end_loc = ce->getRParenLoc();
@@ -71,7 +71,7 @@ void ArgIncDec::Mutate(clang::Expr *e, MusicContext *context)
   if (!(ce = dyn_cast<CallExpr>(e)))
     return;
 
-  // SourceLocation start_loc = ce->getLocStart();
+  // SourceLocation start_loc = ce->getBeginLoc();
   // getRParenLoc returns the location before the right parenthesis
   // SourceLocation end_loc = ce->getRParenLoc();
   // end_loc = end_loc.getLocWithOffset(1);
@@ -82,7 +82,7 @@ void ArgIncDec::Mutate(clang::Expr *e, MusicContext *context)
     if (!ExprIsScalar(arg) && !ExprIsPointer(arg))
       continue;
 
-    SourceLocation start_loc = arg->getLocStart();
+    SourceLocation start_loc = arg->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(arg, context->comp_inst_);
 
     string token{ConvertToString(arg, context->comp_inst_->getLangOpts())};

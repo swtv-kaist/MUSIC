@@ -14,12 +14,12 @@ bool SANL::ValidateRange(const std::set<std::string> &range)
 // Return True if the mutant operator can mutate this expression
 bool SANL::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
-  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
+  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getBeginLoc()) == 49)
   //   cout << "SANL can mutate?\n";
 
 	if (StringLiteral *sl = dyn_cast<StringLiteral>(e))
 	{
-		SourceLocation start_loc = sl->getLocStart();
+		SourceLocation start_loc = sl->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfStringLiteral(
     		context->comp_inst_->getSourceManager(), start_loc);
     StmtContext &stmt_context = context->getStmtContext();
@@ -32,7 +32,7 @@ bool SANL::IsMutationTarget(clang::Expr *e, MusicContext *context)
     			 !stmt_context.IsInFieldDeclRange(e);
 	}
 
-  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
+  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getBeginLoc()) == 49)
   //   cout << "not a string literal: " << e->getStmtClassName() << endl;
 
 	return false;
@@ -42,14 +42,14 @@ bool SANL::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void SANL::Mutate(clang::Expr *e, MusicContext *context)
 {
-  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getLocStart()) == 49)
+  // if (GetLineNumber(context->comp_inst_->getSourceManager(), e->getBeginLoc()) == 49)
   //   cout << "mutating\n";
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfStringLiteral(src_mgr, start_loc);
 
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};

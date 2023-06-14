@@ -93,7 +93,7 @@ void OARN::Mutate(clang::Expr *e, MusicContext *context)
 			GetLineNumber(src_mgr, start_loc),
 			GetColumnNumber(src_mgr, start_loc) + token.length());
 
-	SourceLocation start_of_expr = e->getLocStart();
+	SourceLocation start_of_expr = e->getBeginLoc();
 	SourceLocation end_of_expr = GetEndLocOfExpr(e, context->comp_inst_);
 	Rewriter rewriter;
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());

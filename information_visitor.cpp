@@ -47,8 +47,8 @@ bool InformationVisitor::VisitLabelStmt(LabelStmt *ls)
   // cout << "VisitLabelStmt" << endl;
 
   string labelName{ls->getName()};
-  SourceLocation start_loc = ls->getLocStart();
-  SourceLocation end_loc = ls->getLocEnd();
+  SourceLocation start_loc = ls->getBeginLoc();
+  SourceLocation end_loc = ls->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -71,15 +71,15 @@ bool InformationVisitor::VisitGotoStmt(GotoStmt * gs)
 {
   // cout << "VisitGotoStmt" << endl;
 
-  SourceLocation start_loc = gs->getLocStart();
-  SourceLocation end_loc = gs->getLocEnd();
+  SourceLocation start_loc = gs->getBeginLoc();
+  SourceLocation end_loc = gs->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
 
   // Retrieve LabelStmtToGotoStmtListMap's key which is label declaration location.
   LabelStmt *label = gs->getLabel()->getStmt();
-  SourceLocation labelStartLoc = label->getLocStart();
+  SourceLocation labelStartLoc = label->getBeginLoc();
 
   // string temp{gs->getLabel()->getName()};
   // SourceLocation end_loc = gs->getLabelLoc().getLocWithOffset(
@@ -102,8 +102,8 @@ bool InformationVisitor::VisitReturnStmt(ReturnStmt *rs)
 {
   // cout << "VisitReturnStmt" << endl;
 
-  SourceLocation start_loc = rs->getLocStart();
-  SourceLocation end_loc = rs->getLocEnd();
+  SourceLocation start_loc = rs->getBeginLoc();
+  SourceLocation end_loc = rs->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -116,8 +116,8 @@ bool InformationVisitor::VisitExpr(Expr *e)
 {
   // cout << "VisitExpr" << endl;
 
-  SourceLocation start_loc = e->getLocStart();
-  SourceLocation end_loc = e->getLocEnd();
+  SourceLocation start_loc = e->getBeginLoc();
+  SourceLocation end_loc = e->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -181,8 +181,8 @@ bool InformationVisitor::VisitTypedefDecl(TypedefDecl *td)
 {
   // cout << "VisitTypedefDecl" << endl;
 
-  SourceLocation start_loc = td->getLocStart();
-  SourceLocation end_loc = td->getLocEnd();
+  SourceLocation start_loc = td->getBeginLoc();
+  SourceLocation end_loc = td->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -190,7 +190,7 @@ bool InformationVisitor::VisitTypedefDecl(TypedefDecl *td)
   if (typedefdecl_range_ != nullptr)
     delete typedefdecl_range_;
 
-  typedefdecl_range_ = new SourceRange(td->getLocStart(), td->getLocEnd());
+  typedefdecl_range_ = new SourceRange(td->getBeginLoc(), td->getEndLoc());
 
   return true;
 }
@@ -199,8 +199,8 @@ bool InformationVisitor::VisitVarDecl(VarDecl *vd)
 {
   // cout << "VisitVarDecl" << endl;
 
-  SourceLocation start_loc = vd->getLocStart();
-  SourceLocation end_loc = vd->getLocEnd();
+  SourceLocation start_loc = vd->getBeginLoc();
+  SourceLocation end_loc = vd->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -218,8 +218,8 @@ bool InformationVisitor::VisitFunctionDecl(FunctionDecl *fd)
 {
   // cout << "VisitFunctionDecl" << endl;
 
-  SourceLocation start_loc = fd->getLocStart();
-  SourceLocation end_loc = fd->getLocEnd();
+  SourceLocation start_loc = fd->getBeginLoc();
+  SourceLocation end_loc = fd->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -285,8 +285,8 @@ bool InformationVisitor::VisitDeclRefExpr(DeclRefExpr *dre)
 {
   // cout << "VisitLabelStmt" << endl;
 
-  SourceLocation start_loc = dre->getLocStart();
-  SourceLocation end_loc = dre->getLocEnd();
+  SourceLocation start_loc = dre->getBeginLoc();
+  SourceLocation end_loc = dre->getEndLoc();
 
   if (!ValidateSourceRange(start_loc, end_loc))
     return true;
@@ -323,8 +323,8 @@ LabelStmtToGotoStmtListMap* InformationVisitor::getLabelToGotoListMap()
 
 void InformationVisitor::CollectVarDecl(VarDecl *vd)
 {
-  SourceLocation start_loc = vd->getLocStart();
-  SourceLocation end_loc = vd->getLocEnd();
+  SourceLocation start_loc = vd->getBeginLoc();
+  SourceLocation end_loc = vd->getEndLoc();
   string var_name{GetVarDeclName(vd)};
 
   // If VD is non-named variable (inside a function prototype), or is not
@@ -383,7 +383,7 @@ void InformationVisitor::CollectVarDecl(VarDecl *vd)
 
 void InformationVisitor::CollectScalarConstant(Expr* e)
 {
-  SourceLocation loc = e->getLocStart();
+  SourceLocation loc = e->getBeginLoc();
   unsigned int line = src_mgr_.getExpansionLineNumber(loc);
   line_to_consts_map_[line].insert(e);
 
@@ -398,7 +398,7 @@ void InformationVisitor::CollectScalarConstant(Expr* e)
     ConvertConstIntExprToIntString(e, comp_inst_, token);
 
   // local constants
-  if (LocationIsInRange(src_mgr_.getExpansionLoc(e->getLocStart()), 
+  if (LocationIsInRange(src_mgr_.getExpansionLoc(e->getBeginLoc()), 
                         *currently_parsed_function_range_))  
   {
     // If the constant is not in the cache, add this new entity into
@@ -424,7 +424,7 @@ void InformationVisitor::CollectScalarConstant(Expr* e)
 
 void InformationVisitor::CollectStringLiteral(Expr *e)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   string string_literal{ConvertToString(e, comp_inst_->getLangOpts())};
 
   if (LocationIsInRange(start_loc, *currently_parsed_function_range_))

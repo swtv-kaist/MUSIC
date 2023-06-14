@@ -44,7 +44,7 @@ bool VLAR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsArrayReference(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
@@ -63,7 +63,7 @@ bool VLAR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void VLAR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
@@ -103,7 +103,7 @@ void VLAR::Mutate(clang::Expr *e, MusicContext *context)
 
 void VLAR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
 
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
 	StmtContext &stmt_context = context->getStmtContext();
@@ -119,7 +119,7 @@ void VLAR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 	// remove all vardecl appear after expr
 	for (auto it = range->begin(); it != range->end(); )
 	{
-		if (!((*it)->getLocStart() < start_loc))
+		if (!((*it)->getBeginLoc() < start_loc))
 		{
 			range->erase(it, range->end());
 			break;
@@ -152,10 +152,10 @@ void VLAR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 		if (!LocationIsInRange(start_loc, scope))
 			for (auto it = range->begin(); it != range->end();)
 			{
-				if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+				if (LocationAfterRangeEnd((*it)->getBeginLoc(), scope))
 					break;
 
-				if (LocationIsInRange((*it)->getLocStart(), scope))
+				if (LocationIsInRange((*it)->getBeginLoc(), scope))
 				{
 					it = range->erase(it);
 					continue;

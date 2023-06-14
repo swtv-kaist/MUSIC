@@ -18,7 +18,7 @@ bool DirVarRepCon::IsMutationTarget(clang::Expr *e, MusicContext *context)
   if (!ExprIsScalar(e) || !IsDirVar(e, context))
     return false;
   // cout << "cp1" << endl;
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   StmtContext &stmt_context = context->getStmtContext();
 
@@ -43,10 +43,10 @@ bool DirVarRepCon::IsMutationTarget(clang::Expr *e, MusicContext *context)
 void DirVarRepCon::Mutate(clang::Expr *e, MusicContext *context)
 {
   // cout << "found an interface variable " << ConvertToString(e, context->comp_inst_->getLangOpts()) << endl;
-  // PrintLocation(context->comp_inst_->getSourceManager(), e->getLocStart());
+  // PrintLocation(context->comp_inst_->getSourceManager(), e->getBeginLoc());
   // return;
 
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
   Rewriter rewriter;
@@ -73,7 +73,7 @@ bool DirVarRepCon::IsDirVar(clang::Expr *e, MusicContext *context)
   
   // cout << "in IsDirVar" << endl;
   string token{""};
-  // PrintLocation(context->comp_inst_->getSourceManager(), e->getLocStart());
+  // PrintLocation(context->comp_inst_->getSourceManager(), e->getBeginLoc());
   // cout << e->getStmtClassName() << endl;
 
   if (DeclRefExpr *dre = dyn_cast_or_null<DeclRefExpr>(e))

@@ -24,7 +24,7 @@ bool STRI::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = is->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -38,7 +38,7 @@ bool STRI::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = ws->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -52,7 +52,7 @@ bool STRI::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = ds->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -66,7 +66,7 @@ bool STRI::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = fs->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -81,7 +81,7 @@ bool STRI::IsMutationTarget(clang::Stmt *s, MusicContext *context)
       return false;
 
     condition = aco->getCond()->IgnoreImpCasts();
-    start_loc = condition->getLocStart();
+    start_loc = condition->getBeginLoc();
 
     if (start_loc.isInvalid())
       goto invalid_start_loc;
@@ -123,7 +123,7 @@ void STRI::Mutate(clang::Stmt *s, MusicContext *context)
     return;
 
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
-  SourceLocation start_loc = condition->getLocStart();
+  SourceLocation start_loc = condition->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(condition, context->comp_inst_);
   
   string token{ConvertToString(condition, context->comp_inst_->getLangOpts())};

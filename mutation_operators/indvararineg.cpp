@@ -18,7 +18,7 @@ bool IndVarAriNeg::IsMutationTarget(clang::Expr *e, MusicContext *context)
   if (!IsIndVar(e, context))
     return false;
   // cout << "cp1" << endl;
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   StmtContext &stmt_context = context->getStmtContext();
 
@@ -42,10 +42,10 @@ bool IndVarAriNeg::IsMutationTarget(clang::Expr *e, MusicContext *context)
 void IndVarAriNeg::Mutate(clang::Expr *e, MusicContext *context)
 {
   // cout << "found an non-interface variable " << ConvertToString(e, context->comp_inst_->getLangOpts()) << endl;
-  // PrintLocation(context->comp_inst_->getSourceManager(), e->getLocStart());
+  // PrintLocation(context->comp_inst_->getSourceManager(), e->getBeginLoc());
   // return;
 
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
   Rewriter rewriter;
@@ -68,7 +68,7 @@ bool IndVarAriNeg::IsIndVar(clang::Expr *e, MusicContext *context)
   
   // cout << "in IsIndVar" << endl;
   string token{""};
-  // PrintLocation(context->comp_inst_->getSourceManager(), e->getLocStart());
+  // PrintLocation(context->comp_inst_->getSourceManager(), e->getBeginLoc());
   // cout << e->getStmtClassName() << endl;
 
   // Must be a local variable or a constant
@@ -83,13 +83,13 @@ bool IndVarAriNeg::IsIndVar(clang::Expr *e, MusicContext *context)
       return false;
   else if ((isa<CharacterLiteral>(e) || isa<FloatingLiteral>(e) || 
              isa<IntegerLiteral>(e)) && 
-           context->getStmtContext().IsInCurrentlyParsedFunctionRange(e->getLocStart()))
+           context->getStmtContext().IsInCurrentlyParsedFunctionRange(e->getBeginLoc()))
     token = ConvertToString(e, context->comp_inst_->getLangOpts());
   else
     return false;  // not variable reference or unary operators expressions
   
   // Either be in a return statement
-  SourceLocation loc = e->getLocStart();
+  SourceLocation loc = e->getBeginLoc();
   unsigned int line = context->comp_inst_->getSourceManager().getExpansionLineNumber(loc);
   if (line == context->getStmtContext().last_return_statement_line_num_)
     return true;

@@ -66,7 +66,7 @@ bool RLSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
     // RHS needs to be inside mutation range, outside enum declaration,
     // and inside user-specified domain (if available)
-    SourceLocation start_loc = rhs->getLocStart();
+    SourceLocation start_loc = rhs->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(rhs, context->comp_inst_);
     StmtContext& stmt_context = context->getStmtContext();
     string token{ConvertToString(rhs, context->comp_inst_->getLangOpts())};
@@ -85,7 +85,7 @@ bool RLSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 bool RLSR::IsInitMutationTarget(clang::Expr *e, MusicContext *context)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   StmtContext& stmt_context = context->getStmtContext();
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
@@ -122,11 +122,11 @@ void RLSR::Mutate(clang::Expr *e, MusicContext *context)
       rhs = bo->getRHS()->IgnoreImpCasts();
   }
 
-  SourceLocation start_loc = rhs->getLocStart();
+  SourceLocation start_loc = rhs->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(rhs, context->comp_inst_);
 
   // cout << start_loc.printToString(context->comp_inst_->getSourceManager()) << endl;
-  // cout << e->getLocEnd().printToString(context->comp_inst_->getSourceManager()) << endl;
+  // cout << e->getEndLoc().printToString(context->comp_inst_->getSourceManager()) << endl;
 
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 
@@ -160,7 +160,7 @@ void RLSR::Mutate(clang::Expr *e, MusicContext *context)
 
 void RLSR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
 
   string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
   StmtContext &stmt_context = context->getStmtContext();
@@ -173,7 +173,7 @@ void RLSR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
   // VarDecl not inside user-specified range (if range is not empty)
   for (auto it = range->begin(); it != range->end(); )
   {
-    if (!((*it)->getLocStart() < start_loc))
+    if (!((*it)->getBeginLoc() < start_loc))
     {
       range->erase(it, range->end());
       break;
@@ -206,12 +206,12 @@ void RLSR::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
       {
         // We are only considering variable inside this scope.
         // The rest of the loop are VarDecl after scope.
-        if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+        if (LocationAfterRangeEnd((*it)->getBeginLoc(), scope))
           break;
 
         // Expr E is not inside this scope so we cannot mutate to any variables
         // declared inside this scope.
-        if (LocationIsInRange((*it)->getLocStart(), scope))
+        if (LocationIsInRange((*it)->getBeginLoc(), scope))
         {
           it = range->erase(it);
           continue;

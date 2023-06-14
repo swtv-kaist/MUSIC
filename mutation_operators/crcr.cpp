@@ -34,7 +34,7 @@ bool CRCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsScalarReference(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	StmtContext &stmt_context = context->getStmtContext();
@@ -54,7 +54,7 @@ void CRCR::Mutate(clang::Expr *e, MusicContext *context)
 	rewriter.setSourceMgr(src_mgr, context->comp_inst_->getLangOpts());
 
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	if (ExprIsIntegral(context->comp_inst_, e))

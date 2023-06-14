@@ -63,7 +63,7 @@ bool CGCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 			!isa<IntegerLiteral>(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext& stmt_context = context->getStmtContext();
 
@@ -82,7 +82,7 @@ bool CGCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void CGCR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};

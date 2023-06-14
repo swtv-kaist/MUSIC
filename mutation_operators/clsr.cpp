@@ -42,7 +42,7 @@ bool CLSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsDeclRefExpr(e) || !ExprIsScalar(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
@@ -71,7 +71,7 @@ bool CLSR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void CLSR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	string token{ConvertToString(e, context->comp_inst_->getLangOpts())};

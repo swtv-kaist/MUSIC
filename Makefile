@@ -1,7 +1,7 @@
 # Edit these variables based on where you put your llvm source file
 # and build file.
-# LLVM_SRC_PATH := /usr/lib/llvm-7
-LLVM_BUILD_PATH := /usr/lib/llvm-7
+# LLVM_SRC_PATH := /usr/lib/llvm-16
+LLVM_BUILD_PATH := /usr/lib/llvm-16
 LLVM_BIN_PATH := $(LLVM_BUILD_PATH)/bin
 
 SRCS=tool.cpp configuration.cpp music_utility.cpp mutant_entry.cpp\
@@ -108,14 +108,14 @@ CLANG_LIBS := \
 	-lclangSema -lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore \
 	-lclangAnalysis -lclangARCMigrate -lclangRewrite \
-	-lclangRewriteFrontend -lclangEdit -lclangAST \
-	-lclangLex -lclangBasic -pthread
+	-lclangRewriteFrontend -lclangEdit -lclangAST -lclangASTMatchers \
+	-lclangLex -lclangBasic -lclangSupport -pthread
 
 CXX := g++
 
 CLANG_INCLUDES := -I$(LLVM_BUILD_PATH)/include
 
-CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++11 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fexceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl -lz -ltinfo
+CXXFLAGS := $(CLANG_INCLUDES) $(CLANG_BUILD_FLAGS) $(CLANG_LIBS) `$(LLVM_CONFIG_COMMAND)` -fno-rtti -g -std=c++17 -O0 -D_DEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -fomit-frame-pointer -fvisibility-inlines-hidden -fexceptions -fno-rtti -fPIC -Woverloaded-virtual -Wcast-qual -ldl -lz -ltinfo
 		
 all: $(TARGET)
 

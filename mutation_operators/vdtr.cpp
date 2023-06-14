@@ -29,7 +29,7 @@ bool VDTR::IsMutationTarget(clang::Expr *e, MusicContext *context)
   if (!ExprIsScalarReference(e))
     return false;
 
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   StmtContext &stmt_context = context->getStmtContext();
 
@@ -50,7 +50,7 @@ bool VDTR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void VDTR::Mutate(clang::Expr *e, MusicContext *context)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
   SourceManager &src_mgr = context->comp_inst_->getSourceManager();
 

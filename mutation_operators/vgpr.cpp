@@ -44,7 +44,7 @@ bool VGPR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 	if (!ExprIsPointerReference(e))
 		return false;
 
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 	StmtContext &stmt_context = context->getStmtContext();
 
@@ -67,7 +67,7 @@ bool VGPR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 
 void VGPR::Mutate(clang::Expr *e, MusicContext *context)
 {
-	SourceLocation start_loc = e->getLocStart();
+	SourceLocation start_loc = e->getBeginLoc();
 	SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
 	SourceManager &src_mgr = context->comp_inst_->getSourceManager();
@@ -89,7 +89,7 @@ void VGPR::Mutate(clang::Expr *e, MusicContext *context)
 
   for (auto vardecl: *(context->getSymbolTable()->getGlobalPointerVarDeclList()))
   {
-  	if (!(vardecl->getLocStart() < start_loc))
+  	if (!(vardecl->getBeginLoc() < start_loc))
   		break; 
   	
     string mutated_token{GetVarDeclName(vardecl)};

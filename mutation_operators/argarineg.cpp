@@ -41,7 +41,7 @@ bool ArgAriNeg::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
   if (CallExpr *ce = dyn_cast<CallExpr>(e))
   {
-    SourceLocation start_loc = ce->getLocStart();
+    SourceLocation start_loc = ce->getBeginLoc();
 
     // getRParenLoc returns the location before the right parenthesis
     SourceLocation end_loc = ce->getRParenLoc();
@@ -68,13 +68,13 @@ bool ArgAriNeg::IsMutationTarget(clang::Expr *e, MusicContext *context)
 void ArgAriNeg::Mutate(clang::Expr *e, MusicContext *context)
 {
   // cout << "Mutating " << ConvertToString(e, context->comp_inst_->getLangOpts()) << endl;
-  // PrintLocation(context->comp_inst_->getSourceManager(), e->getLocStart());
+  // PrintLocation(context->comp_inst_->getSourceManager(), e->getBeginLoc());
 
   CallExpr *ce;
   if (!(ce = dyn_cast<CallExpr>(e)))
     return;
 
-  // SourceLocation start_loc = ce->getLocStart();
+  // SourceLocation start_loc = ce->getBeginLoc();
   // getRParenLoc returns the location before the right parenthesis
   // SourceLocation end_loc = ce->getRParenLoc();
   // end_loc = end_loc.getLocWithOffset(1);
@@ -90,7 +90,7 @@ void ArgAriNeg::Mutate(clang::Expr *e, MusicContext *context)
 
     // cout << "cp1\n";
 
-    SourceLocation start_loc = arg->getLocStart();
+    SourceLocation start_loc = arg->getBeginLoc();
     SourceLocation end_loc = GetEndLocOfExpr(arg, context->comp_inst_);
 
     // cout << token << " ~~~ " << mutated_token << endl;

@@ -35,7 +35,7 @@ bool VSCR::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (MemberExpr *me = dyn_cast<MemberExpr>(e))
 	{
-		SourceLocation start_loc = e->getLocStart();
+		SourceLocation start_loc = e->getBeginLoc();
 		SourceLocation end_loc = GetEndLocOfExpr(e, context->comp_inst_);
 
     SourceManager &src_mgr = context->comp_inst_->getSourceManager();

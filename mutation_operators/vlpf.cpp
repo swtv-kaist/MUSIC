@@ -35,7 +35,7 @@ bool VLPF::IsMutationTarget(clang::Expr *e, MusicContext *context)
 {
 	if (CallExpr *ce = dyn_cast<CallExpr>(e))
 	{
-		SourceLocation start_loc = ce->getLocStart();
+		SourceLocation start_loc = ce->getBeginLoc();
 
     // getRParenLoc returns the location before the right parenthesis
     SourceLocation end_loc = ce->getRParenLoc();
@@ -62,7 +62,7 @@ void VLPF::Mutate(clang::Expr *e, MusicContext *context)
 	if (!(ce = dyn_cast<CallExpr>(e)))
 		return;
 
-	SourceLocation start_loc = ce->getLocStart();
+	SourceLocation start_loc = ce->getBeginLoc();
 
   // getRParenLoc returns the location before the right parenthesis
   SourceLocation end_loc = ce->getRParenLoc();
@@ -119,7 +119,7 @@ void VLPF::Mutate(clang::Expr *e, MusicContext *context)
 
 void VLPF::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
 {
-  SourceLocation start_loc = e->getLocStart();
+  SourceLocation start_loc = e->getBeginLoc();
   Rewriter rewriter;
   rewriter.setSourceMgr(context->comp_inst_->getSourceManager(), 
                         context->comp_inst_->getLangOpts());
@@ -133,7 +133,7 @@ void VLPF::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
   // remove all vardecl appear after expr
   for (auto it = range->begin(); it != range->end(); )
   {
-    if (!((*it)->getLocStart() < start_loc))
+    if (!((*it)->getBeginLoc() < start_loc))
     {
       range->erase(it, range->end());
       break;
@@ -158,10 +158,10 @@ void VLPF::GetRange(Expr *e, MusicContext *context, VarDeclList *range)
     if (!LocationIsInRange(start_loc, scope))
       for (auto it = range->begin(); it != range->end();)
       {
-        if (LocationAfterRangeEnd((*it)->getLocStart(), scope))
+        if (LocationAfterRangeEnd((*it)->getBeginLoc(), scope))
           break;
 
-        if (LocationIsInRange((*it)->getLocStart(), scope))
+        if (LocationIsInRange((*it)->getBeginLoc(), scope))
         {
           it = range->erase(it);
           continue;
