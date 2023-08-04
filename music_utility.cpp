@@ -776,9 +776,19 @@ bool ExprIsPointer(Expr *e)
 
 bool ExprIsScalar(Expr *e)
 {
-  auto type = ((e->getType().getCanonicalType()).getTypePtr());
-  return type->isScalarType() && !ExprIsPointer(e); 
+    //This additional check ensures that the expression is not null
+    //which will cause a core dump error that results in failure in
+    //making mutants on jsoncpp/gflags.
+  if(!((e->getType()).isNull())){
+    auto type = ((e->getType().getCanonicalType()).getTypePtr());
+    return type->isScalarType() && !ExprIsPointer(e);
+  }else {
+   
+    return false;
+  }
+  // return type->isScalarType() && !ExprIsPointer(e) && !type->isClassType();
 }
+
 
 bool ExprIsFloat(Expr *e)
 {
